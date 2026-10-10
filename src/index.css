@@ -1,0 +1,37 @@
+/* NEXSMARKETS — Base Reset
+   App.css overrides everything below with the neon dark theme */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  min-height: 100vh;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  /* Dark base so there is never a white flash before App.css loads */
+  background: #060912;
+  color: #eef4ff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+button, input, select, textarea {
+  font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 2px solid #00e5ff;
+  outline-offset: 2px;
+}
+
+::selection {
+  background: rgba(0, 229, 255, 0.25);
+  color: #eef4ff;
+}

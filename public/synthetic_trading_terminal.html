@@ -1,0 +1,795 @@
+﻿<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Synthetic Trading Terminal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { background-color: #0b0e14; color: #f3f4f6; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
+    .glass-panel { background: #121721; border: 1px solid rgba(255, 255, 255, 0.07); }
+    .glass-button { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); transition: all 0.2s; }
+    .glass-button:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.18); }
+
+    /* Digit Circle Styling */
+    .digit-circle {
+      position: relative;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: #18202c;
+      border: 1.5px solid #2a3447;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .digit-circle.active-tick {
+      background: #1f2a3a;
+      border-color: #ef4444;
+      box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+    }
+    .digit-circle.active-prediction {
+      border-color: #14b8a6;
+      box-shadow: 0 0 12px rgba(20, 184, 166, 0.5);
+    }
+    .digit-pointer-arrow {
+      position: absolute;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-bottom: 6px solid #ef4444;
+    }
+
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: rgba(11, 14, 20, 0.8); }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 3px; }
+  </style>
+</head>
+<body class="bg-[#0b0e14] text-gray-100 flex flex-col h-screen overflow-hidden font-sans select-none">
+  <!-- HEADER -->
+  <header class="h-14 bg-[#111622] border-b border-gray-800/80 px-4 flex items-center justify-between shrink-0 z-20">
+    <!-- First child: Brand & Symbol Header -->
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400 font-bold text-xs">
+          <i class="fa-solid fa-bolt"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span id="headerSymbolTitle" class="font-bold text-sm text-white tracking-wide">Volatility 25 (1s) Index</span>
+            <span class="text-[10px] bg-teal-500/20 text-teal-300 px-1.5 py-0.5 rounded font-mono font-medium border border-teal-500/30">EXSTRADE SYNTHETICS</span>
+          </div>
+          <div class="flex items-center gap-2 text-xs text-gray-400">
+            <span>1s Ticks</span>
+            <span>•</span>
+            <span id="currentPriceDisplay" class="font-mono text-teal-400 font-semibold">594,570.20</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Last child: Actions area -->
+    <div class="flex items-center gap-3">
+      <!-- Account Panel (First child of headerActions) -->
+      <div class="flex items-center gap-2 bg-[#18202e] border border-gray-800 rounded-lg px-3 py-1.5 text-xs">
+        <span id="accountLabelDisplay" class="text-gray-400 font-medium">Demo Account</span>
+        <span id="accountBalance" class="font-mono font-bold text-teal-400">$10,000.00 USD</span>
+        <button type="button" title="Reset Balance" class="text-gray-500 hover:text-gray-300 ml-1">
+          <i class="fa-solid fa-rotate"></i>
+        </button>
+      </div>
+      <!-- Action / Deposit Button -->
+      <button type="button" onclick="openFundsModal()" class="bg-teal-600 hover:bg-teal-500 text-white font-medium px-3.5 py-1.5 rounded-lg text-xs transition shadow-md shadow-teal-950/40">
+        Add Funds
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE CONTAINER -->
+  <div class="flex-1 flex overflow-hidden">
+    <!-- Aside 1: Left Vertical Tool Rail (First child) -->
+    <aside class="w-12 bg-[#111622] border-r border-gray-800/80 flex flex-col items-center py-3 gap-3 shrink-0 z-10">
+      <button type="button" title="1 Tick Interval" aria-pressed="true" class="w-8 h-8 rounded-lg glass-button flex items-center justify-center text-xs font-bold text-teal-400">
+        1T
+      </button>
+      <button type="button" id="toolCrosshair" title="Crosshair Mode" aria-pressed="false" class="w-8 h-8 rounded-lg glass-button flex items-center justify-center text-gray-400 hover:text-white transition">
+        <i class="fa-solid fa-crosshairs text-sm"></i>
+      </button>
+      <button type="button" id="toolDrawing" title="Drawing Tools" aria-pressed="false" class="w-8 h-8 rounded-lg glass-button flex items-center justify-center text-gray-400 hover:text-white transition">
+        <i class="fa-solid fa-pen-nib text-sm"></i>
+      </button>
+      <button type="button" id="toolIndicator" title="Moving Average Indicator" aria-pressed="false" class="w-8 h-8 rounded-lg glass-button flex items-center justify-center text-gray-400 hover:text-white transition">
+        <i class="fa-solid fa-chart-line text-sm"></i>
+      </button>
+      <button type="button" id="toolChartStyle" title="Chart Style" aria-pressed="false" class="w-8 h-8 rounded-lg glass-button flex items-center justify-center text-gray-400 hover:text-white transition">
+        <i class="fa-solid fa-chart-simple text-sm"></i>
+      </button>
+    </aside>
+
+    <!-- Center Section: Chart + Running Indexes Bar -->
+    <main class="flex-1 flex flex-col relative bg-[#0b0e14] overflow-hidden">
+      <!-- Top Left Asset Overlay Card with Market Selector Dropdown -->
+      <div class="absolute top-4 left-4 z-20">
+        <div id="assetSelectorCard" onclick="toggleMarketDropdown()" class="bg-[#121824]/90 border border-gray-800 backdrop-blur-md rounded-xl p-3 flex items-center gap-3 shadow-xl cursor-pointer hover:border-gray-700 transition">
+          <div class="w-7 h-7 rounded-lg bg-teal-500/20 text-teal-400 flex items-center justify-center text-xs font-bold">
+            <i class="fa-solid fa-chart-area"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span id="assetOverlayName" class="font-bold text-xs text-white">Volatility 25 (1s) Index</span>
+              <i class="fa-solid fa-chevron-down text-[10px] text-gray-400"></i>
+            </div>
+            <div class="text-[11px] font-mono text-teal-400 font-semibold flex items-center gap-1">
+              <span id="chartOverlayPrice">594570.20</span>
+              <span id="chartOverlayChange" class="text-gray-400 font-normal">-5.07 (0.00%)</span>
+              <span id="chartOverlayDirection" class="text-red-400 text-[9px]">▼</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dropdown Menu for Markets -->
+        <div id="marketDropdownMenu" class="hidden absolute top-full left-0 mt-2 w-64 bg-[#121824] border border-gray-800 rounded-xl shadow-2xl overflow-hidden backdrop-blur-xl z-30">
+          <div class="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-900/60 border-b border-gray-800">Select Synthetic Chart Market</div>
+          <div id="marketListOptions" class="max-h-60 overflow-y-auto divide-y divide-gray-800/40">
+            <!-- Dynamically populated market items -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Chart Canvas Wrapper -->
+      <div class="flex-1 relative w-full h-full p-2">
+        <canvas id="liveTickChart" class="w-full h-full block"></canvas>
+      </div>
+
+      <!-- Zoom Floating Controls (Bottom Left) -->
+      <div class="absolute bottom-20 left-4 z-10 flex flex-col gap-1">
+        <button type="button" onclick="zoomChart(0.8)" class="w-7 h-7 rounded-md bg-[#121824] border border-gray-800 text-gray-300 hover:text-white flex items-center justify-center text-xs shadow-md">
+          <i class="fa-solid fa-plus"></i>
+        </button>
+        <button type="button" onclick="zoomChart(1.0)" class="w-7 h-7 rounded-md bg-[#121824] border border-gray-800 text-gray-300 hover:text-white flex items-center justify-center text-xs shadow-md">
+          <i class="fa-solid fa-crosshairs"></i>
+        </button>
+        <button type="button" onclick="zoomChart(1.2)" class="w-7 h-7 rounded-md bg-[#121824] border border-gray-800 text-gray-300 hover:text-white flex items-center justify-center text-xs shadow-md">
+          <i class="fa-solid fa-minus"></i>
+        </button>
+      </div>
+
+      <!-- RUNNING INDEXES BAR (Bottom Overlay over Chart) -->
+      <div class="bg-[#0f141e]/95 border-t border-gray-800/80 px-4 py-2.5 flex flex-col gap-1.5 shrink-0 z-10 backdrop-blur-md">
+        <div class="flex items-center justify-between">
+          <!-- Powered by Exstrade -->
+          <div class="flex items-center gap-2 text-xs">
+            <span class="text-gray-500 font-medium text-[11px]">Powered by</span>
+            <div class="flex items-center gap-1 text-teal-400 font-bold tracking-wide">
+              <i class="fa-solid fa-cube text-xs"></i>
+              <span class="text-white text-xs">Exstrade</span>
+            </div>
+          </div>
+
+          <!-- 10 Running Digit Circles (0 - 9) -->
+          <div class="flex items-center gap-3.5 my-1" id="runningIndexesContainer">
+            <!-- Dynamically generated 0-9 digit items -->
+          </div>
+
+          <!-- Info Icon -->
+          <div class="text-gray-500 text-xs hover:text-gray-300 cursor-pointer" title="Last Digit Stats">
+            <i class="fa-solid fa-circle-info"></i>
+          </div>
+        </div>
+
+        <!-- Risk Disclaimer Text -->
+        <p class="text-[10px] text-gray-500 leading-tight text-center max-w-4xl mx-auto opacity-75">
+          Exstrade offers complex derivative products, such as options and synthetic index contracts. These products may not be suitable for all customers, and trading them may expose you to risk. You should never trade with borrowed funds or money you cannot afford to lose.
+        </p>
+      </div>
+    </main>
+
+    <!-- Aside 2: Right Side Contract Ticket Panel (Last child) -->
+    <aside class="w-80 bg-[#121722] border-l border-gray-800/80 p-4 flex flex-col justify-between shrink-0 overflow-y-auto">
+      <div class="space-y-4">
+        <!-- Header Link -->
+        <div class="flex justify-between items-center text-xs">
+          <a href="#" onclick="alert('Synthetic Contract Guide: Select your trade type, ticks duration, prediction digit, and stake to place live trades.'); return false;" class="text-teal-400 hover:text-teal-300 font-medium text-[11px] underline">Learn about this trade type</a>
+        </div>
+
+        <!-- Trade Type Selector Dropdown Box -->
+        <div class="bg-[#18202d] border border-gray-700/60 rounded-xl p-2.5 flex items-center justify-between text-xs font-semibold text-white">
+          <button type="button" id="prevTradeTypeBtn" class="text-gray-400 hover:text-white px-1">
+            <i class="fa-solid fa-chevron-left text-xs"></i>
+          </button>
+          <div class="flex items-center gap-2 text-teal-400">
+            <i class="fa-solid fa-arrows-up-down text-sm"></i>
+            <span id="tradeTypeNameDisplay" class="text-white">Over/Under</span>
+          </div>
+          <button type="button" id="nextTradeTypeBtn" class="text-gray-400 hover:text-white px-1">
+            <i class="fa-solid fa-chevron-right text-xs"></i>
+          </button>
+        </div>
+
+        <!-- Ticks Stepper -->
+        <div class="bg-[#18202d]/70 border border-gray-800 rounded-xl p-3 space-y-2">
+          <div class="flex justify-between items-center text-xs text-gray-400 font-medium">
+            <span>Ticks Duration</span>
+            <span id="ticksDisplayVal" class="text-white font-bold font-mono">5 Ticks</span>
+          </div>
+          <input type="range" id="ticksSlider" min="1" max="10" value="5" class="w-full accent-teal-500 h-1.5 bg-gray-800 rounded-lg cursor-pointer">
+        </div>
+
+        <!-- Last Digit Prediction Grid (0 - 9) -->
+        <div class="space-y-1.5">
+          <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Last Digit Prediction</label>
+          <div class="grid grid-cols-5 gap-1.5" id="digitPredictionGrid">
+            <!-- 0 to 9 buttons -->
+          </div>
+        </div>
+
+        <!-- Stake / Payout Toggle & Input -->
+        <div class="space-y-2">
+          <div class="flex bg-[#18202d] border border-gray-800 rounded-lg p-1 text-xs">
+            <button type="button" id="stakeTabBtn" onclick="setMode('stake')" class="flex-1 py-1.5 font-semibold text-center rounded-md bg-teal-500/20 text-teal-300 border border-teal-500/40">Stake</button>
+            <button type="button" id="payoutTabBtn" onclick="setMode('payout')" class="flex-1 py-1.5 font-semibold text-center rounded-md text-gray-400 hover:text-white">Payout</button>
+          </div>
+
+          <div class="bg-[#18202d] border border-gray-800 rounded-xl p-2 flex items-center justify-between">
+            <button type="button" onclick="adjustAmount(-1)" class="w-8 h-8 rounded-lg bg-gray-800 hover:bg-gray-700 text-white font-bold flex items-center justify-center text-sm">-</button>
+            <div class="flex items-center gap-1 font-mono font-bold text-sm text-white">
+              <input type="number" id="stakeInput" value="10" min="1" class="w-20 bg-transparent text-center focus:outline-none text-white">
+              <span class="text-xs text-gray-400 font-sans">USD</span>
+            </div>
+            <button type="button" onclick="adjustAmount(1)" class="w-8 h-8 rounded-lg bg-gray-800 hover:bg-gray-700 text-white font-bold flex items-center justify-center text-sm">+</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Execute Trade Buttons (Over / Under Style) -->
+      <div class="space-y-3 mt-4">
+        <!-- Top Action Button Group -->
+        <div class="space-y-1">
+          <div class="flex justify-between text-[11px] text-gray-400 px-1">
+            <span>Payout <strong id="payoutUpVal" class="text-white font-mono">24.27 USD</strong></span>
+            <i class="fa-solid fa-circle-info text-gray-500 cursor-pointer"></i>
+          </div>
+          <button type="button" id="btnPrimaryUp" onclick="executeTrade('higher')" class="w-full bg-[#0d9488] hover:bg-[#0f766e] text-white font-bold py-3 px-4 rounded-xl flex items-center justify-between transition shadow-lg shadow-teal-950/40 active:scale-[0.99]">
+            <span class="flex items-center gap-2 text-sm">
+              <i class="fa-solid fa-arrow-trend-up"></i>
+              <span id="btnUpLabel">Over</span>
+            </span>
+            <span id="btnUpRate" class="font-mono text-sm">142.70%</span>
+          </button>
+        </div>
+
+        <!-- Bottom Action Button Group -->
+        <div class="space-y-1">
+          <div class="flex justify-between text-[11px] text-gray-400 px-1">
+            <span>Payout <strong id="payoutDownVal" class="text-white font-mono">19.53 USD</strong></span>
+            <i class="fa-solid fa-circle-info text-gray-500 cursor-pointer"></i>
+          </div>
+          <button type="button" id="btnPrimaryDown" onclick="executeTrade('lower')" class="w-full bg-[#be123c] hover:bg-[#9f1239] text-white font-bold py-3 px-4 rounded-xl flex items-center justify-between transition shadow-lg shadow-rose-950/40 active:scale-[0.99]">
+            <span class="flex items-center gap-2 text-sm">
+              <i class="fa-solid fa-arrow-trend-down"></i>
+              <span id="btnDownLabel">Under</span>
+            </span>
+            <span id="btnDownRate" class="font-mono text-sm">95.30%</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- FOOTER: Position & Execution Logs -->
+  <footer class="bg-[#0e131d] border-t border-gray-800/80 flex flex-col shrink-0 transition-all duration-200" style="height: 128px; min-height: 128px;">
+    <!-- First child: Log Header -->
+    <div class="h-8 px-4 border-b border-gray-800/60 flex items-center justify-between bg-[#131926] shrink-0">
+      <div class="flex items-center gap-2 text-xs font-semibold text-gray-300">
+        <i class="fa-solid fa-list-check text-teal-400"></i>
+        <span>Active Positions & Executed Contracts</span>
+        <span id="openPositionsCount" class="bg-teal-500/20 text-teal-300 text-[10px] px-1.5 py-0.2 rounded font-mono">0 Open</span>
+      </div>
+    </div>
+
+    <!-- Last child: Log Table -->
+    <div class="flex-1 overflow-x-auto overflow-y-auto">
+      <table class="w-full text-left text-xs font-mono">
+        <thead class="bg-[#151c2a] text-gray-400 text-[11px] uppercase tracking-wider sticky top-0 border-b border-gray-800/60">
+          <tr>
+            <th class="py-1.5 px-3">Contract ID</th>
+            <th class="py-1.5 px-3">Type</th>
+            <th class="py-1.5 px-3">Entry Price</th>
+            <th class="py-1.5 px-3">Current Price</th>
+            <th class="py-1.5 px-3">Stake</th>
+            <th class="py-1.5 px-3">P/L</th>
+            <th class="py-1.5 px-3">Status</th>
+          </tr>
+        </thead>
+        <tbody id="logTableBody" class="divide-y divide-gray-800/40 text-gray-300">
+          <!-- Position logs -->
+        </tbody>
+      </table>
+    </div>
+  </footer>
+
+  <!-- SCRIPT LOGIC -->
+  <script>
+    let accountBalance = 10000.00;
+    let selectedAccountType = 'demo';
+    let priceHistory = [];
+    let digitHistory = [];
+    let openTrades = [];
+    let tradeCounter = 1001;
+    let selectedPredictionDigit = 5;
+    let currentTradeTypeIndex = 0;
+    let inputMode = 'stake'; // 'stake' or 'payout'
+    let currentZoom = 1.0;
+
+    // Synthetic Index Chart Markets List
+    const markets = [
+      { id: 'vol25', name: 'Volatility 25 (1s) Index', basePrice: 594570.20, volatility: 2.5 },
+      { id: 'vol10', name: 'Volatility 10 (1s) Index', basePrice: 8420.50, volatility: 0.8 },
+      { id: 'vol50', name: 'Volatility 50 (1s) Index', basePrice: 125430.80, volatility: 4.0 },
+      { id: 'vol75', name: 'Volatility 75 (1s) Index', basePrice: 340890.10, volatility: 6.5 },
+      { id: 'vol100', name: 'Volatility 100 (1s) Index', basePrice: 1248.50, volatility: 10.0 },
+      { id: 'jump10', name: 'Jump 10 Index', basePrice: 45210.30, volatility: 3.5 },
+      { id: 'bear', name: 'Bear Market Index', basePrice: 3420.10, volatility: 1.8 },
+      { id: 'bull', name: 'Bull Market Index', basePrice: 6890.40, volatility: 1.8 }
+    ];
+    let activeMarket = markets[0];
+
+    const tradeTypes = [
+      { name: 'Over/Under', upLabel: 'Over', downLabel: 'Under', upMult: 1.427, downMult: 0.953, upRate: '142.70%', downRate: '95.30%' },
+      { name: 'Rise/Fall', upLabel: 'Rise', downLabel: 'Fall', upMult: 0.954, downMult: 0.954, upRate: '95.40%', downRate: '95.40%' },
+      { name: 'Matches/Differs', upLabel: 'Matches', downLabel: 'Differs', upMult: 8.80, downMult: 0.112, upRate: '880.00%', downRate: '11.20%' },
+      { name: 'Even/Odd', upLabel: 'Even', downLabel: 'Odd', upMult: 0.951, downMult: 0.951, upRate: '95.10%', downRate: '95.10%' }
+    ];
+
+    // Seed Market Prices & Digits
+    function seedMarketData(market) {
+      priceHistory = [];
+      digitHistory = [];
+      let current = market.basePrice;
+      for (let i = 0; i < 40; i++) {
+        current += (Math.random() - 0.49) * market.volatility;
+        const formatted = Number(current.toFixed(2));
+        priceHistory.push(formatted);
+        const str = formatted.toFixed(2);
+        digitHistory.push(parseInt(str.slice(-1), 10));
+      }
+    }
+    seedMarketData(activeMarket);
+
+    // Populate Market Dropdown Menu
+    function renderMarketList() {
+      const list = document.getElementById('marketListOptions');
+      if (!list) return;
+      list.innerHTML = markets.map(m => `
+        <div onclick="selectMarket('${m.id}')" class="px-3 py-2 text-xs flex items-center justify-between hover:bg-gray-800/80 cursor-pointer transition ${m.id === activeMarket.id ? 'text-teal-400 font-bold bg-teal-500/10' : 'text-gray-300'}">
+          <span>${m.name}</span>
+          <span class="font-mono text-[10px] text-gray-400">${m.basePrice.toLocaleString(undefined, {minimumFractionDigits:2})}</span>
+        </div>
+      `).join('');
+    }
+
+    function toggleMarketDropdown() {
+      const menu = document.getElementById('marketDropdownMenu');
+      if (menu) menu.classList.toggle('hidden');
+    }
+
+    function selectMarket(marketId) {
+      const found = markets.find(m => m.id === marketId);
+      if (!found) return;
+      activeMarket = found;
+      seedMarketData(activeMarket);
+
+      document.getElementById('headerSymbolTitle').textContent = activeMarket.name;
+      document.getElementById('assetOverlayName').textContent = activeMarket.name;
+
+      const menu = document.getElementById('marketDropdownMenu');
+      if (menu) menu.classList.add('hidden');
+
+      renderMarketList();
+      updateRunningIndexesUI();
+    }
+
+    // Chart Setup
+    const ctx = document.getElementById('liveTickChart').getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 320);
+    gradient.addColorStop(0, 'rgba(20, 184, 166, 0.25)');
+    gradient.addColorStop(1, 'rgba(20, 184, 166, 0.0)');
+
+    const tickChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: priceHistory.map((_, i) => i + 1),
+        datasets: [{
+          label: activeMarket.name,
+          data: [...priceHistory],
+          borderColor: '#2dd4bf',
+          borderWidth: 2,
+          pointRadius: priceHistory.map((_, i) => i === priceHistory.length - 1 ? 5 : 0),
+          pointBackgroundColor: '#ffffff',
+          pointBorderColor: '#2dd4bf',
+          pointBorderWidth: 2,
+          fill: true,
+          backgroundColor: gradient,
+          tension: 0.15
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 120 },
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { display: false },
+          y: {
+            position: 'right',
+            grid: { color: 'rgba(255, 255, 255, 0.04)' },
+            ticks: { color: '#9ca3af', font: { family: 'monospace', size: 10 } }
+          }
+        }
+      }
+    });
+
+    window.zoomChart = function(factor) {
+      if (factor === 1.0) currentZoom = 1.0;
+      else currentZoom = Math.max(0.3, Math.min(5, currentZoom * factor));
+      if (tickChart && tickChart.options.scales.y) {
+        if (currentZoom === 1.0) {
+          delete tickChart.options.scales.y.min;
+          delete tickChart.options.scales.y.max;
+        } else {
+          const vals = priceHistory.slice(-20);
+          const center = vals[vals.length - 1] || 0;
+          const range = (Math.max(...vals) - Math.min(...vals) || 10) / currentZoom;
+          tickChart.options.scales.y.min = center - range / 2;
+          tickChart.options.scales.y.max = center + range / 2;
+        }
+        tickChart.update('none');
+      }
+    };
+
+    // Render 10 Digit Prediction Buttons (0 - 9)
+    function renderDigitPredictionGrid() {
+      const container = document.getElementById('digitPredictionGrid');
+      if (!container) return;
+      container.innerHTML = [0,1,2,3,4,5,6,7,8,9].map(d => `
+        <button type="button" onclick="selectPredictionDigit(${d})" class="py-2 rounded-lg font-bold text-xs font-mono transition border ${d === selectedPredictionDigit ? 'bg-teal-500/20 text-teal-300 border-teal-500/60 shadow-md shadow-teal-950/50' : 'bg-[#18202d] text-gray-400 border-gray-800 hover:text-white hover:bg-gray-800'}">
+          ${d}
+        </button>
+      `).join('');
+    }
+
+    function selectPredictionDigit(d) {
+      selectedPredictionDigit = d;
+      renderDigitPredictionGrid();
+      updateRunningIndexesUI();
+    }
+
+    // Render Running Indexes Bar
+    function updateRunningIndexesUI() {
+      const container = document.getElementById('runningIndexesContainer');
+      if (!container || !digitHistory.length) return;
+
+      const latestDigit = digitHistory[digitHistory.length - 1];
+      const counts = Array(10).fill(0);
+      digitHistory.forEach(d => counts[d]++);
+      const total = digitHistory.length;
+
+      container.innerHTML = [0,1,2,3,4,5,6,7,8,9].map(d => {
+        const pct = ((counts[d] / total) * 100).toFixed(1);
+        const isLatest = d === latestDigit;
+        const isSelected = d === selectedPredictionDigit;
+        let ringClasses = 'digit-circle';
+        if (isLatest) ringClasses += ' active-tick';
+        else if (isSelected) ringClasses += ' active-prediction';
+
+        return `
+          <div class="flex flex-col items-center gap-1 cursor-pointer" onclick="selectPredictionDigit(${d})">
+            <div class="${ringClasses}">
+              <span class="text-xs font-bold font-mono ${isLatest ? 'text-white' : isSelected ? 'text-teal-300' : 'text-gray-300'}">${d}</span>
+              ${isLatest ? '<div class="digit-pointer-arrow"></div>' : ''}
+            </div>
+            <span class="text-[10px] font-mono ${isLatest ? 'text-red-400 font-bold' : isSelected ? 'text-teal-400 font-bold' : 'text-gray-400'}">${pct}%</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Trade Type Carousel Controls
+    document.getElementById('prevTradeTypeBtn')?.addEventListener('click', () => {
+      currentTradeTypeIndex = (currentTradeTypeIndex - 1 + tradeTypes.length) % tradeTypes.length;
+      updateTradeTypeDisplay();
+    });
+
+    document.getElementById('nextTradeTypeBtn')?.addEventListener('click', () => {
+      currentTradeTypeIndex = (currentTradeTypeIndex + 1) % tradeTypes.length;
+      updateTradeTypeDisplay();
+    });
+
+    function updateTradeTypeDisplay() {
+      const t = tradeTypes[currentTradeTypeIndex];
+      document.getElementById('tradeTypeNameDisplay').textContent = t.name;
+      document.getElementById('btnUpLabel').textContent = t.upLabel;
+      document.getElementById('btnDownLabel').textContent = t.downLabel;
+      document.getElementById('btnUpRate').textContent = t.upRate;
+      document.getElementById('btnDownRate').textContent = t.downRate;
+      updatePayoutDisplays();
+    }
+
+    // Ticks Slider
+    document.getElementById('ticksSlider')?.addEventListener('input', (e) => {
+      document.getElementById('ticksDisplayVal').textContent = e.target.value + ' Ticks';
+    });
+
+    function setMode(mode) {
+      inputMode = mode;
+      const stakeBtn = document.getElementById('stakeTabBtn');
+      const payoutBtn = document.getElementById('payoutTabBtn');
+      if (mode === 'stake') {
+        stakeBtn.className = 'flex-1 py-1.5 font-semibold text-center rounded-md bg-teal-500/20 text-teal-300 border border-teal-500/40';
+        payoutBtn.className = 'flex-1 py-1.5 font-semibold text-center rounded-md text-gray-400 hover:text-white';
+      } else {
+        payoutBtn.className = 'flex-1 py-1.5 font-semibold text-center rounded-md bg-teal-500/20 text-teal-300 border border-teal-500/40';
+        stakeBtn.className = 'flex-1 py-1.5 font-semibold text-center rounded-md text-gray-400 hover:text-white';
+      }
+      updatePayoutDisplays();
+    }
+
+    function adjustAmount(delta) {
+      const input = document.getElementById('stakeInput');
+      if (!input) return;
+      const val = Math.max(1, (parseInt(input.value || '10', 10) + delta));
+      input.value = val;
+      updatePayoutDisplays();
+    }
+
+    function updatePayoutDisplays() {
+      const val = parseFloat(document.getElementById('stakeInput')?.value || '10');
+      const t = tradeTypes[currentTradeTypeIndex];
+      let stake = val;
+      if (inputMode === 'payout') {
+        stake = val / (1 + t.upMult);
+      }
+      const payoutUp = stake * (1 + t.upMult);
+      const payoutDown = stake * (1 + t.downMult);
+
+      document.getElementById('payoutUpVal').textContent = payoutUp.toFixed(2) + ' USD';
+      document.getElementById('payoutDownVal').textContent = payoutDown.toFixed(2) + ' USD';
+    }
+
+    document.getElementById('stakeInput')?.addEventListener('input', updatePayoutDisplays);
+
+    // Parent Window Account Synchronization
+    function syncBalanceToParent() {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({
+          type: 'EXSTRADE_BALANCE_UPDATE',
+          accountType: selectedAccountType,
+          balance: accountBalance
+        }, location.origin);
+      }
+    }
+
+    function openFundsModal() {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'EXSTRADE_OPEN_FUNDS' }, location.origin);
+      } else {
+        alert('Deposit Funds requested.');
+      }
+    }
+
+    window.addEventListener('message', (event) => {
+      if (event.origin !== location.origin || event.data?.type !== 'EXSTRADE_ACCOUNT_SYNC') return;
+      const data = event.data;
+      if (Number.isFinite(data.balance)) {
+        accountBalance = Number(data.balance);
+        const display = document.getElementById('accountBalance');
+        if (display) {
+          display.textContent = '$' + accountBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USD';
+        }
+      }
+      if (data.accountName) {
+        document.getElementById('accountLabelDisplay').textContent = data.accountName;
+      }
+      if (data.accountType) {
+        selectedAccountType = data.accountType;
+      }
+    });
+
+    // Notify Parent Ready
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'EXSTRADE_TERMINAL_READY' }, location.origin);
+    }
+
+    // Execute Trade Logic
+    window.executeTrade = function(direction) {
+      const val = parseFloat(document.getElementById('stakeInput')?.value || 10);
+      const ticks = parseInt(document.getElementById('ticksSlider')?.value || 5, 10);
+      const t = tradeTypes[currentTradeTypeIndex];
+
+      let stake = val;
+      if (inputMode === 'payout') {
+        stake = val / (1 + (direction === 'higher' ? t.upMult : t.downMult));
+      }
+      stake = Number(stake.toFixed(2));
+
+      if (accountBalance < stake) {
+        alert('Insufficient account balance ($' + accountBalance.toFixed(2) + ' USD). Please deposit or switch account.');
+        return;
+      }
+
+      // Deduct funds from active balance immediately
+      accountBalance -= stake;
+      accountBalance = Number(accountBalance.toFixed(2));
+      const display = document.getElementById('accountBalance');
+      if (display) {
+        display.textContent = '$' + accountBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USD';
+      }
+      syncBalanceToParent();
+
+      const currentPrice = priceHistory[priceHistory.length - 1];
+      const trade = {
+        id: 'SYN-' + (tradeCounter++),
+        marketName: activeMarket.name,
+        tradeType: t.name,
+        direction,
+        entryPrice: currentPrice,
+        entryDigit: parseInt(currentPrice.toFixed(2).slice(-1), 10),
+        predictionDigit: selectedPredictionDigit,
+        stake,
+        ticksLeft: ticks,
+        totalTicks: ticks,
+        mult: direction === 'higher' ? t.upMult : t.downMult,
+        status: 'OPEN'
+      };
+
+      openTrades.push(trade);
+      renderLogTable();
+    };
+
+    function renderLogTable() {
+      const body = document.getElementById('logTableBody');
+      const openCountDisplay = document.getElementById('openPositionsCount');
+      if (!body) return;
+
+      const activeCount = openTrades.filter(t => t.status === 'OPEN').length;
+      if (openCountDisplay) openCountDisplay.textContent = activeCount + ' Open';
+
+      if (openTrades.length === 0) {
+        body.innerHTML = `<tr><td colspan="7" class="py-3 text-center text-gray-500 italic">No contract positions executed yet.</td></tr>`;
+        return;
+      }
+
+      body.innerHTML = openTrades.slice().reverse().map(trade => {
+        const currentPrice = priceHistory[priceHistory.length - 1];
+        let plText = '-';
+        let plClass = 'text-gray-400';
+        let statusBadge = '<span class="bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded text-[10px]">OPEN (' + trade.ticksLeft + 't)</span>';
+
+        if (trade.status !== 'OPEN') {
+          const won = trade.status === 'WON';
+          const profit = won ? trade.stake * trade.mult : -trade.stake;
+          plText = (won ? '+' : '') + '$' + profit.toFixed(2);
+          plClass = won ? 'text-teal-400 font-bold' : 'text-rose-400 font-bold';
+          statusBadge = won
+            ? '<span class="bg-teal-500/20 text-teal-300 px-1.5 py-0.5 rounded text-[10px]">WON</span>'
+            : '<span class="bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded text-[10px]">LOST</span>';
+        }
+
+        return `
+          <tr class="hover:bg-gray-900/50 transition">
+            <td class="py-2 px-3 text-gray-300">${trade.id}</td>
+            <td class="py-2 px-3 ${trade.direction === 'higher' ? 'text-teal-400' : 'text-rose-400'} uppercase font-semibold">${trade.tradeType} (${trade.direction})</td>
+            <td class="py-2 px-3">${trade.entryPrice.toFixed(2)}</td>
+            <td class="py-2 px-3">${currentPrice.toFixed(2)}</td>
+            <td class="py-2 px-3">$${trade.stake.toFixed(2)}</td>
+            <td class="py-2 px-3 ${plClass}">${plText}</td>
+            <td class="py-2 px-3">${statusBadge}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Tick Simulator Loop (1 second per tick)
+    setInterval(() => {
+      const lastPrice = priceHistory[priceHistory.length - 1];
+      const change = (Math.random() - 0.49) * activeMarket.volatility;
+      const newPrice = Number((lastPrice + change).toFixed(2));
+
+      priceHistory.push(newPrice);
+      if (priceHistory.length > 50) priceHistory.shift();
+
+      const priceStr = newPrice.toFixed(2);
+      const lastDigit = parseInt(priceStr.slice(-1), 10);
+      digitHistory.push(lastDigit);
+      if (digitHistory.length > 100) digitHistory.shift();
+
+      // Update Displays
+      const currentPriceDisplay = document.getElementById('currentPriceDisplay');
+      const chartOverlayPrice = document.getElementById('chartOverlayPrice');
+      const chartOverlayChange = document.getElementById('chartOverlayChange');
+      const chartOverlayDirection = document.getElementById('chartOverlayDirection');
+
+      if (currentPriceDisplay) {
+        currentPriceDisplay.textContent = newPrice.toLocaleString(undefined, { minimumFractionDigits: 2 });
+        currentPriceDisplay.className = change >= 0 ? 'font-mono text-teal-400 font-semibold' : 'font-mono text-rose-400 font-semibold';
+      }
+      if (chartOverlayPrice) chartOverlayPrice.textContent = newPrice.toFixed(2);
+      if (chartOverlayChange) {
+        const diff = newPrice - activeMarket.basePrice;
+        const pct = (diff / activeMarket.basePrice) * 100;
+        chartOverlayChange.textContent = `${diff >= 0 ? '+' : ''}${diff.toFixed(2)} (${pct.toFixed(2)}%)`;
+      }
+      if (chartOverlayDirection) {
+        chartOverlayDirection.textContent = change >= 0 ? '▲' : '▼';
+        chartOverlayDirection.className = change >= 0 ? 'text-teal-400 text-[9px]' : 'text-rose-400 text-[9px]';
+      }
+
+      // Process open trades settlement
+      openTrades.forEach(trade => {
+        if (trade.status === 'OPEN') {
+          trade.ticksLeft--;
+          if (trade.ticksLeft <= 0) {
+            let won = false;
+            const exitPrice = newPrice;
+            const exitDigit = lastDigit;
+
+            if (trade.tradeType === 'Over/Under') {
+              won = trade.direction === 'higher' ? exitDigit > trade.predictionDigit : exitDigit < trade.predictionDigit;
+            } else if (trade.tradeType === 'Rise/Fall') {
+              won = trade.direction === 'higher' ? exitPrice > trade.entryPrice : exitPrice < trade.entryPrice;
+            } else if (trade.tradeType === 'Matches/Differs') {
+              won = trade.direction === 'higher' ? exitDigit === trade.predictionDigit : exitDigit !== trade.predictionDigit;
+            } else if (trade.tradeType === 'Even/Odd') {
+              won = trade.direction === 'higher' ? exitDigit % 2 === 0 : exitDigit % 2 !== 0;
+            }
+
+            trade.status = won ? 'WON' : 'LOST';
+            if (won) {
+              const returnAmount = Number((trade.stake * (1 + trade.mult)).toFixed(2));
+              accountBalance += returnAmount;
+              accountBalance = Number(accountBalance.toFixed(2));
+              const display = document.getElementById('accountBalance');
+              if (display) {
+                display.textContent = '$' + accountBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USD';
+              }
+              syncBalanceToParent();
+            }
+          }
+        }
+      });
+
+      // Update Chart Dataset
+      tickChart.data.labels = priceHistory.map((_, i) => i + 1);
+      tickChart.data.datasets[0].data = [...priceHistory];
+      tickChart.data.datasets[0].pointRadius = priceHistory.map((_, i) => i === priceHistory.length - 1 ? 5 : 0);
+      tickChart.data.datasets[0].borderColor = change >= 0 ? '#2dd4bf' : '#f43f5e';
+      tickChart.update('none');
+
+      updateRunningIndexesUI();
+      renderLogTable();
+    }, 1000);
+
+    // Initial Setup
+    renderMarketList();
+    renderDigitPredictionGrid();
+    updateRunningIndexesUI();
+    updatePayoutDisplays();
+    renderLogTable();
+  </script>
+</body>
+</html>
