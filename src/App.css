@@ -4064,9 +4064,17 @@ textarea:focus {
 @media (max-width: 768px) {
   .chart-workspace-container {
     grid-template-columns: 1fr !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .drawing-toolbar {
+    display: none !important;
   }
   .tradingview-main-card {
     min-height: auto !important;
+    width: 100% !important;
+    border-radius: 0 !important;
   }
   .tv-top-control-header {
     padding: 8px 12px;
