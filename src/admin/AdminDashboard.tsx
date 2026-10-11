@@ -516,6 +516,22 @@ export default function AdminDashboard() {
     fetchUsers()
   }
 
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault()
+    const match = admins.find(a => a.email.toLowerCase() === email.trim().toLowerCase())
+    if (!match || password !== SUPER_ADMIN_PASSWORD) {
+      setLoginError('Invalid credentials.')
+      return
+    }
+    if (match.status === 'inactive') { setLoginError('This admin account is inactive.'); return }
+    setCurrentAdmin(match)
+    // Skip MFA — go straight to dashboard
+    setPhase('dashboard')
+    setAdmins(curr => curr.map(a => a.id === match.id ? { ...a, lastLogin: new Date().toISOString() } : a))
+    addAudit('ADMIN_LOGIN', match.id, 'Admin', `Successful login for ${match.name}`, 'info')
+    fetchUsers()
+  }
+
   const handleLogout = () => {
     addAudit('ADMIN_LOGOUT', currentAdmin!.id, 'Admin', `${currentAdmin!.name} logged out`, 'info')
     setPhase('login')
