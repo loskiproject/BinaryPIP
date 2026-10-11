@@ -295,11 +295,14 @@ html, body, #root {
 }
 
 .topbar {
-  height: 64px;
-  padding: 0 24px;
+  min-height: 64px;
+  height: auto;
+  padding: 10px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
   background: linear-gradient(180deg, rgba(18, 20, 24, 1), rgba(13, 16, 20, 1));
   border-bottom: 1px solid rgba(255,255,255,0.06);
   position: sticky;
@@ -351,7 +354,26 @@ html, body, #root {
 .topbar-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .topbar {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .breadcrumb {
+    font-size: 11.5px;
+    gap: 6px;
+  }
+  .unified-account-dropdown {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+  .topbar-actions {
+    gap: 6px;
+  }
 }
 
 .unified-account-dropdown {
@@ -3929,4 +3951,68 @@ textarea:focus {
 @media (max-width: 520px) {
   .kyc-prompt-card { padding: 24px 18px 20px; }
   .kyc-prompt-title { font-size: 17px; }
+}
+
+/* Responsive adjustments for client dashboard overview, demo mode, and terminal workspace across all screen sizes */
+@media (max-width: 1200px) {
+  .chart-workspace-container {
+    grid-template-columns: 48px minmax(0, 1fr) 260px !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .chart-workspace-container {
+    grid-template-columns: 1fr !important;
+  }
+  .drawing-toolbar {
+    width: 100% !important;
+    max-height: 48px !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--glass-border) !important;
+  }
+  .dom-orderbook-dock {
+    width: 100% !important;
+    border-left: none !important;
+    border-top: 1px solid var(--glass-border) !important;
+  }
+  .tradingview-main-card {
+    min-height: auto !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .chart-workspace-container {
+    grid-template-columns: 1fr !important;
+  }
+  .tradingview-main-card {
+    min-height: auto !important;
+  }
+  .tv-top-control-header {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  .tv-control-group {
+    gap: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .pro-terminal-grid {
+    gap: 10px;
+    padding: 0 4px;
+  }
+  .tv-ohlc-info-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 6px 10px;
+    font-size: 10.5px;
+  }
+  .tv-symbol-pill {
+    padding: 4px 10px;
+    font-size: 12px;
+  }
 }

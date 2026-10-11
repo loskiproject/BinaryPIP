@@ -28,13 +28,15 @@
 /* ── Shell + animated mesh background ─────────────────────────────────── */
 .nx-shell {
   min-height: 100vh;
+  height: 100%;
   background: var(--nx-bg);
   font-family: var(--nx-font);
   color: var(--nx-text);
   display: flex;
   flex-direction: column;
   position: relative;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Animated gradient mesh orbs */
@@ -91,15 +93,19 @@
 
 /* ── Live price ticker ─────────────────────────────────────────────────── */
 .nx-ticker-rail {
-  position: relative;
-  z-index: 10;
-  background: rgba(0,229,255,0.05);
-  border-bottom: 1px solid rgba(0,229,255,0.15);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: rgba(13, 18, 32, 0.95);
+  border-bottom: 1px solid rgba(0,229,255,0.18);
   height: 38px;
   overflow: hidden;
   display: flex;
   align-items: center;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .nx-ticker-track {
@@ -137,6 +143,7 @@
   flex: 1;
   display: grid;
   grid-template-columns: 1fr 500px;
+  margin-top: 38px;
   min-height: calc(100vh - 38px);
 }
 
@@ -912,15 +919,21 @@
 
 /* ── Responsive ───────────────────────────────────────────────────────── */
 @media (max-width: 960px) {
-  .nx-body { grid-template-columns: 1fr; }
+  .nx-body { grid-template-columns: 1fr; margin-top: 38px; min-height: auto; }
   .nx-left { display: none; }
-  .nx-right { padding: 20px 16px; min-height: calc(100vh - 38px); }
-  .nx-card { max-width: 100%; border-radius: 18px; }
+  .nx-right { padding: 24px 16px; width: 100%; min-height: calc(100vh - 38px); }
+  .nx-card { max-width: 100%; width: 100%; border-radius: 18px; }
 }
 
 @media (max-width: 480px) {
-  .nx-form-wrap { padding: 18px 18px 14px; }
-  .nx-headline   { font-size: 36px; }
+  .nx-form-wrap { padding: 16px 14px 12px; }
+  .nx-headline   { font-size: 30px; }
   .nx-step-label { display: none; }
-  .nx-brand-name { font-size: 18px; }
+  .nx-brand-name { font-size: 16px; }
+  .nx-right { padding: 16px 12px; }
+}
+
+@media (max-height: 700px) {
+  .nx-right { padding: 16px; align-items: flex-start; }
+  .nx-card { margin-top: 10px; margin-bottom: 20px; }
 }
