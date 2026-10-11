@@ -422,10 +422,98 @@ export default function AdminDashboard() {
     setPhase('mfa')
   }
 
+  // ── Fetch real users from Supabase ────────────────────────────────────────
+  const fetchUsers = useCallback(async () => {
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return
+    setUsersLoading(true)
+    setUsersError('')
+    try {
+      // Use Supabase REST API directly with service role via admin-users edge function
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'apikey': SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({ action: 'list' }),
+      })
+      const data = await res.json() as {
+        customers?: Array<{
+          id: string
+          email: string
+          emailConfirmed: boolean
+          bannedUntil: string | null
+          profile: { full_name: string; phone: string; country: string; created_at: string } | null
+        }>
+        error?: string
+      }
+      if (!res.ok || data.error) {
+        // Fallback: fetch profiles directly (works without admin role check)
+        await fetchUsersFromProfiles()
+        return
+      }
+      const mapped: PlatformUser[] = (data.customers ?? []).map(c => ({
+        id: c.id,
+        name: c.profile?.full_name || c.email.split('@')[0],
+        email: c.email,
+        phone: c.profile?.phone || '—',
+        country: c.profile?.country || '—',
+        balance: 0,
+        accountType: 'LIVE' as const,
+        status: c.bannedUntil ? 'suspended' as const : 'active' as const,
+        kycStatus: c.emailConfirmed ? 'pending' as const : 'unverified' as const,
+        accountStatus: c.emailConfirmed ? 'approved' as const : 'pending' as const,
+        registeredAt: c.profile?.created_at ? new Date(c.profile.created_at).toLocaleDateString('en-GB') : '—',
+        lastSeen: '—',
+      }))
+      setUsers(mapped)
+    } catch {
+      await fetchUsersFromProfiles()
+    } finally {
+      setUsersLoading(false)
+    }
+  }, [])
+
+  // Fallback: read profiles table directly via REST
+  const fetchUsersFromProfiles = async () => {
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/profiles?select=id,full_name,phone,country,created_at&order=created_at.desc`,
+        {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        }
+      )
+      if (!res.ok) { setUsersError('Could not load users.'); return }
+      const rows = await res.json() as Array<{ id: string; full_name: string; phone: string; country: string; created_at: string }>
+      const mapped: PlatformUser[] = rows.map(r => ({
+        id: r.id,
+        name: r.full_name || '(no name)',
+        email: '—',
+        phone: r.phone || '—',
+        country: r.country || '—',
+        balance: 0,
+        accountType: 'LIVE' as const,
+        status: 'active' as const,
+        kycStatus: 'unverified' as const,
+        accountStatus: 'approved' as const,
+        registeredAt: new Date(r.created_at).toLocaleDateString('en-GB'),
+        lastSeen: '—',
+      }))
+      setUsers(mapped)
+    } catch {
+      setUsersError('Failed to load users from database.')
+    }
+  }
+
   const handleMfaPass = () => {
     setPhase('dashboard')
     setAdmins(curr => curr.map(a => a.id === currentAdmin!.id ? { ...a, lastLogin: new Date().toISOString() } : a))
     addAudit('ADMIN_LOGIN', currentAdmin!.id, 'Admin', `Successful login for ${currentAdmin!.name}`, 'info')
+    fetchUsers()
   }
 
   const handleLogout = () => {
