@@ -505,12 +505,43 @@ function TradingViewCandlestickCanvas({
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
   }
 
+  // Touch Pinch-to-Zoom Handler
+  const touchStartDistRef = useRef<number | null>(null)
+  const initialZoomRef = useRef(1.0)
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      )
+      touchStartDistRef.current = dist
+      initialZoomRef.current = zoomScale
+    }
+  }
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 2 && touchStartDistRef.current !== null) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      )
+      const factor = dist / touchStartDistRef.current
+      const nextZoom = Math.max(0.6, Math.min(3.5, initialZoomRef.current * factor))
+      setZoomScale(nextZoom)
+    }
+  }
+
+  const handleTouchEnd = () => {
+    touchStartDistRef.current = null
+  }
+
   // Price Axis Ticks Calculation
   const step = range / 6
   const priceTicks = Array.from({ length: 7 }, (_, i) => max - i * step)
 
   return (
-    <div className="candlestick-chart-box">
+    <div className="candlestick-chart-box" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
       {/* Floating Interactive Canvas Zoom & Pan Control Bar */}
       <div className="tv-floating-zoom-controls">
         <button type="button" className="zoom-btn" title="Zoom In (+)" onClick={handleZoomIn}><ZoomIn size={14} /></button>
