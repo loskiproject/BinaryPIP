@@ -1072,6 +1072,7 @@ export default function App() {
   const changeView = (nextView: View) => {
     setPreviousView(activeView)
     setActiveView(nextView)
+    setMobileMenuOpen(false)
   }
 
   const goBack = () => {
@@ -3358,6 +3359,9 @@ export default function App() {
           <TradingViewCandlestickCanvas symbol={selectedAsset} chartStyle={chartStyle} timeframe={timeframe} indicators={activeIndicators} onExecuteTrade={(isBuy, price) => handleExecuteTrade(isBuy, selectedAsset, price)} />
         </div>
       )}
+
+      {/* MOBILE MENU BACKDROP */}
+      {mobileMenuOpen && <div className="mobile-menu-backdrop" onClick={() => setMobileMenuOpen(false)} />}
 
       {/* COMPACT/EXPANDABLE SIDEBAR */}
       <aside className={`sidebar ${mobileMenuOpen ? 'sidebar-open' : ''}`}>
