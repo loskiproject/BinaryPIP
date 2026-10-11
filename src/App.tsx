@@ -912,6 +912,8 @@ export default function App() {
   const [timeframe, setTimeframe] = useState<Timeframe>('1m')
   const [selectedChartRange, setSelectedChartRange] = useState<ChartRange>('1D')
   const [chartStyle, setChartStyle] = useState<ChartStyle>('Candlesticks')
+  const [chartToolsMenuOpen, setChartToolsMenuOpen] = useState(false)
+  const [marketHubMenuOpen, setMarketHubMenuOpen] = useState(false)
   const [lotSize, setLotSize] = useState('0.01')
   const [lotMode, setLotMode] = useState<'Micro' | 'To' | 'Pip' | 'Standard' | 'Custom'>('Micro')
 
@@ -1652,6 +1654,163 @@ export default function App() {
           </div>
           {activeIndicators.vwma && <span style={{ color: 'var(--accent-blue)' }}>VWMA 20 close 0: 4,143.883</span>}
         </div>
+
+        {/* MOBILE FLOATING TOOLBAR TRIGGER BAR (DRAWING TOOLS + MARKET HUB) */}
+        <div className="mobile-workspace-tools-bar">
+          <button
+            type="button"
+            className="mobile-workspace-tool-trigger"
+            onClick={() => {
+              setChartToolsMenuOpen(!chartToolsMenuOpen)
+              setMarketHubMenuOpen(false)
+            }}
+          >
+            <Pencil size={15} color="var(--mint-teal)" />
+            <span>Drawing Tools</span>
+            <ChevronDown size={12} style={{ transform: chartToolsMenuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+          </button>
+
+          <button
+            type="button"
+            className="mobile-workspace-tool-trigger"
+            onClick={() => {
+              setMarketHubMenuOpen(!marketHubMenuOpen)
+              setChartToolsMenuOpen(false)
+            }}
+          >
+            <List size={15} color="var(--neon-cyan)" />
+            <span>Market Hub &amp; Alerts</span>
+            <ChevronDown size={12} style={{ transform: marketHubMenuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+          </button>
+        </div>
+
+        {/* MOBILE CHART DRAWING TOOLS SHEET */}
+        {chartToolsMenuOpen && (
+          <div className="mobile-tools-bottom-sheet">
+            <div className="mobile-tools-sheet-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Pencil size={16} color="var(--mint-teal)" />
+                <strong>Chart Drawing &amp; Analysis Tools</strong>
+              </div>
+              <button type="button" onClick={() => setChartToolsMenuOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="mobile-tools-sheet-grid">
+              <button type="button" className={`mobile-tool-btn ${selectedChartTool === 'crosshair' ? 'active' : ''}`} onClick={() => { handleChartToolClick('crosshair'); setChartToolsMenuOpen(false); }}>
+                <Crosshair size={18} />
+                <span>Crosshair</span>
+              </button>
+              <button type="button" className={`mobile-tool-btn ${selectedChartTool === 'trendline' ? 'active' : ''}`} onClick={() => { handleChartToolClick('trendline'); setChartToolsMenuOpen(false); }}>
+                <Pencil size={18} />
+                <span>Trendline</span>
+              </button>
+              <button type="button" className={`mobile-tool-btn ${selectedChartTool === 'fibonacci' ? 'active' : ''}`} onClick={() => { handleChartToolClick('fibonacci'); setChartToolsMenuOpen(false); }}>
+                <Sliders size={18} />
+                <span>Fibonacci</span>
+              </button>
+              <button type="button" className={`mobile-tool-btn ${selectedChartTool === 'shapes' ? 'active' : ''}`} onClick={() => { handleChartToolClick('shapes'); setChartToolsMenuOpen(false); }}>
+                <Layers size={18} />
+                <span>Shapes</span>
+              </button>
+              <button type="button" className={`mobile-tool-btn ${selectedChartTool === 'brush' ? 'active' : ''}`} onClick={() => { handleChartToolClick('brush'); setChartToolsMenuOpen(false); }}>
+                <Brush size={18} />
+                <span>Brush</span>
+              </button>
+              <button type="button" className={`mobile-tool-btn ${selectedChartTool === 'text' ? 'active' : ''}`} onClick={() => { handleChartToolClick('text'); setChartToolsMenuOpen(false); }}>
+                <Type size={18} />
+                <span>Text Note</span>
+              </button>
+              <button type="button" className={`mobile-tool-btn ${selectedChartTool === 'ruler' ? 'active' : ''}`} onClick={() => { handleChartToolClick('ruler'); setChartToolsMenuOpen(false); }}>
+                <Ruler size={18} />
+                <span>Measure</span>
+              </button>
+              <button type="button" className={`mobile-tool-btn ${selectedChartTool === 'horizontal' ? 'active' : ''}`} onClick={() => { handleChartToolClick('horizontal'); setChartToolsMenuOpen(false); }}>
+                <Minus size={18} />
+                <span>Horizontal</span>
+              </button>
+              <button type="button" className={`mobile-tool-btn ${selectedChartTool === 'vertical' ? 'active' : ''}`} onClick={() => { handleChartToolClick('vertical'); setChartToolsMenuOpen(false); }}>
+                <MoveVertical size={18} />
+                <span>Vertical</span>
+              </button>
+              <button type="button" className={`mobile-tool-btn ${selectedChartTool === 'arrow' ? 'active' : ''}`} onClick={() => { handleChartToolClick('arrow'); setChartToolsMenuOpen(false); }}>
+                <ArrowUpRight size={18} />
+                <span>Arrow</span>
+              </button>
+              <button type="button" className={`mobile-tool-btn ${selectedChartTool === 'ellipse' ? 'active' : ''}`} onClick={() => { handleChartToolClick('ellipse'); setChartToolsMenuOpen(false); }}>
+                <Circle size={18} />
+                <span>Ellipse</span>
+              </button>
+              <button type="button" className={`mobile-tool-btn ${selectedChartTool === 'pan' ? 'active' : ''}`} onClick={() => { handleChartToolClick('pan'); setChartToolsMenuOpen(false); }}>
+                <Move size={18} />
+                <span>Pan Chart</span>
+              </button>
+              <button type="button" className={`mobile-tool-btn ${selectedChartTool === 'zoom' ? 'active' : ''}`} onClick={() => { handleChartToolClick('zoom'); setChartToolsMenuOpen(false); }}>
+                <ZoomIn size={18} />
+                <span>Zoom</span>
+              </button>
+              <button type="button" className={`mobile-tool-btn ${magnetEnabled ? 'active' : ''}`} onClick={() => { handleChartToolClick('magnet'); setChartToolsMenuOpen(false); }}>
+                <Magnet size={18} />
+                <span>Magnet</span>
+              </button>
+              <button type="button" className={`mobile-tool-btn ${drawingsLocked ? 'active' : ''}`} onClick={() => { handleChartToolClick('lock'); setChartToolsMenuOpen(false); }}>
+                <Settings size={18} />
+                <span>Lock All</span>
+              </button>
+              <button type="button" className="mobile-tool-btn delete" onClick={() => { handleChartToolClick('delete'); setChartToolsMenuOpen(false); }}>
+                <Trash size={18} />
+                <span>Clear All</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* MOBILE MARKET HUB & ALERTS SHEET */}
+        {marketHubMenuOpen && (
+          <div className="mobile-tools-bottom-sheet">
+            <div className="mobile-tools-sheet-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <List size={16} color="var(--neon-cyan)" />
+                <strong>Market Hub, Alerts &amp; Calendar</strong>
+              </div>
+              <button type="button" onClick={() => setMarketHubMenuOpen(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="mobile-tools-sheet-grid">
+              <button type="button" className="mobile-tool-btn" onClick={() => { changeView('assets'); setMarketHubMenuOpen(false); }}>
+                <List size={18} />
+                <span>Watchlist</span>
+              </button>
+              <button type="button" className="mobile-tool-btn" onClick={() => { showNotice('Alerts Manager Active'); setMarketHubMenuOpen(false); }}>
+                <Clock size={18} />
+                <span>Price Alerts</span>
+              </button>
+              <button type="button" className="mobile-tool-btn" onClick={() => { showNotice('Live Market News Loaded'); setMarketHubMenuOpen(false); }}>
+                <Newspaper size={18} />
+                <span>Market News</span>
+              </button>
+              <button type="button" className="mobile-tool-btn" onClick={() => { showNotice('Top Market Movers Active'); setMarketHubMenuOpen(false); }}>
+                <Flame size={18} />
+                <span>Hot Movers</span>
+              </button>
+              <button type="button" className="mobile-tool-btn" onClick={() => { showNotice('Economic Calendar Loaded'); setMarketHubMenuOpen(false); }}>
+                <Calendar size={18} />
+                <span>Economic Calendar</span>
+              </button>
+              <button type="button" className="mobile-tool-btn" onClick={() => { showNotice('Pro Trading Ideas Stream'); setMarketHubMenuOpen(false); }}>
+                <Lightbulb size={18} />
+                <span>Trading Ideas</span>
+              </button>
+              <button type="button" className="mobile-tool-btn" onClick={() => { showNotice('Notifications Active'); setMarketHubMenuOpen(false); }}>
+                <Bell size={18} />
+                <span>Notifications</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* WORKSPACE AREA: TRADINGVIEW PRO DRAWING TOOLBAR + CANDLESTICK CANVAS + DOM + RIGHT TOOLBAR */}
         <div className={`chart-workspace-container ${isChartExpanded ? 'expanded-canvas' : ''}`}>
