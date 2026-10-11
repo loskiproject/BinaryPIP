@@ -58,6 +58,80 @@
     ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: rgba(11, 14, 20, 0.8); }
     ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 3px; }
+
+    @media (max-width: 768px) {
+      body {
+        height: auto !important;
+        min-height: 100vh !important;
+        overflow-y: auto !important;
+      }
+
+      header {
+        height: auto !important;
+        padding: 8px 12px !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+      }
+
+      header > div:first-child,
+      header > div:last-child {
+        width: 100% !important;
+        justify-content: space-between !important;
+      }
+
+      body > div.flex-1.flex.overflow-hidden {
+        flex-direction: column !important;
+        overflow: visible !important;
+        height: auto !important;
+        flex: none !important;
+      }
+
+      body > div.flex-1.flex.overflow-hidden > aside:first-child {
+        width: 100% !important;
+        height: auto !important;
+        flex-direction: row !important;
+        justify-content: center !important;
+        gap: 12px !important;
+        padding: 8px 12px !important;
+        border-right: none !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+      }
+
+      body > div.flex-1.flex.overflow-hidden > main {
+        width: 100% !important;
+        height: 380px !important;
+        min-height: 320px !important;
+        flex: none !important;
+      }
+
+      body > div.flex-1.flex.overflow-hidden > aside:last-child {
+        width: 100% !important;
+        height: auto !important;
+        border-left: none !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+        padding: 16px 12px !important;
+      }
+
+      #runningIndexesContainer {
+        overflow-x: auto !important;
+        width: 100% !important;
+        justify-content: space-between !important;
+        padding-bottom: 4px !important;
+        -webkit-overflow-scrolling: touch !important;
+      }
+
+      .digit-circle {
+        min-width: 32px !important;
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 11px !important;
+      }
+
+      footer {
+        height: auto !important;
+        min-height: 100px !important;
+      }
+    }
   </style>
 </head>
 <body class="bg-[#0b0e14] text-gray-100 flex flex-col h-screen overflow-hidden font-sans select-none">
