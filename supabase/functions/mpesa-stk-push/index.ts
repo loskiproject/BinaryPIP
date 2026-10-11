@@ -3,12 +3,11 @@
  * https://docs.payhero.co.ke
  *
  * Required Supabase secrets (Dashboard → Edge Functions → Secrets):
- *   PAYHERO_API_USERNAME   — API username from PayHero dashboard → API Keys
- *   PAYHERO_API_PASSWORD   — API password from PayHero dashboard → API Keys
- *   PAYHERO_CHANNEL_ID     — Numeric channel ID from PayHero → Payment Channels
- *   PAYHERO_CALLBACK_URL   — Public URL PayHero will POST results to
- *                            e.g. https://your-project.supabase.co/functions/v1/mpesa-callback
- *   APP_ORIGIN             — Your Vercel frontend URL e.g. https://cryptcoin.vercel.app
+ *   PAYHERO_BASIC_AUTH_TOKEN  — Full Basic token from PayHero dashboard (e.g. "Basic WjQ3...")
+ *   PAYHERO_CHANNEL_ID        — Numeric channel ID from PayHero → Payment Channels
+ *   PAYHERO_CALLBACK_URL      — Public URL PayHero will POST results to
+ *                               e.g. https://gnuxadlnzyyvkobdnkaq.supabase.co/functions/v1/mpesa-callback
+ *   APP_ORIGIN                — Your Vercel frontend URL e.g. https://cryptcoin.vercel.app
  */
 
 const PAYHERO_BASE = 'https://backend.payhero.co.ke/api/v2'
@@ -62,14 +61,13 @@ Deno.serve(async (req) => {
   }
 
   // Read credentials from Supabase secrets
-  const apiUsername   = Deno.env.get('PAYHERO_API_USERNAME')
-  const apiPassword   = Deno.env.get('PAYHERO_API_PASSWORD')
-  const channelId     = Deno.env.get('PAYHERO_CHANNEL_ID')
-  const callbackUrl   = Deno.env.get('PAYHERO_CALLBACK_URL')
+  const basicToken  = Deno.env.get('PAYHERO_BASIC_AUTH_TOKEN')
+  const channelId   = Deno.env.get('PAYHERO_CHANNEL_ID')
+  const callbackUrl = Deno.env.get('PAYHERO_CALLBACK_URL')
 
-  if (!apiUsername || !apiPassword) {
+  if (!basicToken) {
     return respond(
-      { error: 'PayHero API credentials not configured. Add PAYHERO_API_USERNAME and PAYHERO_API_PASSWORD to Supabase secrets.' },
+      { error: 'PAYHERO_BASIC_AUTH_TOKEN not configured. Add it to Supabase secrets.' },
       503,
       allowed
     )
@@ -118,15 +116,13 @@ Deno.serve(async (req) => {
     )
   }
 
-  // Build Basic auth header
-  const basicToken = btoa(`${apiUsername}:${apiPassword}`)
   const externalReference = generateRef()
 
   try {
     const res = await fetch(`${PAYHERO_BASE}/payments`, {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${basicToken}`,
+        'Authorization': basicToken,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
