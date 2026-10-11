@@ -8,7 +8,7 @@
       "matcher": "\\.(tsx|ts|css|html|json)$",
       "action": {
         "type": "command",
-        "command": "cd \"c:\\Users\\mutua\\cryptcoin\" && \"C:\\Program Files\\Git\\bin\\git.exe\" add -A && \"C:\\Program Files\\Git\\bin\\git.exe\" diff --cached --quiet || \"C:\\Program Files\\Git\\bin\\git.exe\" commit -m \"auto: update $(Get-Date -Format HH:mm:ss)\" && \"C:\\Program Files\\Git\\bin\\git.exe\" push origin master",
+        "command": "powershell -Command \"Set-Location 'c:\\Users\\mutua\\cryptcoin'; $git = 'C:\\Program Files\\Git\\bin\\git.exe'; & $git add -A; $diff = & $git diff --cached --quiet; if ($LASTEXITCODE -ne 0) { $ts = Get-Date -Format 'HH:mm:ss'; & $git commit -m \"auto: update $ts\"; & $git push origin master }\"",
         "timeout": 60
       }
     }
