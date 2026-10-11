@@ -225,18 +225,20 @@ function createInitialCandles(
   anchorPrice: number,
   candleCount: number,
 ) {
-  const candleVolatility = priceUnit * getTimeframeVolatility(timeframe) * (6 + Math.log2(candleCount / 24 + 1) * 2)
+  const candleVolatility = priceUnit * getTimeframeVolatility(timeframe) * (8 + Math.log2(candleCount / 24 + 1) * 3)
   let previousClose = anchorPrice
   const history = Array.from({ length: candleCount }, (_, index) => {
-    const marketTrend = Math.sin(index * 0.88 + symbolSeed * 0.27 + timeframeSeed * 0.19 + rangeSeed * 0.11)
+    const marketTrend = Math.sin(index * 0.75 + symbolSeed * 0.33 + timeframeSeed * 0.21 + rangeSeed * 0.15)
     const open = previousClose
-    const close = open + marketTrend * candleVolatility * 0.6 + (Math.random() - 0.5) * candleVolatility * 2
-    const wick = candleVolatility * (0.15 + Math.random() * 0.5)
+    const bodyMultiplier = 0.3 + Math.abs(Math.sin(index * 1.5 + symbolSeed)) * 2.2
+    const close = open + marketTrend * candleVolatility * 0.5 + (Math.random() - 0.49) * candleVolatility * bodyMultiplier
+    const upperWick = candleVolatility * (0.1 + Math.random() * 1.8)
+    const lowerWick = candleVolatility * (0.1 + Math.random() * 1.8)
     previousClose = close
     return {
       open,
-      high: Math.max(open, close) + wick,
-      low: Math.min(open, close) - wick,
+      high: Math.max(open, close) + upperWick,
+      low: Math.min(open, close) - lowerWick,
       close,
     }
   })
