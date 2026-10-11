@@ -1083,9 +1083,10 @@ export default function AdminDashboard() {
                     <RefreshCw size={13} style={{ animation: usersLoading ? 'sa-spin 1s linear infinite' : 'none' }} />
                     {usersLoading ? 'Loading…' : 'Refresh'}
                   </button>
-                <div className="sa-search-box">
-                  <Search size={14} />
-                  <input placeholder="Search by name, email or ID…" value={userSearch} onChange={e => setUserSearch(e.target.value)} />
+                  <div className="sa-search-box">
+                    <Search size={14} />
+                    <input placeholder="Search by name, email or ID…" value={userSearch} onChange={e => setUserSearch(e.target.value)} />
+                  </div>
                 </div>
               </div>
 
