@@ -12,6 +12,10 @@ import './AdminDashboard.css'
 import '../features/features.css'
 import AdminChatDesk from '../features/AdminChatDesk'
 
+// ─── Supabase config (read from env) ─────────────────────────────────────────
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type AdminSection =
