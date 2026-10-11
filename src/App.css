@@ -4016,3 +4016,37 @@ textarea:focus {
     font-size: 12px;
   }
 }
+
+/* Responsive adjustments for Profile and Verification Hub across all screen sizes in both Demo and Customer modes */
+@media (max-width: 900px) {
+  .dedicated-profile-card {
+    padding: 20px 16px !important;
+    border-radius: 14px !important;
+  }
+  .verification-page {
+    padding: 0 8px !important;
+  }
+  .verification-layout {
+    grid-template-columns: 1fr !important;
+  }
+  .profile-user-card {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .dedicated-profile-card {
+    padding: 16px 12px !important;
+  }
+  .verification-panel {
+    padding: 16px 12px !important;
+  }
+  .verification-page-heading {
+    padding: 14px 16px !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+}
