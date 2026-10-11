@@ -1930,17 +1930,6 @@ export default function App() {
               </div>
             )}
           </div>
-
-          {/* RIGHT VERTICAL TOOLBAR */}
-          <aside className="tv-right-vertical-toolbar">
-            <button type="button" className="draw-tool-btn" title="Watchlist" onClick={() => changeView('assets')}><List size={16} /></button>
-            <button type="button" className="draw-tool-btn" title="Alerts" onClick={() => showNotice('Alerts window opened')}><Clock size={16} /></button>
-            <button type="button" className="draw-tool-btn" title="News" onClick={() => showNotice('Market News feed active')}><Newspaper size={16} /></button>
-            <button type="button" className="draw-tool-btn" title="Hotlist" onClick={() => showNotice('Market Hotlists loaded')}><Flame size={16} /></button>
-            <button type="button" className="draw-tool-btn" title="Calendar" onClick={() => showNotice('Economic Calendar active')}><Calendar size={16} /></button>
-            <button type="button" className="draw-tool-btn" title="Ideas" onClick={() => showNotice('Community Trading Ideas')}><Lightbulb size={16} /></button>
-            <button type="button" className="draw-tool-btn" title="Notifications" onClick={() => showNotice('Notifications Bell')}><Bell size={16} /></button>
-          </aside>
         </div>
 
         {/* BOTTOM DATE RANGE & TIMEZONE BAR */}
