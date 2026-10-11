@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight,
-  Copy, CheckCircle2, AlertCircle, Smartphone, Bitcoin,
-  DollarSign, RefreshCw, Zap,
+  Copy, CheckCircle2, AlertCircle, Smartphone,
+  DollarSign, RefreshCw, ChevronDown, EyeOff, Eye,
+  Zap,
 } from 'lucide-react'
 
 export type WalletBalances = {
@@ -31,62 +32,69 @@ type Props = {
   minWithdrawalUSD?: number
 }
 
-const WALLET_COLORS: Record<keyof WalletBalances, string> = {
-  main:       '#00e5ff',
-  synthetic:  '#00e676',
-  liveMarket: '#f2b94b',
+const WALLET_META: Record<keyof WalletBalances, { label: string; sub: string; color: string }> = {
+  main:       { label: 'Main',        sub: 'Primary',   color: '#00e5ff' },
+  synthetic:  { label: 'Synthetic',   sub: 'Synthetic', color: '#00e676' },
+  liveMarket: { label: 'Live Market', sub: 'Live trade', color: '#f2b94b' },
 }
 
-const WALLET_LABELS: Record<keyof WalletBalances, string> = {
-  main:       'Main Balance',
-  synthetic:  'Synthetic Wallet',
-  liveMarket: 'Live Market Wallet',
+// Crypto coin icons (inline SVG colours)
+const COIN_ICONS: Record<string, { color: string; symbol: string }> = {
+  BTC:         { color: '#f7931a', symbol: '₿' },
+  ETH:         { color: '#627eea', symbol: 'Ξ' },
+  SOL:         { color: '#9945ff', symbol: '◎' },
+  DOGE:        { color: '#c2a633', symbol: 'Ð' },
+  DOT:         { color: '#e6007a', symbol: '●' },
+  'USDT-TRC20':{ color: '#26a17b', symbol: '₮' },
+  'USDT-ERC20':{ color: '#26a17b', symbol: '₮' },
+  BNB:         { color: '#f0b90b', symbol: 'B' },
+  LTC:         { color: '#bfbbbb', symbol: 'Ł' },
 }
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-// Simulated activity log
 const ACTIVITY = [
   'GLOBAL SYNC: Volatility 25 (1s) index → Probability Check [Analyzing…]',
   'Security Audit: Passkey fully enrolled. ✅',
   '**On-boarding Update**: Questionnaire response registered. id_card_front queued for review. ⏳',
 ]
 
-export default function FundsHub({ wallets, onTransfer, onDepositRequest, adminAddresses, showNotice, minDepositUSD = 50, minDepositKES = 100, minWithdrawalUSD = 10 }: Props) {
-  // Quick amount pills — built from admin-set minimum + standard amounts
-  const quickAmounts = [minDepositUSD, 100, 250, 500, 1000, 5000]
-    .filter((v, i, a) => a.indexOf(v) === i)
-    .sort((a, b) => a - b)
-  const [tab, setTab]                 = useState<'deposit' | 'withdraw' | 'transfer'>('deposit')
-  const [depositMode, setDepositMode] = useState<'crypto' | 'mpesa'>('crypto')
-  const [network, setNetwork]         = useState(adminAddresses.find(a => a.enabled)?.network ?? 'USDT-TRC20')
-  const [amount, setAmount]           = useState('')
-  const [copied, setCopied]           = useState(false)
+type StkStep = 'form' | 'pushing' | 'waiting' | 'verify' | 'done' | 'error'
 
-  // withdraw
-  const [wAmt, setWAmt]       = useState('')
-  const [wAddr, setWAddr]     = useState('')
+export default function FundsHub({
+  wallets, onTransfer, onDepositRequest, adminAddresses, showNotice,
+  minDepositUSD = 50, minDepositKES = 100, minWithdrawalUSD = 10,
+}: Props) {
+  const [tab, setTab] = useState<'deposit' | 'withdraw' | 'transfer'>('deposit')
+  const [selectedWallet, setSelectedWallet] = useState<keyof WalletBalances>('main')
+  const [depositMethod, setDepositMethod] = useState<'mpesa' | string>('mpesa')
+  const [methodOpen, setMethodOpen] = useState(false)
+  const [amount, setAmount] = useState('')
+  const [copied, setCopied] = useState(false)
+  const [hideBalance, setHideBalance] = useState(false)
+
+  // Withdraw
+  const [wAmt, setWAmt] = useState('')
+  const [wAddr, setWAddr] = useState('')
   const [wGateway, setWGateway] = useState('USDT-TRC20')
 
-  // transfer
+  // Transfer
   const [tFrom, setTFrom] = useState<keyof WalletBalances>('main')
-  const [tTo, setTTo]     = useState<keyof WalletBalances>('synthetic')
-  const [tAmt, setTAmt]   = useState('')
+  const [tTo, setTTo] = useState<keyof WalletBalances>('synthetic')
+  const [tAmt, setTAmt] = useState('')
 
-  // mpesa
-  const [mpPhone, setMpPhone]   = useState('')
-  const [mpKes, setMpKes]       = useState('')
-  const [mpCode, setMpCode]     = useState('')
-  // STK Push flow state
-  type StkStep = 'form' | 'pushing' | 'waiting' | 'verify' | 'done' | 'error'
-  const [stkStep, setStkStep]           = useState<StkStep>('form')
-  const [stkError, setStkError]         = useState('')
+  // M-Pesa
+  const [mpPhone, setMpPhone] = useState('')
+  const [mpKes, setMpKes] = useState('')
+  const [mpCode, setMpCode] = useState('')
+  const [stkStep, setStkStep] = useState<StkStep>('form')
+  const [stkError, setStkError] = useState('')
   const [_stkCheckoutId, setStkCheckoutId] = useState('')
   const [stkVerifying, setStkVerifying] = useState(false)
 
-  // activity log ticker
+  // Activity log
   const [logLines, setLogLines] = useState<string[]>([])
   const logRef = useRef(0)
   useEffect(() => {
@@ -99,87 +107,67 @@ export default function FundsHub({ wallets, onTransfer, onDepositRequest, adminA
   }, [])
 
   const total = wallets.main + wallets.synthetic + wallets.liveMarket
-  const activeAddr = adminAddresses.find(a => a.network === network && a.enabled)
-    ?? { network, assetName: network, address: '—', note: 'No address configured for this network.' }
+
+  const cryptoNetworks = adminAddresses.filter(a => a.enabled)
+  const allMethods = [
+    { id: 'mpesa', label: 'M-PESA DEPOSIT', icon: '📱' },
+    { id: 'CRYPTO', label: 'CRYPTO', icon: '₿', isSeparator: true },
+    ...cryptoNetworks.map(a => ({
+      id: a.network,
+      label: a.network,
+      icon: COIN_ICONS[a.network]?.symbol ?? '◈',
+      color: COIN_ICONS[a.network]?.color,
+    })),
+  ]
+
+  const selectedMethodMeta = allMethods.find(m => m.id === depositMethod) ?? allMethods[0]
+  const activeAddr = adminAddresses.find(a => a.network === depositMethod && a.enabled)
 
   const copyAddr = () => {
+    if (!activeAddr) return
     navigator.clipboard.writeText(activeAddr.address).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      setCopied(true); setTimeout(() => setCopied(false), 2000)
     })
   }
 
-  const confirmDeposit = () => {
-    const amt = parseFloat(amount)
-    if (!amt || amt < minDepositUSD) { showNotice(`Minimum deposit is $${minDepositUSD}.`); return }
-    onDepositRequest(amt, network)
-    showNotice(`✅ Deposit of $${fmt(amt)} via ${network} submitted. Awaiting admin confirmation.`)
-    setAmount('')
-  }
-
-  const confirmMpesa = async () => {
-    // Validate
-    if (!mpPhone.match(/^07\d{8}$|^\+2547\d{8}$/)) { showNotice('Enter a valid M-Pesa number (07XXXXXXXX).'); return }
-    const kes = parseFloat(mpKes)
-    if (!kes || kes < minDepositKES) { showNotice(`Minimum is KES ${minDepositKES}.`); return }
-
-    setStkStep('pushing')
-    setStkError('')
-
-    try {
-      // Call Supabase edge function
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
-
-      const res = await fetch(`${supabaseUrl}/functions/v1/mpesa-stk-push`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
-          'apikey': supabaseKey,
-        },
-        body: JSON.stringify({
-          phone: mpPhone.trim(),
-          amount: Math.ceil(kes),
-          customerName: 'NEXSMARKETS CLIENT',
-        }),
-      })
-
-      const data = await res.json() as { success?: boolean; message?: string; checkoutRequestId?: string; error?: string }
-
-      if (!res.ok || !data.success) {
-        setStkStep('error')
-        setStkError(data.error ?? 'STK Push failed. Try again.')
-        return
-      }
-
-      setStkCheckoutId(data.checkoutRequestId ?? '')
-      setStkStep('waiting')
-    } catch (err) {
-      setStkStep('error')
-      setStkError('Network error. Check your connection and try again.')
+  const handleProceedDeposit = async () => {
+    if (depositMethod === 'mpesa') {
+      // validate then call STK
+      if (!mpPhone.match(/^07\d{8}$|^\+2547\d{8}$/)) { showNotice('Enter a valid M-Pesa number (07XXXXXXXX).'); return }
+      const kes = parseFloat(mpKes || amount)
+      if (!kes || kes < minDepositKES) { showNotice(`Minimum M-Pesa deposit is KES ${minDepositKES}.`); return }
+      setStkStep('pushing')
+      try {
+        const supabaseUrl  = import.meta.env.VITE_SUPABASE_URL  as string
+        const supabaseKey  = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+        const res = await fetch(`${supabaseUrl}/functions/v1/mpesa-stk-push`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseKey}`, 'apikey': supabaseKey },
+          body: JSON.stringify({ phone: mpPhone.trim(), amount: Math.ceil(kes), customerName: 'NEXSMARKETS CLIENT' }),
+        })
+        const data = await res.json() as { success?: boolean; error?: string; checkoutRequestId?: string }
+        if (!res.ok || !data.success) { setStkStep('error'); setStkError(data.error ?? 'STK Push failed.'); return }
+        setStkCheckoutId(data.checkoutRequestId ?? '')
+        setStkStep('waiting')
+      } catch { setStkStep('error'); setStkError('Network error. Check your connection.') }
+    } else {
+      // Crypto deposit
+      const amt = parseFloat(amount)
+      if (!amt || amt < minDepositUSD) { showNotice(`Minimum deposit is $${minDepositUSD}.`); return }
+      onDepositRequest(amt, depositMethod)
+      showNotice(`✅ Crypto deposit of $${fmt(amt)} via ${depositMethod} submitted. Awaiting admin confirmation.`)
+      setAmount('')
     }
   }
 
   const submitMpesaCode = () => {
-    if (!mpCode.trim()) { showNotice('Enter the M-Pesa transaction code from your SMS.'); return }
+    if (!mpCode.trim()) { showNotice('Enter the M-Pesa transaction code.'); return }
     setStkVerifying(true)
-    // Submit to platform for admin verification
-    onDepositRequest(parseFloat(mpKes) / 130, 'MPESA', mpCode.trim())
-    setTimeout(() => {
-      setStkStep('done')
-      setStkVerifying(false)
-    }, 800)
+    onDepositRequest(parseFloat(mpKes || amount) / 130, 'MPESA', mpCode.trim())
+    setTimeout(() => { setStkStep('done'); setStkVerifying(false) }, 800)
   }
 
-  const resetMpesa = () => {
-    setStkStep('form')
-    setStkError('')
-    setMpPhone('')
-    setMpKes('')
-    setMpCode('')
-    setStkCheckoutId('')
-  }
+  const resetMpesa = () => { setStkStep('form'); setStkError(''); setMpPhone(''); setMpKes(''); setMpCode(''); setStkCheckoutId('') }
 
   const confirmWithdraw = () => {
     const amt = parseFloat(wAmt)
@@ -196,425 +184,339 @@ export default function FundsHub({ wallets, onTransfer, onDepositRequest, adminA
     if (tFrom === tTo) { showNotice('Select two different wallets.'); return }
     if (wallets[tFrom] < amt) { showNotice('Insufficient balance.'); return }
     onTransfer(tFrom, tTo, amt)
-    showNotice(`✅ Transferred $${fmt(amt)} → ${WALLET_LABELS[tTo]}`)
+    showNotice(`✅ Transferred $${fmt(amt)} → ${WALLET_META[tTo].label}`)
     setTAmt('')
   }
 
-  const NETWORKS = adminAddresses
-    .filter(a => a.enabled)
-    .map(a => ({ id: a.network, label: a.assetName || a.network }))
-
   return (
-    <div className="fhub-shell">
+    <div className="th-shell">
+      {/* ── TITLE ───────────────────────────────────────────────────────── */}
+      <div className="th-hero">
+        <div className="th-hero-title">YOUR TREASURY HUB</div>
+        <div className="th-hero-sub">Manage Funds</div>
+      </div>
 
-      {/* ── HEADER ──────────────────────────────────────────────────────── */}
-      <div className="fhub-header">
-        <div className="fhub-title-block">
-          <h2 className="fhub-title">Treasury Centre | Funds &amp; Multi-Wallet Hub</h2>
-          <p className="fhub-sub">Manage balances, deposit, withdraw, and transfer between wallets.</p>
+      {/* ── TOTAL BALANCE ────────────────────────────────────────────────── */}
+      <div className="th-balance-bar">
+        <div className="th-balance-left">
+          <div className="th-balance-label">Total Balance</div>
+          <div className="th-balance-value">
+            {hideBalance ? '••••••' : `$${fmt(total)} USD`}
+            <button className="th-eye-btn" onClick={() => setHideBalance(p => !p)}>
+              {hideBalance ? <Eye size={16} /> : <EyeOff size={16} />}
+            </button>
+          </div>
+        </div>
+        <div className="th-balance-icons">
+          <div className="th-bal-icon"><DollarSign size={18} /></div>
+          <div className="th-bal-icon" style={{ opacity: 0.5 }}><DollarSign size={18} /></div>
         </div>
       </div>
 
-      {/* ── BALANCE ROW ─────────────────────────────────────────────────── */}
-      <div className="fhub-balance-row">
-        <div className="fhub-bal-card fhub-bal-total">
-          <div className="fhub-bal-label">Total Portfolio</div>
-          <div className="fhub-bal-value">
-            <span>${fmt(total)}</span><small>USD</small>
-          </div>
-        </div>
-        {(Object.keys(wallets) as (keyof WalletBalances)[]).map(k => (
-          <div key={k} className="fhub-bal-card" style={{ borderColor: WALLET_COLORS[k] + '50' }}>
-            <div className="fhub-bal-label">{WALLET_LABELS[k]}</div>
-            <div className="fhub-bal-value" style={{ color: WALLET_COLORS[k] }}>
-              <span>${fmt(wallets[k])}</span><small>USD</small>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* ── TAB NAV ─────────────────────────────────────────────────────── */}
-      <div className="fhub-tabs">
-        <button className={`fhub-tab ${tab === 'deposit' ? 'fhub-tab-active-dep' : ''}`} onClick={() => setTab('deposit')}>
+      {/* ── TAB ROW ──────────────────────────────────────────────────────── */}
+      <div className="th-tabs">
+        <button className={`th-tab ${tab === 'deposit'  ? 'th-tab-active' : ''}`} onClick={() => setTab('deposit')}>
           <ArrowDownToLine size={14} /> Deposit
         </button>
-        <button className={`fhub-tab ${tab === 'withdraw' ? 'fhub-tab-active-wit' : ''}`} onClick={() => setTab('withdraw')}>
+        <button className={`th-tab ${tab === 'withdraw' ? 'th-tab-active' : ''}`} onClick={() => setTab('withdraw')}>
           <ArrowUpFromLine size={14} /> Withdraw
         </button>
-        <button className={`fhub-tab ${tab === 'transfer' ? 'fhub-tab-active-trf' : ''}`} onClick={() => setTab('transfer')}>
+        <button className={`th-tab ${tab === 'transfer' ? 'th-tab-active' : ''}`} onClick={() => setTab('transfer')}>
           <ArrowLeftRight size={14} /> Internal Transfer
         </button>
       </div>
 
-      {/* ════════════════════ DEPOSIT ═══════════════════════════════════════ */}
+      {/* ════════════════ DEPOSIT ═══════════════════════════════════════════ */}
       {tab === 'deposit' && (
-        <div className="fhub-body">
-          {/* Method toggle */}
-          <div className="fhub-method-row">
-            <button
-              className={`fhub-method-btn ${depositMode === 'crypto' ? 'fhub-method-on' : ''}`}
-              onClick={() => setDepositMode('crypto')}
-            >
-              <Bitcoin size={14} /> Crypto Gateway
-              <span className={`fhub-toggle ${depositMode === 'crypto' ? 'fhub-toggle-on' : ''}`} />
-            </button>
-            <button
-              className={`fhub-method-btn ${depositMode === 'mpesa' ? 'fhub-method-on-mpesa' : ''}`}
-              onClick={() => setDepositMode('mpesa')}
-            >
-              <Smartphone size={14} /> M-Pesa Mobile Money
-              <span className={`fhub-toggle ${depositMode === 'mpesa' ? 'fhub-toggle-on-mpesa' : ''}`} />
-            </button>
+        <div className="th-deposit-grid">
+
+          {/* ── LEFT: CHOOSE WALLET ──────────────────────────────────────── */}
+          <div className="th-panel">
+            <div className="th-panel-title">CHOOSE WALLET</div>
+            <div className="th-wallet-list">
+              {(Object.keys(wallets) as (keyof WalletBalances)[]).map(k => {
+                const m = WALLET_META[k]
+                return (
+                  <button
+                    key={k}
+                    className={`th-wallet-item ${selectedWallet === k ? 'th-wallet-selected' : ''}`}
+                    onClick={() => setSelectedWallet(k)}
+                    style={{ '--wc': m.color } as React.CSSProperties}
+                  >
+                    <div className="th-wallet-radio">
+                      <div className="th-wallet-radio-inner" />
+                    </div>
+                    {selectedWallet === k && (
+                      <div className="th-wallet-check"><CheckCircle2 size={14} color={m.color} /></div>
+                    )}
+                    <div className="th-wallet-info">
+                      <div className="th-wallet-name">{m.label}</div>
+                      <div className="th-wallet-sub">{m.sub}</div>
+                    </div>
+                    <ChevronDown size={12} style={{ marginLeft: 'auto', opacity: 0.4 }} />
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
-          {/* ── CRYPTO ── */}
-          {depositMode === 'crypto' && (
-            <div className="fhub-crypto-grid">
-              {/* Left: QR */}
-              <div className="fhub-qr-panel">
-                <svg viewBox="0 0 120 120" width="140" height="140" className="fhub-qr-svg">
-                  <rect width="120" height="120" rx="10" fill="rgba(0,229,255,0.05)" stroke="rgba(0,229,255,0.3)" strokeWidth="1.5"/>
-                  {/* Corner finders */}
-                  {([[4,4],[82,4],[4,82]] as [number,number][]).map(([x,y],i) => (
-                    <g key={i}>
-                      <rect x={x} y={y} width="34" height="34" rx="4" fill="none" stroke="#00e5ff" strokeWidth="2.5"/>
-                      <rect x={x+7} y={y+7} width="20" height="20" rx="2" fill="#00e5ff"/>
-                    </g>
-                  ))}
-                  {/* Data dots */}
-                  {Array.from({length:36},(_,i)=>{
-                    const row=Math.floor(i/6), col=i%6
-                    const x=46+col*12, y=4+row*12
-                    const filled=(row*7+col*3+row+col)%3!==0
-                    return filled?<rect key={i} x={x} y={y} width="9" height="9" rx="1.5" fill="#00e5ff" opacity="0.75"/>:null
-                  })}
-                  {Array.from({length:24},(_,i)=>{
-                    const row=Math.floor(i/4), col=i%4
-                    const x=4+col*9, y=46+row*9
-                    const filled=(row+col)%2===0
-                    return filled?<rect key={i} x={x} y={y} width="7" height="7" rx="1" fill="#00e676" opacity="0.6"/>:null
-                  })}
-                  {/* Scan line animation */}
-                  <line x1="4" y1="60" x2="116" y2="60" stroke="#00e5ff" strokeWidth="1.5" opacity="0.5" strokeDasharray="4 3">
-                    <animateTransform attributeName="transform" type="translate" values="0,-56; 0,56; 0,-56" dur="3s" repeatCount="indefinite"/>
-                  </line>
-                </svg>
-                <div className="fhub-qr-net">{network}</div>
+          {/* ── CENTER: SELECT METHOD ────────────────────────────────────── */}
+          <div className="th-panel">
+            <div className="th-panel-title">SELECT DEPOSIT METHOD</div>
+
+            {/* Dropdown */}
+            <div className="th-method-dropdown" onClick={() => setMethodOpen(p => !p)}>
+              <span className="th-method-icon">{selectedMethodMeta.icon}</span>
+              <span className="th-method-label">{selectedMethodMeta.label}</span>
+              <ChevronDown size={14} style={{ marginLeft: 'auto', transition: 'transform 0.2s', transform: methodOpen ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+            </div>
+
+            {methodOpen && (
+              <div className="th-method-list">
+                {allMethods.map((m, i) => {
+                  if (m.isSeparator) return (
+                    <div key={i} className="th-method-sep">
+                      <CheckCircle2 size={11} /> {m.label}
+                    </div>
+                  )
+                  return (
+                    <button key={m.id} className={`th-method-opt ${depositMethod === m.id ? 'th-method-opt-active' : ''}`}
+                      onClick={() => { setDepositMethod(m.id); setMethodOpen(false); setStkStep('form') }}>
+                      <span className="th-coin-icon" style={{ background: m.color ? m.color + '22' : 'rgba(255,255,255,0.06)', color: m.color ?? '#fff' }}>
+                        {m.icon}
+                      </span>
+                      {m.label}
+                    </button>
+                  )
+                })}
               </div>
+            )}
 
-              {/* Right: details */}
-              <div className="fhub-crypto-detail">
-                {/* Network chips */}
-                <div className="fhub-net-chips">
-                  {NETWORKS.map(n => (
-                    <button key={n.id} className={`fhub-net-chip ${network === n.id ? 'fhub-net-chip-active' : ''}`}
-                      onClick={() => setNetwork(n.id)}>
-                      {n.label}
+            {/* M-Pesa inputs */}
+            {depositMethod === 'mpesa' && stkStep === 'form' && (
+              <div className="th-mpesa-fields">
+                <label className="th-field-label">
+                  M-Pesa Phone
+                  <div className="th-input-wrap">
+                    <span className="th-input-pre">🇰🇪</span>
+                    <input className="th-input" type="tel" placeholder="07XXXXXXXX"
+                      value={mpPhone} onChange={e => setMpPhone(e.target.value)} />
+                  </div>
+                </label>
+                <label className="th-field-label">
+                  Amount (KES)
+                  <div className="th-input-wrap">
+                    <span className="th-input-pre">KES</span>
+                    <input className="th-input" type="number" min={minDepositKES} placeholder="0"
+                      value={mpKes} onChange={e => setMpKes(e.target.value)} />
+                  </div>
+                  <span className="th-hint">Min KES {minDepositKES} · ~${((parseFloat(mpKes)||0)/130).toFixed(2)} USD</span>
+                </label>
+              </div>
+            )}
+
+            {/* STK Push states */}
+            {depositMethod === 'mpesa' && stkStep === 'pushing' && (
+              <div className="th-stk-status">
+                <div className="th-spinner" />
+                <strong>Sending STK Push…</strong>
+              </div>
+            )}
+
+            {depositMethod === 'mpesa' && stkStep === 'waiting' && (
+              <div className="th-stk-waiting">
+                <Smartphone size={32} color="#00e676" />
+                <strong>Check your phone!</strong>
+                <p>Prompt sent to <b style={{color:'#00e5ff'}}>{mpPhone}</b> for KES {parseFloat(mpKes).toLocaleString()}</p>
+                <label className="th-field-label" style={{width:'100%'}}>
+                  M-Pesa Code (from SMS)
+                  <input className="th-input th-mono" placeholder="e.g. QJK7WXYZ12"
+                    value={mpCode} onChange={e => setMpCode(e.target.value.toUpperCase())} autoFocus />
+                </label>
+                <button className="th-proceed-btn" onClick={submitMpesaCode} disabled={stkVerifying}>
+                  {stkVerifying ? 'Verifying…' : <><DollarSign size={15}/> Confirm Deposit</>}
+                </button>
+                <button className="th-back-btn" onClick={resetMpesa}>← Try again</button>
+              </div>
+            )}
+
+            {depositMethod === 'mpesa' && stkStep === 'done' && (
+              <div className="th-stk-done">
+                <div style={{fontSize:40}}>✅</div>
+                <strong>Deposit Submitted!</strong>
+                <p>KES {parseFloat(mpKes).toLocaleString()} submitted for admin verification.</p>
+                {mpCode && <code className="th-ref-code">{mpCode}</code>}
+                <button className="th-proceed-btn" onClick={resetMpesa}>Make Another</button>
+              </div>
+            )}
+
+            {depositMethod === 'mpesa' && stkStep === 'error' && (
+              <div className="th-stk-err">
+                <div style={{fontSize:36}}>❌</div>
+                <strong>STK Push Failed</strong>
+                <p>{stkError}</p>
+                <button className="th-proceed-btn" onClick={resetMpesa}>Try Again</button>
+              </div>
+            )}
+
+            {/* Crypto amount input */}
+            {depositMethod !== 'mpesa' && stkStep === 'form' && (
+              <div className="th-crypto-fields">
+                {activeAddr && (
+                  <div className="th-addr-bar">
+                    <span className="th-addr-text">{activeAddr.address}</span>
+                    <button className="th-copy-btn" onClick={copyAddr}>
+                      {copied ? <><CheckCircle2 size={11}/> Copied</> : <><Copy size={11}/> Copy</>}
                     </button>
-                  ))}
-                </div>
-
-                <div className="fhub-net-name">Network: {activeAddr.assetName}</div>
-
-                {/* Address bar */}
-                <div className="fhub-addr-bar">
-                  <span className="fhub-addr-text">{activeAddr.address}</span>
-                  <button className="fhub-copy-btn" onClick={copyAddr}>
-                    {copied ? <><CheckCircle2 size={12}/> Copied</> : <><Copy size={12}/> Copy Address</>}
-                  </button>
-                </div>
-
-                <div className="fhub-addr-warn">
-                  <AlertCircle size={11}/> {activeAddr.note}
-                </div>
-
-                {/* Quick amounts */}
-                <div className="fhub-quick-row">
-                  {quickAmounts.map(q => (
-                    <button key={q} className={`fhub-quick ${amount === String(q) ? 'fhub-quick-on' : ''}`}
-                      onClick={() => setAmount(String(q))}>
-                      ${q}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Amount input */}
-                <div className="fhub-amt-row">
-                  <label className="fhub-amt-label">Amount to Deposit (USD)</label>
-                  <div className="fhub-amt-input-wrap">
-                    <span className="fhub-amt-sym">$</span>
-                    <input className="fhub-amt-input" type="number" min="50" placeholder="0.00"
+                  </div>
+                )}
+                <label className="th-field-label">
+                  Amount (USD)
+                  <div className="th-input-wrap">
+                    <span className="th-input-pre">$</span>
+                    <input className="th-input" type="number" min={minDepositUSD} placeholder="0.00"
                       value={amount} onChange={e => setAmount(e.target.value)} />
                   </div>
-                </div>
-
-                <button className="fhub-confirm-btn" onClick={confirmDeposit}>
-                  <Zap size={15}/> Confirm Deposit
-                </button>
+                  <span className="th-hint">Min ${minDepositUSD}</span>
+                </label>
               </div>
+            )}
+          </div>
+
+          {/* ── RIGHT: INSTRUCTIONS ──────────────────────────────────────── */}
+          <div className="th-panel">
+            {depositMethod === 'mpesa' ? (
+              <>
+                <div className="th-panel-title">📱 M-PESA DEPOSIT</div>
+                <ol className="th-instructions">
+                  <li>ENTER PHONE NUMBER (Left)</li>
+                  <li>ENTER KES AMOUNT</li>
+                  <li>CLICK PROCEED BELOW</li>
+                  <li>ENTER PIN ON YOUR PHONE</li>
+                  <li>PASTE SMS CODE TO CONFIRM</li>
+                </ol>
+              </>
+            ) : (
+              <>
+                <div className="th-panel-title" style={{color: COIN_ICONS[depositMethod]?.color ?? '#00e5ff'}}>
+                  {COIN_ICONS[depositMethod]?.symbol ?? '◈'} {depositMethod} DEPOSIT
+                  <button className="th-help-btn" title="How to deposit">?</button>
+                </div>
+                <ol className="th-instructions">
+                  <li>SELECT WALLET (Left)</li>
+                  <li>SELECT CRYPTO ASSET</li>
+                  <li>COPY ADDRESS</li>
+                  <li>ENTER AMOUNT BELOW</li>
+                </ol>
+                <div className="th-panel-title" style={{marginTop:16}}>ENTER AMOUNT BELOW</div>
+                {activeAddr && (
+                  <div className="th-addr-note">
+                    <AlertCircle size={11}/> {activeAddr.note}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Review line */}
+            <div className="th-review-line">
+              Review selections: Deposit:{' '}
+              <span>{amount ? `$${amount}` : '[amount]'}</span> to{' '}
+              <span>{WALLET_META[selectedWallet].label}</span> via{' '}
+              <span>{depositMethod === 'mpesa' ? 'M-Pesa' : depositMethod}</span>
             </div>
-          )}
-
-          {/* ── M-PESA STK PUSH ── */}
-          {depositMode === 'mpesa' && (
-            <div className="fhub-stk-shell">
-
-              {/* ── STEP: FORM ───────────────────────────────────────── */}
-              {stkStep === 'form' && (
-                <>
-                  <div className="fhub-stk-header">
-                    <Smartphone size={22} color="#00e676" />
-                    <div>
-                      <div className="fhub-stk-title">M-Pesa STK Push</div>
-                      <div className="fhub-stk-sub">Enter your number and amount — we'll send a payment prompt directly to your phone.</div>
-                    </div>
-                  </div>
-
-                  <div className="fhub-stk-form">
-                    <label className="fhub-field-label">
-                      M-Pesa Phone Number
-                      <div className="fhub-amt-input-wrap">
-                        <span className="fhub-amt-sym">🇰🇪</span>
-                        <input
-                          className="fhub-amt-input"
-                          type="tel"
-                          placeholder="0712 345 678"
-                          value={mpPhone}
-                          onChange={e => setMpPhone(e.target.value)}
-                        />
-                      </div>
-                    </label>
-
-                    <label className="fhub-field-label">
-                      Amount (KES)
-                      <div className="fhub-quick-row" style={{ marginBottom: 6 }}>
-                        {[minDepositKES, 500, 1000, 2500, 5000].filter((v,i,a)=>a.indexOf(v)===i).sort((a,b)=>a-b).map(q => (
-                          <button key={q} className={`fhub-quick ${mpKes===String(q)?'fhub-quick-on':''}`}
-                            onClick={() => setMpKes(String(q))}>
-                            {q.toLocaleString()}
-                          </button>
-                        ))}
-                      </div>
-                      <div className="fhub-amt-input-wrap">
-                        <span className="fhub-amt-sym">KES</span>
-                        <input
-                          className="fhub-amt-input"
-                          type="number"
-                          min={minDepositKES}
-                          placeholder="0"
-                          value={mpKes}
-                          onChange={e => setMpKes(e.target.value)}
-                        />
-                      </div>
-                      <div className="fhub-addr-warn" style={{ marginTop: 4 }}>
-                        <AlertCircle size={11}/> Min KES {minDepositKES} · ~${((parseFloat(mpKes)||0)/130).toFixed(2)} USD
-                      </div>
-                    </label>
-
-                    <button className="fhub-confirm-btn fhub-confirm-mpesa" onClick={confirmMpesa}>
-                      <Smartphone size={16}/> Send M-Pesa Prompt to My Phone
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {/* ── STEP: PUSHING ────────────────────────────────────── */}
-              {stkStep === 'pushing' && (
-                <div className="fhub-stk-status">
-                  <div className="fhub-stk-spinner" />
-                  <strong>Sending STK Push…</strong>
-                  <p>Connecting to Safaricom. Please wait.</p>
-                </div>
-              )}
-
-              {/* ── STEP: WAITING ON PHONE ───────────────────────────── */}
-              {stkStep === 'waiting' && (
-                <div className="fhub-stk-waiting">
-                  <div className="fhub-stk-phone-icon">
-                    <Smartphone size={36} color="#00e676" />
-                    <span className="fhub-stk-ping" />
-                  </div>
-                  <strong>Check your phone!</strong>
-                  <p>
-                    A payment prompt has been sent to <strong style={{color:'#00e5ff'}}>{mpPhone}</strong> for
-                    {' '}<strong style={{color:'#00e676'}}>KES {parseFloat(mpKes).toLocaleString()}</strong>.
-                  </p>
-                  <ol className="fhub-stk-steps">
-                    <li>Your phone shows an M-Pesa PIN prompt</li>
-                    <li>Enter your M-Pesa PIN to confirm payment</li>
-                    <li>You'll receive an SMS with a transaction code</li>
-                    <li>Paste that code below</li>
-                  </ol>
-
-                  <label className="fhub-field-label" style={{ width: '100%' }}>
-                    M-Pesa Transaction Code (from SMS)
-                    <input
-                      className="fhub-input fhub-mono"
-                      placeholder="e.g. QJK7WXYZ12"
-                      value={mpCode}
-                      onChange={e => setMpCode(e.target.value.toUpperCase())}
-                      style={{ fontSize: '15px', letterSpacing: '2px', marginTop: 6 }}
-                      autoFocus
-                    />
-                  </label>
-
-                  <button
-                    className="fhub-confirm-btn fhub-confirm-mpesa"
-                    onClick={submitMpesaCode}
-                    disabled={stkVerifying}
-                    style={{ width: '100%' }}
-                  >
-                    {stkVerifying
-                      ? <><span className="fhub-stk-spinner-sm" /> Verifying…</>
-                      : <><DollarSign size={15}/> Confirm Deposit</>}
-                  </button>
-
-                  <button className="fhub-stk-retry" onClick={resetMpesa}>
-                    ← Try different number or amount
-                  </button>
-                </div>
-              )}
-
-              {/* ── STEP: DONE ───────────────────────────────────────── */}
-              {stkStep === 'done' && (
-                <div className="fhub-stk-status fhub-stk-success">
-                  <div style={{ fontSize: 48 }}>✅</div>
-                  <strong>Deposit Submitted!</strong>
-                  <p>
-                    KES {parseFloat(mpKes).toLocaleString()} via M-Pesa has been submitted for admin verification.
-                    Your balance will be credited once confirmed.
-                  </p>
-                  {mpCode && (
-                    <div style={{ background: 'rgba(0,230,118,0.08)', border: '1px solid rgba(0,230,118,0.25)', borderRadius: 8, padding: '8px 14px', fontSize: 13, color: '#00e676', fontFamily: 'var(--ft-mono)' }}>
-                      Reference: {mpCode}
-                    </div>
-                  )}
-                  <button className="fhub-confirm-btn fhub-confirm-mpesa" onClick={resetMpesa} style={{ marginTop: 8 }}>
-                    Make Another Deposit
-                  </button>
-                </div>
-              )}
-
-              {/* ── STEP: ERROR ──────────────────────────────────────── */}
-              {stkStep === 'error' && (
-                <div className="fhub-stk-status fhub-stk-err">
-                  <div style={{ fontSize: 40 }}>❌</div>
-                  <strong>STK Push Failed</strong>
-                  <p>{stkError}</p>
-                  <button className="fhub-confirm-btn" onClick={resetMpesa} style={{ background: 'rgba(0,229,255,0.15)', color: '#00e5ff', border: '1px solid rgba(0,229,255,0.3)' }}>
-                    Try Again
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+          </div>
         </div>
       )}
 
-      {/* ════════════════════ WITHDRAW ══════════════════════════════════════ */}
-      {tab === 'withdraw' && (
-        <div className="fhub-body fhub-simple">
-          <div className="fhub-avail">
-            Available: <strong style={{color:'#00e5ff'}}>${fmt(wallets.main)}</strong>
-          </div>
+      {/* ── PROCEED BUTTON (Deposit) ─────────────────────────────────────── */}
+      {tab === 'deposit' && stkStep === 'form' && (
+        <button className="th-proceed-btn th-proceed-full" onClick={handleProceedDeposit}>
+          <Zap size={16} /> PROCEED TO DEPOSIT
+        </button>
+      )}
 
-          <div className="fhub-net-chips" style={{marginBottom:4}}>
+      {/* ════════════════ WITHDRAW ══════════════════════════════════════════ */}
+      {tab === 'withdraw' && (
+        <div className="th-simple-body">
+          <div className="th-avail-row">
+            Available Balance: <strong style={{color:'#00e5ff'}}>${fmt(wallets.main)}</strong>
+          </div>
+          <div className="th-net-chips">
             {['USDT-TRC20','BTC','ETH','BANK_WIRE'].map(g => (
-              <button key={g} className={`fhub-net-chip ${wGateway===g?'fhub-net-chip-active':''}`}
-                onClick={() => setWGateway(g)}>
+              <button key={g} className={`th-net-chip ${wGateway===g?'th-net-chip-on':''}`} onClick={() => setWGateway(g)}>
                 {g === 'BANK_WIRE' ? 'Bank Wire' : g}
               </button>
             ))}
           </div>
-
-          <label className="fhub-field-label">Destination Address
-            <input className="fhub-input fhub-mono" placeholder="Paste wallet address…"
-              value={wAddr} onChange={e => setWAddr(e.target.value)}/>
+          <label className="th-field-label">Destination Address
+            <input className="th-input th-mono" placeholder="Paste wallet address…" value={wAddr} onChange={e => setWAddr(e.target.value)}/>
           </label>
-
-          <div className="fhub-quick-row">
-            {[10,50,100,500].map(q => (
-              <button key={q} className={`fhub-quick ${wAmt===String(q)?'fhub-quick-on':''}`}
-                onClick={() => setWAmt(String(q))}>
+          <div className="th-quick-row">
+            {[minWithdrawalUSD,50,100,500].filter((v,i,a)=>a.indexOf(v)===i).sort((a,b)=>a-b).map(q => (
+              <button key={q} className={`th-quick ${wAmt===String(q)?'th-quick-on':''}`} onClick={() => setWAmt(String(q))}>
                 ${q}
               </button>
             ))}
-            <button className="fhub-quick" onClick={() => setWAmt(wallets.main.toFixed(2))}>MAX</button>
+            <button className="th-quick" onClick={() => setWAmt(wallets.main.toFixed(2))}>MAX</button>
           </div>
-
-          <div className="fhub-amt-input-wrap">
-            <span className="fhub-amt-sym">$</span>
-            <input className="fhub-amt-input" type="number" min="10" placeholder="0.00"
-              value={wAmt} onChange={e => setWAmt(e.target.value)}/>
+          <div className="th-input-wrap">
+            <span className="th-input-pre">$</span>
+            <input className="th-input" type="number" min={minWithdrawalUSD} placeholder="0.00" value={wAmt} onChange={e => setWAmt(e.target.value)}/>
           </div>
-
-          <div className="fhub-addr-warn" style={{marginTop:4}}>
-            <AlertCircle size={11}/> Processed within 24 hours after admin review.
-          </div>
-
-          <button className="fhub-confirm-btn fhub-confirm-withdraw" onClick={confirmWithdraw}>
-            <ArrowUpFromLine size={15}/> Submit Withdrawal
+          <div className="th-hint" style={{marginTop:4}}><AlertCircle size={11}/> Processed within 24 hours after admin review.</div>
+          <button className="th-proceed-btn th-proceed-full th-proceed-red" onClick={confirmWithdraw} style={{marginTop:16}}>
+            <ArrowUpFromLine size={15}/> SUBMIT WITHDRAWAL
           </button>
         </div>
       )}
 
-      {/* ════════════════════ TRANSFER ══════════════════════════════════════ */}
+      {/* ════════════════ TRANSFER ══════════════════════════════════════════ */}
       {tab === 'transfer' && (
-        <div className="fhub-body fhub-simple">
-          <div className="fhub-transfer-row">
-            <label className="fhub-field-label" style={{flex:1}}>
+        <div className="th-simple-body">
+          <div className="th-transfer-row">
+            <label className="th-field-label" style={{flex:1}}>
               From
-              <select className="fhub-input" value={tFrom} onChange={e => setTFrom(e.target.value as keyof WalletBalances)}>
+              <select className="th-input" value={tFrom} onChange={e => setTFrom(e.target.value as keyof WalletBalances)}>
                 {(Object.keys(wallets) as (keyof WalletBalances)[]).map(k => (
-                  <option key={k} value={k}>{WALLET_LABELS[k]} — ${fmt(wallets[k])}</option>
+                  <option key={k} value={k}>{WALLET_META[k].label} — ${fmt(wallets[k])}</option>
                 ))}
               </select>
             </label>
-            <button className="fhub-swap" onClick={() => { const t=tFrom; setTFrom(tTo); setTTo(t) }}>
+            <button className="th-swap-btn" onClick={() => { const t=tFrom; setTFrom(tTo); setTTo(t) }}>
               <RefreshCw size={15}/>
             </button>
-            <label className="fhub-field-label" style={{flex:1}}>
+            <label className="th-field-label" style={{flex:1}}>
               To
-              <select className="fhub-input" value={tTo} onChange={e => setTTo(e.target.value as keyof WalletBalances)}>
+              <select className="th-input" value={tTo} onChange={e => setTTo(e.target.value as keyof WalletBalances)}>
                 {(Object.keys(wallets) as (keyof WalletBalances)[]).map(k => (
-                  <option key={k} value={k}>{WALLET_LABELS[k]} — ${fmt(wallets[k])}</option>
+                  <option key={k} value={k}>{WALLET_META[k].label} — ${fmt(wallets[k])}</option>
                 ))}
               </select>
             </label>
           </div>
-
-          <div className="fhub-quick-row">
+          <div className="th-quick-row">
             {[10,50,100,500].map(q => (
-              <button key={q} className={`fhub-quick ${tAmt===String(q)?'fhub-quick-on':''}`}
-                onClick={() => setTAmt(String(q))}>
+              <button key={q} className={`th-quick ${tAmt===String(q)?'th-quick-on':''}`} onClick={() => setTAmt(String(q))}>
                 ${q}
               </button>
             ))}
-            <button className="fhub-quick" onClick={() => setTAmt(wallets[tFrom].toFixed(2))}>MAX</button>
+            <button className="th-quick" onClick={() => setTAmt(wallets[tFrom].toFixed(2))}>MAX</button>
           </div>
-
-          <div className="fhub-amt-input-wrap">
-            <span className="fhub-amt-sym">$</span>
-            <input className="fhub-amt-input" type="number" min="1" placeholder="0.00"
-              value={tAmt} onChange={e => setTAmt(e.target.value)}/>
+          <div className="th-input-wrap">
+            <span className="th-input-pre">$</span>
+            <input className="th-input" type="number" min="1" placeholder="0.00" value={tAmt} onChange={e => setTAmt(e.target.value)}/>
           </div>
-
-          <div className="fhub-addr-warn" style={{borderColor:'rgba(0,229,255,0.2)',color:'var(--text-muted)',marginTop:4}}>
-            <ArrowLeftRight size={11} color="#00e5ff"/> Zero fees · Instant settlement.
-          </div>
-
-          <button className="fhub-confirm-btn fhub-confirm-transfer" onClick={confirmTransfer}>
-            <ArrowLeftRight size={15}/> Execute Transfer
+          <div className="th-hint" style={{marginTop:4,color:'var(--ft-cyan)'}}><ArrowLeftRight size={11}/> Zero fees · Instant settlement.</div>
+          <button className="th-proceed-btn th-proceed-full th-proceed-trf" onClick={confirmTransfer} style={{marginTop:16}}>
+            <ArrowLeftRight size={15}/> EXECUTE TRANSFER
           </button>
         </div>
       )}
 
-      {/* ── ACTIVITY LOG ────────────────────────────────────────────────── */}
+      {/* ── ACTIVITY LOG ─────────────────────────────────────────────────── */}
       <div className="fhub-log">
         {logLines.map((line, i) => (
-          <div key={i} className="fhub-log-line" style={{ opacity: 1 - i * 0.18 }}>
-            {line}
-          </div>
+          <div key={i} className="fhub-log-line" style={{ opacity: 1 - i * 0.18 }}>{line}</div>
         ))}
         {logLines.length === 0 && <div className="fhub-log-line" style={{opacity:0.4}}>Awaiting activity…</div>}
       </div>
