@@ -1078,6 +1078,11 @@ export default function AdminDashboard() {
                   <div className="sa-kicker">USER MANAGEMENT</div>
                   <h1>Client Accounts <span className="sa-count">{filteredUsers.length}</span></h1>
                 </div>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <button className="sa-btn sa-btn-outline sa-btn-sm" onClick={fetchUsers} disabled={usersLoading} title="Refresh users">
+                    <RefreshCw size={13} style={{ animation: usersLoading ? 'sa-spin 1s linear infinite' : 'none' }} />
+                    {usersLoading ? 'Loading…' : 'Refresh'}
+                  </button>
                 <div className="sa-search-box">
                   <Search size={14} />
                   <input placeholder="Search by name, email or ID…" value={userSearch} onChange={e => setUserSearch(e.target.value)} />
