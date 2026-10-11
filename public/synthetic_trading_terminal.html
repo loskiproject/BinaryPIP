@@ -465,6 +465,30 @@
       updateRunningIndexesUI();
     }
 
+    let isChartFull = false;
+    window.toggleChartFullscreen = function() {
+      isChartFull = !isChartFull;
+      const wrap = document.getElementById('chartCanvasWrapper');
+      const icon = document.getElementById('fullscreenIcon');
+      const text = document.getElementById('fullscreenText');
+      if (isChartFull) {
+        wrap.className = 'fixed inset-0 z-50 bg-[#0b0e14] p-4 flex flex-col';
+        icon.className = 'fa-solid fa-compress';
+        text.textContent = 'Exit';
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      } else {
+        wrap.className = 'flex-1 relative w-full h-full p-2';
+        icon.className = 'fa-solid fa-expand';
+        text.textContent = 'Fullscreen';
+        if (document.exitFullscreen && document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+      setTimeout(() => tickChart.resize(), 100);
+    };
+
     // Chart Setup
     const ctx = document.getElementById('liveTickChart').getContext('2d');
     const gradient = ctx.createLinearGradient(0, 0, 0, 320);
