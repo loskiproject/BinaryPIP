@@ -86,30 +86,33 @@
         flex: none !important;
       }
 
-      body > div.flex-1.flex.overflow-hidden > aside:first-child {
-        width: 100% !important;
-        height: auto !important;
-        flex-direction: row !important;
-        justify-content: center !important;
-        gap: 12px !important;
-        padding: 8px 12px !important;
-        border-right: none !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-      }
-
       body > div.flex-1.flex.overflow-hidden > main {
+        order: 1 !important;
         width: 100% !important;
-        height: 380px !important;
-        min-height: 320px !important;
+        height: 320px !important;
+        min-height: 280px !important;
         flex: none !important;
       }
 
       body > div.flex-1.flex.overflow-hidden > aside:last-child {
+        order: 2 !important;
         width: 100% !important;
         height: auto !important;
         border-left: none !important;
         border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
-        padding: 16px 12px !important;
+        padding: 14px 12px !important;
+      }
+
+      body > div.flex-1.flex.overflow-hidden > aside:first-child {
+        order: 3 !important;
+        width: 100% !important;
+        height: auto !important;
+        flex-direction: row !important;
+        justify-content: center !important;
+        gap: 10px !important;
+        padding: 6px 12px !important;
+        border-right: none !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
       }
 
       #runningIndexesContainer {
@@ -121,10 +124,10 @@
       }
 
       .digit-circle {
-        min-width: 32px !important;
-        width: 32px !important;
-        height: 32px !important;
-        font-size: 11px !important;
+        min-width: 30px !important;
+        width: 30px !important;
+        height: 30px !important;
+        font-size: 10.5px !important;
       }
 
       footer {
