@@ -1,39 +1,39 @@
-/* NEXSMARKETS — NEON FINANCIAL TERMINAL DESIGN SYSTEM */
+/* NEXSMARKETS — NEO-FINANCIAL OBSIDIAN DESIGN SYSTEM */
 :root {
   /* ── Backgrounds ────────────────────────────────────── */
-  --bg-deep:        #060a12;
-  --bg-surface:     #0b1120;
-  --bg-card:        #0e1628;
-  --bg-card-hover:  #131e34;
-  --bg-input:       #080e1a;
+  --bg-deep:        #05070A !important;
+  --bg-surface:     #0B121D !important;
+  --bg-card:        #0B121D !important;
+  --bg-card-hover:  #131e34 !important;
+  --bg-input:       #131E2F !important;
 
   /* ── Borders ─────────────────────────────────────────── */
-  --glass-border:       rgba(0, 229, 255, 0.14);
-  --glass-border-hover: rgba(0, 229, 255, 0.38);
+  --glass-border:       #1B293A !important;
+  --glass-border-hover: rgba(0, 210, 255, 0.38) !important;
 
-  /* ── Neon palette ────────────────────────────────────── */
-  --mint-teal:    #00e5ff;   /* electric cyan — primary accent   */
-  --neon-cyan:    #18ffff;   /* bright cyan — highlights         */
-  --bull-green:   #00e676;   /* neon emerald — positive/buy      */
-  --bear-red:     #ff1744;   /* neon crimson — negative/sell     */
-  --accent-blue:  #2979ff;   /* electric blue — secondary        */
-  --accent-purple:#d500f9;   /* neon violet — tertiary           */
-  --accent-amber: #ffea00;   /* electric yellow — alerts         */
+  /* ── Palette ────────────────────────────────────────── */
+  --mint-teal:    #00D2FF !important;
+  --neon-cyan:    #00D2FF !important;
+  --bull-green:   #00C853 !important;
+  --bear-red:     #FF3D00 !important;
+  --accent-blue:  #00D2FF !important;
+  --accent-purple:#d500f9 !important;
+  --accent-amber: #00D2FF !important;
 
   /* ── Text ────────────────────────────────────────────── */
-  --text-main:  #e8f4ff;
-  --text-muted: #7ba8c8;
-  --text-dim:   #3d5a78;
+  --text-main:  #F5F5F5 !important;
+  --text-muted: #8A9BB1 !important;
+  --text-dim:   #4a5f78 !important;
 
   /* ── Fonts ───────────────────────────────────────────── */
   --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-code: 'Space Grotesk', 'SF Mono', monospace;
 
   /* ── Shadows ─────────────────────────────────────────── */
-  --shadow-mint:   0 0 20px rgba(0, 229, 255, 0.35), 0 4px 25px rgba(0, 229, 255, 0.2);
-  --shadow-green:  0 0 20px rgba(0, 230, 118, 0.3);
+  --shadow-mint:   0px 0px 12px rgba(0, 210, 255, 0.25);
+  --shadow-green:  0px 0px 12px rgba(0, 200, 83, 0.3);
   --shadow-card:   0 12px 40px rgba(0, 0, 0, 0.65);
-  --shadow-neon:   0 0 30px rgba(0, 229, 255, 0.15);
+  --shadow-neon:   0px 0px 12px rgba(0, 210, 255, 0.25);
 
   --border-radius-sm: 8px;
   --border-radius-md: 12px;
