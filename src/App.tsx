@@ -1929,54 +1929,6 @@ export default function App() {
             )}
           </div>
 
-          {/* LEVEL 2 DEPTH OF MARKET (DOM) ORDER BOOK DOCK WIDGET (HIDDEN IN EXPANDED MODE) */}
-          {!isChartExpanded && (
-            <aside className="dom-orderbook-dock">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <BarChart3 size={14} color="var(--mint-teal)" /> Depth of Market (DOM)
-                </span>
-                <span className="tier-badge-pill" style={{ fontSize: '9px', padding: '2px 6px' }}>LEVEL 2</span>
-              </div>
-
-              {/* REAL MARGIN, EQUITY & MARGIN LEVEL DISPLAY FOR REAL TRADES */}
-              <div style={{ background: '#0a0f1d', padding: '10px', borderRadius: '8px', border: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Equity:</span> <strong style={{ color: 'var(--mint-teal)' }}>${currentEquity.toFixed(2)}</strong>
-                </div>
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Used Margin:</span> <strong style={{ color: 'var(--text-main)' }}>${totalMarginUsed.toFixed(2)}</strong>
-                </div>
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Margin Level:</span> <strong style={{ color: 'var(--neon-cyan)' }}>{marginLevelPercent}%</strong>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
-                <div className="dom-ladder-row ask"><span>4,158.90</span> <span>Vol: 18.5</span></div>
-                <div className="dom-ladder-row ask"><span>4,157.50</span> <span>Vol: 12.2</span></div>
-                <div className="dom-ladder-row ask"><span>4,156.10</span> <span>Vol: 8.4</span></div>
-
-                <div style={{ padding: '6px 0', textTransform: 'uppercase', textAlign: 'center', fontWeight: 800, fontSize: '11px', color: 'var(--mint-teal)', borderTop: '1px solid var(--glass-border)', borderBottom: '1px solid var(--glass-border)' }}>
-                  Spread: 47.0 Pips
-                </div>
-
-                <div className="dom-ladder-row bid"><span>4,154.90</span> <span>Vol: 24.1</span></div>
-                <div className="dom-ladder-row bid"><span>4,153.20</span> <span>Vol: 16.8</span></div>
-                <div className="dom-ladder-row bid"><span>4,151.80</span> <span>Vol: 9.3</span></div>
-              </div>
-
-              <div style={{ marginTop: 'auto', background: '#060912', padding: '10px', borderRadius: '8px', border: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Pip Value ($/pip):</span> <strong style={{ color: 'var(--mint-teal)' }}>$10.00 / pip</strong>
-                </div>
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Required Margin:</span> <strong style={{ color: 'var(--neon-cyan)' }}>$7.01 USD</strong>
-                </div>
-              </div>
-            </aside>
-          )}
-
           {/* RIGHT VERTICAL TOOLBAR */}
           <aside className="tv-right-vertical-toolbar">
             <button type="button" className="draw-tool-btn" title="Watchlist" onClick={() => changeView('assets')}><List size={16} /></button>
