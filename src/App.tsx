@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import {
   ChevronDown,
-  Eye,
-  EyeOff,
   LayoutDashboard,
   Menu,
   Search,
@@ -62,7 +60,6 @@ import {
   Brain,
   Percent,
   Zap,
-  ArrowRightLeft,
   LogOut,
 } from 'lucide-react'
 import './App.css'
@@ -70,7 +67,8 @@ import './features/features.css'
 import { TIMEFRAME_TO_MS, getTimeframeVolatility } from './chartTimeframes'
 import { supabase, supabaseConfigured } from './lib/supabase'
 import type { Session } from '@supabase/supabase-js'
-import AiScanner, { type AiSignal } from './features/AiScanner'
+import AiScanner from './features/AiScanner'
+import type { AiSignal } from './features/AiScanner'
 import LiveChat from './features/LiveChat'
 import FundsHub from './features/FundsHub'
 import AuthPortal, { type SignupPayload } from './auth/AuthPortal'
@@ -174,7 +172,7 @@ const navigation: { id: View; label: string; icon: typeof LayoutDashboard }[] = 
   { id: 'profile', label: 'Profile', icon: UserRound },
 ]
 
-const countryOptions = [
+const _countryOptions = [
   'Kenya', 'Tanzania', 'Uganda', 'Rwanda', 'Nigeria', 'Ghana', 'South Africa',
   'United States', 'Canada', 'United Kingdom', 'United Arab Emirates', 'India', 'Germany', 'Japan', 'Other'
 ]
@@ -712,12 +710,12 @@ export default function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [modal, setModal] = useState<'deposit' | 'withdraw' | 'pine_script' | 'indicator_menu' | 'order' | 'create_demo' | null>(null)
   const [amount, setAmount] = useState('500')
-  const [withdrawAmount, setWithdrawAmount] = useState('100')
+  const [withdrawAmount] = useState('100')
   const [selectedNetwork, setSelectedNetwork] = useState('USDT-TRC20')
   const [notice, setNotice] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
-  const [authMode, setAuthMode] = useState<AuthMode>('login')
-  const [showLoginPassword, setShowLoginPassword] = useState(false)
+  const [_authMode, setAuthMode] = useState<AuthMode>('login')
+  const [_showLoginPassword, setShowLoginPassword] = useState(false)
   const [loginForm, setLoginForm] = useState<LoginForm>(initialLoginForm)
   const [signupForm, setSignupForm] = useState<SignupForm>(initialSignupForm)
 
@@ -731,7 +729,7 @@ export default function App() {
   const syntheticTerminalRef = useRef<HTMLIFrameElement>(null)
 
   // Multi-wallet balances
-  type WalletKey = 'main' | 'synthetic' | 'liveMarket'
+  // type WalletKey = 'main' | 'synthetic' | 'liveMarket'
   const [walletBalances, setWalletBalances] = useState({ main: 0, synthetic: 0, liveMarket: 0 })
 
   // Market mode: synthetic vs live
@@ -1065,7 +1063,7 @@ export default function App() {
   const [newNetAddress, setNewNetAddress] = useState('')
 
   // Deposit Queue
-  const [pendingDeposits, setPendingDeposits] = useState<DepositRequest[]>([])
+  const [_pendingDeposits, setPendingDeposits] = useState<DepositRequest[]>([])
 
   const [authLoading, setAuthLoading] = useState(supabaseConfigured)
   const [authSubmitting, setAuthSubmitting] = useState(false)
@@ -1226,7 +1224,7 @@ export default function App() {
   // Deposit Form Submit
 
   // AI Signal auto-trade handler
-  const handleAiAutoTrade = (signal: import('./features/AiScanner').AiSignal) => {
+  const handleAiAutoTrade = (signal: AiSignal) => {
     if (accountType !== 'demo') {
       showNotice('Select a demo account to execute AI signals.')
       return
@@ -1264,7 +1262,7 @@ export default function App() {
   }
 
   // Withdrawal Submit
-  const handleWithdrawSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const _handleWithdrawSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const wAmount = parseFloat(withdrawAmount) || 100
     if (activeBalance < wAmount) {
@@ -1278,7 +1276,7 @@ export default function App() {
   }
 
   // Login Submit
-  const handleLoginSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const _handleLoginSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!supabase) {
       showNotice('Configure Supabase to sign in to a saved account. Use Local Demo to explore simulated trading.')
@@ -1293,7 +1291,7 @@ export default function App() {
   }
 
   // Signup Submit
-  const handleSignupSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const _handleSignupSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!supabase) {
       showNotice('Configure Supabase before creating a saved user account.')

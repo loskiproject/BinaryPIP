@@ -57,7 +57,7 @@ function generateSignal(symbol: string, price: number): AiSignal {
 }
 
 export default function AiScanner({ symbol, currentPrice, onAutoTrade, pricePrecision = 2 }: Props) {
-  const [scanning, setScanning] = useState(false)
+  const [_scanning, setScanning] = useState(false)
   const [signal, setSignal] = useState<AiSignal | null>(null)
   const [scanPhase, setScanPhase] = useState<'idle' | 'scanning' | 'result'>('idle')
   const [scanProgress, setScanProgress] = useState(0)

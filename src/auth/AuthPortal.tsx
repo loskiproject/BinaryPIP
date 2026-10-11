@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import {
   Eye, EyeOff, CheckCircle2, XCircle, ArrowRight,
   Shield, Mail, Phone, User, Globe, Gift, AlertCircle,
@@ -30,7 +30,7 @@ type SignupForm = SignupPayload & {
   agreeRisk: boolean
 }
 
-type FailedAttempt = { count: number; lockedUntil: number | null }
+// type FailedAttempt = { count: number; lockedUntil: number | null }
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -155,7 +155,7 @@ function MiniChart({ seed, color }: { seed: number; color: string }) {
     const y = 50 + Math.sin(i * 0.35 + seed) * 22 + Math.sin(i * 0.8 + seed * 2) * 10
     return `${i * 13.8},${Math.max(4, Math.min(96, y))}`
   }).join(' ')
-  const fill = pts.split(' ').map((p, i, arr) => i === 0 ? `M ${p}` : `L ${p}`).join(' ') + ` L ${29 * 13.8},100 L 0,100 Z`
+  const fill = pts.split(' ').map((p, i) => i === 0 ? `M ${p}` : `L ${p}`).join(' ') + ` L ${29 * 13.8},100 L 0,100 Z`
   return (
     <svg viewBox="0 0 400 100" preserveAspectRatio="none" className="nx-panel-chart">
       <defs>

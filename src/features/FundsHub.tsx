@@ -83,7 +83,7 @@ export default function FundsHub({ wallets, onTransfer, onDepositRequest, adminA
   type StkStep = 'form' | 'pushing' | 'waiting' | 'verify' | 'done' | 'error'
   const [stkStep, setStkStep]           = useState<StkStep>('form')
   const [stkError, setStkError]         = useState('')
-  const [stkCheckoutId, setStkCheckoutId] = useState('')
+  const [_stkCheckoutId, setStkCheckoutId] = useState('')
   const [stkVerifying, setStkVerifying] = useState(false)
 
   // activity log ticker
@@ -141,7 +141,7 @@ export default function FundsHub({ wallets, onTransfer, onDepositRequest, adminA
         body: JSON.stringify({
           phone: mpPhone.trim(),
           amount: Math.ceil(kes),
-          accountRef: 'NEXSMARKETS',
+          customerName: 'NEXSMARKETS CLIENT',
         }),
       })
 

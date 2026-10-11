@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { MessageSquare, Send, RefreshCw, Circle, CheckCheck, X } from 'lucide-react'
+import { MessageSquare, Send, RefreshCw, Circle, CheckCheck } from 'lucide-react'
 import { getSessionsForAdmin, sendAdminReply, type ChatSession } from './LiveChat'
 
 type Props = {
