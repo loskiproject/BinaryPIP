@@ -1462,3 +1462,8 @@
   .sa-section h1      { font-size: 17px; }
   .sa-section-head    { flex-direction: column; }
 }
+
+@keyframes sa-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
