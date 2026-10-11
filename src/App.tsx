@@ -1792,39 +1792,23 @@ export default function App() {
                 <div className="mobile-tools-dropdown-header">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <List size={14} color="var(--neon-cyan)" />
-                    <strong>Market Hub &amp; Alerts</strong>
+                    <strong>Market &amp; Alerts</strong>
                   </div>
                   <button type="button" onClick={() => setMarketHubMenuOpen(false)} className="mobile-tools-dropdown-close">
                     <X size={14} />
                   </button>
                 </div>
-                <div className="mobile-tools-dropdown-grid">
+                <div className="mobile-tools-dropdown-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
                   <button type="button" className="mobile-tool-btn" onClick={() => { changeView('assets'); setMarketHubMenuOpen(false); }}>
-                    <List size={16} />
+                    <List size={18} />
                     <span>Watchlist</span>
                   </button>
-                  <button type="button" className="mobile-tool-btn" onClick={() => { showNotice('Alerts Manager Active'); setMarketHubMenuOpen(false); }}>
-                    <Clock size={16} />
-                    <span>Price Alerts</span>
-                  </button>
-                  <button type="button" className="mobile-tool-btn" onClick={() => { showNotice('Live Market News Loaded'); setMarketHubMenuOpen(false); }}>
-                    <Newspaper size={16} />
-                    <span>Market News</span>
-                  </button>
-                  <button type="button" className="mobile-tool-btn" onClick={() => { showNotice('Top Market Movers Active'); setMarketHubMenuOpen(false); }}>
-                    <Flame size={16} />
-                    <span>Hot Movers</span>
-                  </button>
-                  <button type="button" className="mobile-tool-btn" onClick={() => { showNotice('Economic Calendar Loaded'); setMarketHubMenuOpen(false); }}>
-                    <Calendar size={16} />
-                    <span>Economic Calendar</span>
-                  </button>
-                  <button type="button" className="mobile-tool-btn" onClick={() => { showNotice('Pro Trading Ideas Stream'); setMarketHubMenuOpen(false); }}>
-                    <Lightbulb size={16} />
-                    <span>Trading Ideas</span>
+                  <button type="button" className="mobile-tool-btn" onClick={() => { showNotice('Price Alerts Active'); setMarketHubMenuOpen(false); }}>
+                    <Clock size={18} />
+                    <span>Alerts</span>
                   </button>
                   <button type="button" className="mobile-tool-btn" onClick={() => { showNotice('Notifications Active'); setMarketHubMenuOpen(false); }}>
-                    <Bell size={16} />
+                    <Bell size={18} />
                     <span>Notifications</span>
                   </button>
                 </div>
