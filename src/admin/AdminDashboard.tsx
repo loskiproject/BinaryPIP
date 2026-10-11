@@ -327,6 +327,8 @@ export default function AdminDashboard() {
   const [section, setSection] = useState<AdminSection>('overview')
   const [admins, setAdmins] = useState<AdminUser[]>(initialAdmins)
   const [users, setUsers] = useState<PlatformUser[]>(initialUsers)
+  const [usersLoading, setUsersLoading] = useState(false)
+  const [usersError, setUsersError] = useState('')
   const [kycQueue, setKycQueue] = useState<KycCase[]>(initialKycQueue)
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions)
   const [auditLog, setAuditLog] = useState<AuditEntry[]>(initialAuditLog)
