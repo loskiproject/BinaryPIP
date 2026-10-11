@@ -703,7 +703,7 @@ html, body, #root {
 /* WORKSPACE GRID WITH EXPANDABLE CHART CANVAS */
 .chart-workspace-container {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) 320px 44px;
+  grid-template-columns: 56px minmax(0, 1fr) 320px;
   min-height: 520px;
   height: 100%;
   position: relative;
@@ -714,7 +714,7 @@ html, body, #root {
 }
 
 .chart-workspace-container.expanded-canvas {
-  grid-template-columns: 56px minmax(0, 1fr) 44px;
+  grid-template-columns: 56px minmax(0, 1fr);
 }
 
 @media (max-width: 1024px) {
