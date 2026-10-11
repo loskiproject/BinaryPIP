@@ -3205,18 +3205,96 @@ textarea:focus {
 
 /* ── Chart fullscreen neon ─────────────────────────────────────────────────── */
 .chart-fullscreen-overlay {
-  background: rgba(4, 7, 14, 0.98) !important;
-  border: 1px solid rgba(0, 229, 255, 0.15) !important;
+  position: fixed !important;
+  inset: 0 !important;
+  background: var(--bg-deep) !important;
+  z-index: 9999 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 16px !important;
+  gap: 12px !important;
+}
+
+.fullscreen-overlay-topbar {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 10px 18px !important;
+  background: rgba(10, 14, 22, 0.95) !important;
+  border: 1px solid rgba(0, 229, 255, 0.3) !important;
+  border-radius: 12px !important;
+  backdrop-filter: blur(12px) !important;
 }
 
 .exit-fullscreen-btn {
-  border-color: rgba(0, 229, 255, 0.25) !important;
-  color: #00e5ff !important;
+  padding: 8px 16px !important;
+  background: linear-gradient(180deg, #ef4444, #dc2626) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  border: none !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3) !important;
+  transition: all 0.2s !important;
 }
 
 .exit-fullscreen-btn:hover {
-  background: rgba(0, 229, 255, 0.1) !important;
-  box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+  background: rgba(239, 68, 68, 0.9) !important;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.5) !important;
+}
+
+/* MOBILE TOOLS DROPDOWN POPUP MENUS */
+.mobile-tools-dropdown-menu {
+  position: absolute !important;
+  top: 100% !important;
+  left: 0 !important;
+  right: 0 !important;
+  margin-top: 6px !important;
+  background: rgba(8, 12, 20, 0.98) !important;
+  border: 1px solid rgba(0, 229, 255, 0.3) !important;
+  border-radius: 14px !important;
+  padding: 12px !important;
+  z-index: 1500 !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85), 0 0 20px rgba(0, 229, 255, 0.1) !important;
+  backdrop-filter: blur(20px) !important;
+  animation: dropdownFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  min-width: 280px !important;
+}
+
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.mobile-tools-dropdown-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding-bottom: 8px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  margin-bottom: 10px !important;
+  font-size: 12px !important;
+  color: #ffffff !important;
+}
+
+.mobile-tools-dropdown-close {
+  background: transparent !important;
+  border: none !important;
+  color: var(--text-muted) !important;
+  cursor: pointer !important;
+  display: grid !important;
+  place-items: center !important;
+}
+
+.mobile-tools-dropdown-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 8px !important;
+  max-height: 280px !important;
+  overflow-y: auto !important;
 }
 
 /* ── DOM orderbook neon ────────────────────────────────────────────────────── */
