@@ -109,7 +109,8 @@ export default function FundsHub({
   const total = wallets.main + wallets.synthetic + wallets.liveMarket
 
   const cryptoNetworks = adminAddresses.filter(a => a.enabled)
-  const allMethods = [
+  type MethodItem = { id: string; label: string; icon: string; color?: string; isSeparator?: boolean }
+  const allMethods: MethodItem[] = [
     { id: 'mpesa', label: 'M-PESA DEPOSIT', icon: '📱' },
     { id: 'CRYPTO', label: 'CRYPTO', icon: '₿', isSeparator: true },
     ...cryptoNetworks.map(a => ({
