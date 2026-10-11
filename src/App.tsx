@@ -3166,7 +3166,7 @@ export default function App() {
         onDepositRequest={handleFundsDepositRequest}
         adminAddresses={adminAddresses.map(a => ({ ...a, enabled: true }))}
         showNotice={showNotice}
-        minDepositUSD={50}
+        minDepositUSD={10}
         minDepositKES={100}
         minWithdrawalUSD={10}
       />
