@@ -1099,6 +1099,23 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
+                    {usersLoading && (
+                      <tr><td colSpan={9} style={{ textAlign: 'center', padding: '32px', color: 'var(--sa-muted)' }}>
+                        <RefreshCw size={18} style={{ animation: 'sa-spin 1s linear infinite', marginBottom: 8 }} />
+                        <div>Loading users from database…</div>
+                      </td></tr>
+                    )}
+                    {!usersLoading && usersError && (
+                      <tr><td colSpan={9} style={{ textAlign: 'center', padding: '24px', color: '#f04452' }}>
+                        <AlertCircle size={16} style={{ marginRight: 6 }} />{usersError}
+                      </td></tr>
+                    )}
+                    {!usersLoading && !usersError && filteredUsers.length === 0 && (
+                      <tr><td colSpan={9} style={{ textAlign: 'center', padding: '32px', color: 'var(--sa-muted)' }}>
+                        <Users size={24} style={{ marginBottom: 8, opacity: 0.4 }} />
+                        <div>No registered users yet.</div>
+                      </td></tr>
+                    )}
                     {filteredUsers.map(u => (
                       <tr key={u.id} className="sa-row-hover" onClick={() => setSelectedUser(u)}>
                         <td>
