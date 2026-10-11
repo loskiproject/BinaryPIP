@@ -1950,7 +1950,6 @@ export default function App() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ fontFamily: 'var(--font-code)' }}>00:48:10 UTC</span>
-            <span style={{ color: 'var(--mint-teal)', fontWeight: 800 }}>TradingView Engine Pro</span>
           </div>
         </div>
 
