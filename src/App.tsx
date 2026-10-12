@@ -571,7 +571,7 @@ function TradingViewCandlestickCanvas({
       <svg
         viewBox="0 0 580 240"
         preserveAspectRatio="none"
-        style={{ width: '100%', height: '100%', touchAction: 'none', cursor: tool === 'pan' ? (isPanning ? 'grabbing' : 'grab') : tool === 'text' ? 'text' : 'crosshair' }}
+        style={{ width: '100%', height: '100%', minHeight: '220px', touchAction: 'pan-y pinch-zoom', cursor: tool === 'pan' ? (isPanning ? 'grabbing' : 'grab') : tool === 'text' ? 'text' : 'crosshair' }}
         onPointerDown={handleChartPointerDown}
         onPointerMove={handleChartPointerMove}
         onPointerUp={handleChartPointerUp}
@@ -1602,7 +1602,7 @@ export default function App() {
               <span>🟡</span> <span>{selectedAsset}</span>
             </div>
 
-            <button type="button" className="tv-btn-icon" onClick={() => showNotice('Compare assets tool opened')}>+</button>
+            <button type="button" className="tv-btn-icon tv-desktop-only" onClick={() => showNotice('Compare assets tool opened')}>+</button>
 
             <select className="control-select" value={timeframe} onChange={(e) => setTimeframe(e.target.value as Timeframe)}>
               <option value="1s">1s</option>
@@ -1630,7 +1630,7 @@ export default function App() {
             {/* Expandable Chart Workspace Toggle Button */}
             <button
               type="button"
-              className={`tv-btn-icon ${isChartExpanded ? 'active' : ''}`}
+              className={`tv-btn-icon tv-desktop-only ${isChartExpanded ? 'active' : ''}`}
               onClick={() => {
                 setIsChartExpanded(!isChartExpanded)
                 showNotice(isChartExpanded ? 'Docked DOM sidebar' : 'Expanded chart canvas to 100% width!')
@@ -1651,17 +1651,17 @@ export default function App() {
               <option value="1:1000">Leverage 1:1000</option>
             </select>
 
-            <button type="button" className="tv-btn-icon" onClick={() => changeView('institutions')}>
+            <button type="button" className="tv-btn-icon tv-desktop-only" onClick={() => changeView('institutions')}>
               <LayoutDashboard size={14} /> Grid
             </button>
-            <button type="button" className="tv-btn-icon" onClick={() => showNotice('Alert created for price level')}>
+            <button type="button" className="tv-btn-icon tv-desktop-only" onClick={() => showNotice('Alert created for price level')}>
               <Clock size={14} /> Alert
             </button>
-            <button type="button" className="tv-btn-icon" onClick={() => showNotice('Bar Replay mode engaged')}>
+            <button type="button" className="tv-btn-icon tv-desktop-only" onClick={() => showNotice('Bar Replay mode engaged')}>
               <RotateCcw size={14} /> Replay
             </button>
-            <button type="button" className="tv-btn-icon" title="Undo"><RotateCcw size={12} /></button>
-            <button type="button" className="tv-btn-icon" title="Redo"><RotateCw size={12} /></button>
+            <button type="button" className="tv-btn-icon tv-desktop-only" title="Undo"><RotateCcw size={12} /></button>
+            <button type="button" className="tv-btn-icon tv-desktop-only" title="Redo"><RotateCw size={12} /></button>
           </div>
 
           <div className="tv-control-group">
@@ -1681,10 +1681,10 @@ export default function App() {
             <button type="button" className={`tv-btn-icon ${aiScannerOpen ? 'active' : ''}`} onClick={() => setAiScannerOpen(p => !p)} style={{ color: aiScannerOpen ? '#00e5ff' : undefined }}>
               <Brain size={14} /> AI Scan
             </button>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span className="tv-desktop-only" style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <Cloud size={12} color="var(--mint-teal)" /> Unnamed Save
             </span>
-            <button type="button" className="tv-btn-icon" title="Take Snapshot" onClick={() => showNotice('Chart Snapshot captured!')}>
+            <button type="button" className="tv-btn-icon tv-desktop-only" title="Take Snapshot" onClick={() => showNotice('Chart Snapshot captured!')}>
               <Camera size={14} />
             </button>
             <button type="button" className="button button-mint" style={{ padding: '4px 12px', fontSize: '11px' }} onClick={() => handleExecuteTrade(true)}>
@@ -1879,7 +1879,7 @@ export default function App() {
 
             {/* AI ENTRY SCANNER PANEL */}
             {aiScannerOpen && (
-              <div style={{ position: 'absolute', top: '8px', right: '8px', width: '280px', zIndex: 10 }}>
+              <div className="ai-scanner-dock">
                 <AiScanner
                   symbol={selectedAsset}
                   currentPrice={quotes.find(q => q.symbol === selectedAsset)?.price ?? 0}
@@ -3808,6 +3808,30 @@ export default function App() {
       )}
 
       {notice && <div className="toast"><Sparkles size={16} /><span>{notice}</span></div>}
+
+      <nav className="mobile-bottom-nav" aria-label="Primary">
+        {([
+          { id: 'overview' as View, label: 'Home', icon: LayoutDashboard },
+          { id: 'assets' as View, label: 'Markets', icon: CandlestickChart },
+          { id: 'synthetic' as View, label: 'Trade', icon: TrendingUp },
+          { id: 'funds' as View, label: 'Funds', icon: Wallet },
+          { id: 'profile' as View, label: 'Profile', icon: UserRound },
+        ]).map((item) => {
+          const Icon = item.icon
+          const isActive = activeView === item.id || (item.id === 'overview' && activeView === 'positions')
+          return (
+            <button
+              key={item.id}
+              type="button"
+              className={`mobile-bottom-nav-item ${isActive ? 'active' : ''}`}
+              onClick={() => changeView(item.id)}
+            >
+              <Icon size={18} />
+              <span>{item.label}</span>
+            </button>
+          )
+        })}
+      </nav>
 
       {/* LIVE SUPPORT CHAT WIDGET */}
       {user && user.id !== 'local-demo-user' && (

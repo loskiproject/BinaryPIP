@@ -919,10 +919,12 @@
 
 /* ── Responsive ───────────────────────────────────────────────────────── */
 @media (max-width: 960px) {
-  .nx-body { grid-template-columns: 1fr; margin-top: 38px; min-height: auto; }
+  .nx-body { grid-template-columns: 1fr; margin-top: 38px; min-height: auto; width: 100%; }
   .nx-left { display: none; }
-  .nx-right { padding: 24px 16px; width: 100%; min-height: calc(100vh - 38px); }
+  .nx-right { padding: 24px 16px; width: 100%; min-height: calc(100dvh - 38px); }
   .nx-card { max-width: 100%; width: 100%; border-radius: 18px; }
+  .nx-ticker-rail { padding-top: env(safe-area-inset-top); height: calc(38px + env(safe-area-inset-top)); }
+  .nx-body { margin-top: calc(38px + env(safe-area-inset-top)); }
 }
 
 @media (max-width: 480px) {

@@ -9,12 +9,17 @@
 
 html, body, #root {
   min-height: 100vh;
+  min-height: 100dvh;
   width: 100%;
+  max-width: 100%;
   margin: 0;
   padding: 0;
   /* Dark base so there is never a white flash before App.css loads */
   background: #060912;
   color: #eef4ff;
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
