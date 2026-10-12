@@ -234,35 +234,17 @@
           <i class="fa-solid fa-expand" id="fullscreenIcon"></i> <span id="fullscreenText">Fullscreen</span>
         </button>
         <canvas id="liveTickChart" class="w-full h-full block"></canvas>
-      </div>
 
-      <!-- Zoom Floating Controls (Bottom Left) -->
-      <div class="absolute bottom-20 left-4 z-10 flex flex-col gap-1">
-        <button type="button" onclick="zoomChart(0.8)" class="w-7 h-7 rounded-md bg-[#121824] border border-gray-800 text-gray-300 hover:text-white flex items-center justify-center text-xs shadow-md">
-          <i class="fa-solid fa-plus"></i>
-        </button>
-        <button type="button" onclick="zoomChart(1.0)" class="w-7 h-7 rounded-md bg-[#121824] border border-gray-800 text-gray-300 hover:text-white flex items-center justify-center text-xs shadow-md">
-          <i class="fa-solid fa-crosshairs"></i>
-        </button>
-        <button type="button" onclick="zoomChart(1.2)" class="w-7 h-7 rounded-md bg-[#121824] border border-gray-800 text-gray-300 hover:text-white flex items-center justify-center text-xs shadow-md">
-          <i class="fa-solid fa-minus"></i>
-        </button>
-      </div>
-
-      <!-- RUNNING INDEXES BAR (Bottom Overlay over Chart) -->
-      <div class="bg-[#0f141e]/95 border-t border-gray-800/80 px-4 py-2.5 flex flex-col gap-1.5 shrink-0 z-10 backdrop-blur-md">
-        <div class="flex items-center justify-between">
-          <div class="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-            <i class="fa-solid fa-chart-pie text-teal-400 text-xs"></i> Last Digit Statistics (0 - 9)
+        <!-- RUNNING INDEXES BAR (Overlayed at Bottom Left over Chart, exactly like Deriv) -->
+        <div class="absolute bottom-4 left-4 z-20 bg-[#0c1018]/90 border border-gray-800/90 backdrop-blur-md rounded-xl p-3 flex items-center gap-3 shadow-2xl">
+          <div class="text-[10px] text-gray-500 font-bold uppercase tracking-wider flex flex-col items-center pr-2 border-r border-gray-800">
+            <span>Powered by</span>
+            <span class="text-teal-400 font-extrabold tracking-normal text-xs">Exstrade</span>
           </div>
-          <div class="text-gray-500 text-xs hover:text-gray-300 cursor-pointer" title="Last Digit Stats">
-            <i class="fa-solid fa-circle-info"></i>
+          <!-- 10 Running Digit Circles (0 - 9) -->
+          <div class="flex items-center gap-2.5" id="runningIndexesContainer">
+            <!-- Dynamically generated 0-9 digit items -->
           </div>
-        </div>
-
-        <!-- 10 Running Digit Circles (0 - 9) -->
-        <div class="flex items-center justify-between gap-2 overflow-x-auto my-1 py-1" id="runningIndexesContainer">
-          <!-- Dynamically generated 0-9 digit items -->
         </div>
       </div>
     </main>
