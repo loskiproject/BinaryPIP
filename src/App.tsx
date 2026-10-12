@@ -1122,11 +1122,18 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(supabaseConfigured)
   const [authSubmitting, setAuthSubmitting] = useState(false)
 
+  const [pageLoading, setPageLoading] = useState(false)
+
   // Navigation Handler
   const changeView = (nextView: View) => {
+    if (nextView === activeView) return
+    setPageLoading(true)
     setPreviousView(activeView)
     setActiveView(nextView)
     setMobileMenuOpen(false)
+    setTimeout(() => {
+      setPageLoading(false)
+    }, 320)
   }
 
   const goBack = () => {
@@ -3853,6 +3860,13 @@ export default function App() {
               <Check size={16} /> Apply Indicators to Canvas
             </button>
           </section>
+        </div>
+      )}
+
+      {pageLoading && (
+        <div className="page-transition-loader">
+          <div className="page-loader-spinner"></div>
+          <span className="page-loader-text">Loading Nexus Workspace...</span>
         </div>
       )}
 
