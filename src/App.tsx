@@ -2877,173 +2877,221 @@ export default function App() {
   )
 
   // VIEW 7: DEDICATED PROFILE PAGE
-  const renderDedicatedProfilePage = () => (
-    <section className="verification-page">
-      <header className="verification-page-heading">
-        <div>
-          <span className="section-kicker">IDENTITY & COMPLIANCE</span>
-          <h2>User Identity &amp; Global Verification Hub</h2>
-          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '3px' }}>
-            Signed in as <strong style={{ color: 'var(--mint-teal)' }}>{user?.email || user?.fullName || 'Trader'}</strong>
-          </p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span className="verification-review-state pending">AWAITING APPROVAL</span>
-          <button
-            type="button"
-            className="button button-dark"
-            style={{ color: 'var(--bear-red)', border: '1px solid rgba(240,68,82,0.3)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}
-            onClick={async () => {
-              if (supabase) await supabase.auth.signOut()
-              setUser(null)
-              setAccountType('none')
-              setDemoBalance(0)
-              setLiveBalance(0)
-              setLiveAccountCreated(false)
-            }}
-          >
-            <LogOut size={14} /> Sign Out
-          </button>
-        </div>
-      </header>
+  const renderDedicatedProfilePage = () => {
+    const isKycApproved = (user as any)?.kycStatus === 'APPROVED' || (user as any)?.kycStatus === 'approved' || (user as any)?.kyc_status === 'approved' || (user as any)?.kyc_status === 'APPROVED' || (user as any)?.accountStatus === 'approved' || (user as any)?.accountStatus === 'APPROVED'
 
-      <div className="verification-layout">
-        <article className="verification-panel identity-panel">
-          <div className="verification-panel-title">
+    return (
+      <section className="verification-page">
+        {isKycApproved && (
+          <div className="kyc-approved-global-banner">
+            <div className="kyc-banner-badge"><Check size={18} color="#fff" /></div>
             <div>
-              <span className="verification-eyebrow">ACCOUNT HOLDER</span>
-              <h3>User Identity &amp; Profile</h3>
-            </div>
-            <span className="verification-step">01</span>
-          </div>
-
-          <div className="identity-person">
-            <div className="identity-avatar-wrap">
-              <div className="identity-avatar">
-                <img src={avatarPreview || avatarUrl || '/generic-profile-portrait.svg'} alt="Profile portrait" />
-              </div>
-              <input ref={avatarInputRef} className="visually-hidden-input" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void handleAvatarFile(event.currentTarget.files?.[0])} />
-              <button type="button" className="identity-photo-link" onClick={() => avatarInputRef.current?.click()}><Camera size={13} /> Update Photo</button>
-            </div>
-            <div className="identity-holder-copy">
-              <span className="verification-eyebrow">USERNAME</span>
-              <strong>{profileDraft.displayName || 'Your name'}</strong>
-              <span className="access-level-label">Access Level</span>
-              <div className="access-level-insignia">
-                <ShieldCheck size={22} />
-                <span>{user?.role === 'admin' ? 'ADMINISTRATOR' : 'CLIENT ACCESS'}</span>
-              </div>
+              <strong>KYC VERIFICATION APPROVED</strong>
+              <span>Confirmation on {new Date().toLocaleString()} GM</span>
             </div>
           </div>
+        )}
 
-          <form className="verification-form identity-form" onSubmit={(event) => void handleProfileSubmit(event)}>
-            <div className="verification-form-heading">
-              <h4>Your Identity</h4>
-              <span>Account details</span>
-            </div>
-            <label className="verification-field">
-              <span>Display Name <Pencil size={12} /></span>
-              <input required value={profileDraft.displayName} onChange={(event) => setProfileDraft((current) => ({ ...current, displayName: event.target.value }))} placeholder="Your full name" />
-            </label>
-            <label className="verification-field">
-              <span>Account Email <Pencil size={12} /></span>
-              <input required type="email" value={profileDraft.email} onChange={(event) => setProfileDraft((current) => ({ ...current, email: event.target.value }))} placeholder="name@example.com" />
-            </label>
-            <label className="verification-field">
-              <span>Primary Phone Number <Pencil size={12} /></span>
-              <div className="verification-phone-row">
-                <select aria-label="Phone region" value={profileDraft.country} onChange={(event) => setProfileDraft((current) => ({ ...current, country: event.target.value }))}>
-                  <option>Global</option><option>Kenya</option><option>United States</option><option>United Kingdom</option><option>India</option><option>South Africa</option>
-                </select>
-                <input type="tel" value={profileDraft.phone} onChange={(event) => setProfileDraft((current) => ({ ...current, phone: event.target.value }))} placeholder="+XXX XXX XXX XXX" />
-              </div>
-            </label>
-            <label className="verification-field">
-              <span><Mail size={13} /> Recovery Email <Pencil size={12} /><em>Optional</em></span>
-              <input type="email" value={profileDraft.recoveryEmail} onChange={(event) => setProfileDraft((current) => ({ ...current, recoveryEmail: event.target.value }))} placeholder="recovery@example.com" />
-            </label>
-            <button type="submit" className="verification-primary-button"><Check size={16} /> Update My Profile Details</button>
-          </form>
-        </article>
+        <header className="verification-page-heading">
+          <div>
+            <span className="section-kicker">IDENTITY & COMPLIANCE</span>
+            <h2>User Identity &amp; Global Verification Hub</h2>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '3px' }}>
+              Signed in as <strong style={{ color: 'var(--mint-teal)' }}>{user?.email || user?.fullName || 'Trader'}</strong>
+            </p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span className={`verification-review-state ${isKycApproved ? 'approved' : 'pending'}`}>
+              {isKycApproved ? '✓ APPROVED' : 'AWAITING APPROVAL'}
+            </span>
+            <button
+              type="button"
+              className="button button-dark"
+              style={{ color: 'var(--bear-red)', border: '1px solid rgba(240,68,82,0.3)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}
+              onClick={async () => {
+                if (supabase) await supabase.auth.signOut()
+                setUser(null)
+                setAccountType('none')
+                setDemoBalance(0)
+                setLiveBalance(0)
+                setLiveAccountCreated(false)
+              }}
+            >
+              <LogOut size={14} /> Sign Out
+            </button>
+          </div>
+        </header>
 
-        <div className="verification-right-column">
-          <article className="verification-panel document-panel">
+        <div className="verification-layout">
+          <article className="verification-panel identity-panel">
             <div className="verification-panel-title">
               <div>
-                <span className="verification-eyebrow">IDENTIFY HUB | GLOBAL DOCUMENT CENTRE</span>
-                <h3>Document Centre &amp; Global Verification Hub</h3>
+                <span className="verification-eyebrow">ACCOUNT HOLDER</span>
+                <h3>User Identity &amp; Profile</h3>
               </div>
-              <span className="verification-step">02</span>
+              <span className="verification-step">01</span>
             </div>
 
-            <div className="document-details-grid">
-              <label className="verification-field">
-                <span>Home Address <Pencil size={12} /></span>
-                <input value={profileDraft.homeAddress} onChange={(event) => setProfileDraft((current) => ({ ...current, homeAddress: event.target.value }))} placeholder="Street, city, postal code" />
-              </label>
-              <label className="verification-field">
-                <span><Globe size={13} /> Document Issuing Region</span>
-                <select value={profileDraft.issuingRegion} onChange={(event) => setProfileDraft((current) => ({ ...current, issuingRegion: event.target.value }))}>
-                  <option>Global</option><option>Kenya</option><option>United States</option><option>United Kingdom</option><option>India</option><option>South Africa</option>
-                </select>
-              </label>
-              <label className="verification-field">
-                <span>National ID Document Type</span>
-                <select value={profileDraft.documentType} onChange={(event) => setProfileDraft((current) => ({ ...current, documentType: event.target.value }))}>
-                  <option>ID Card</option><option>Passport</option><option>Driver License</option><option>Residence Permit</option>
-                </select>
-              </label>
-              <label className="verification-field">
-                <span>National ID / Document Number <b>PRIMARY</b></span>
-                <input value={profileDraft.documentNumber} onChange={(event) => setProfileDraft((current) => ({ ...current, documentNumber: event.target.value }))} placeholder="Enter document number" />
-              </label>
-            </div>
-
-            <div className="upload-section-heading">
-              <h4>Required Document Uploads</h4>
-              <span>Private · JPEG or PDF · Max 5MB</span>
-            </div>
-            <div className="document-upload-row">
-              <div className="document-upload-column">
-                <label className="verification-field upload-type-field">
-                  <span>Select Document Type</span>
-                  <select value={documentUploadType} onChange={(event) => setDocumentUploadType(event.target.value)}>
-                    <option>National ID</option><option>Proof of Address</option><option>Income Proof</option><option>Passport</option><option>Other Supporting Document</option>
-                  </select>
-                </label>
-                <label className="document-dropzone" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void handleVerificationDocument(event.dataTransfer.files[0]) }}>
-                  <input className="visually-hidden-input" type="file" accept="image/jpeg,application/pdf" onChange={(event) => { void handleVerificationDocument(event.currentTarget.files?.[0]); event.currentTarget.value = '' }} />
-                  <span className="document-upload-icon"><Upload size={21} /><Plus size={12} /></span>
-                  <strong>UPLOAD HERE</strong>
-                  <span>Drag file or click to browse</span>
-                  <small>JPEG or PDF · Maximum 5MB</small>
-                </label>
+            <div className="identity-person">
+              <div className="identity-avatar-wrap">
+                <div className="identity-avatar">
+                  <img src={avatarPreview || avatarUrl || '/generic-profile-portrait.svg'} alt="Profile portrait" />
+                </div>
+                <input ref={avatarInputRef} className="visually-hidden-input" type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void handleAvatarFile(event.currentTarget.files?.[0])} />
+                <button type="button" className="identity-photo-link" onClick={() => avatarInputRef.current?.click()}><Camera size={13} /> Update Photo</button>
               </div>
-              <div className="document-status-column">
-                <div className="document-status-heading"><h4>Status / Pending Documents</h4><span>{verificationDocuments.length.toString().padStart(2, '0')}</span></div>
-                {verificationDocuments.length ? verificationDocuments.map((document) => {
-                  const isVerified = document.status === 'verified'
-                  const isLocal = document.status === 'local'
-                  const statusText = isVerified ? 'VERIFIED' : isLocal ? 'LOCAL PREVIEW · NOT SUBMITTED' : `QUEUED FOR REVIEW (${formatEATTime(new Date(document.submittedAt))} EAT)`
-                  return (
-                    <div className={`document-status-item ${isVerified ? 'is-verified' : isLocal ? 'is-local' : 'is-pending'}`} key={document.id}>
-                      <FileText size={17} />
-                      <div><strong>{document.name}</strong><span>{document.documentType} · {statusText}</span></div>
+              <div className="identity-holder-copy">
+                <span className="verification-eyebrow">USERNAME</span>
+                <strong>{profileDraft.displayName || 'Your name'}</strong>
+                <span className="access-level-label">Access Level</span>
+                <div className="access-level-insignia" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <ShieldCheck size={22} />
+                    <span>{user?.role === 'admin' ? 'ADMINISTRATOR' : 'CLIENT ACCESS'}</span>
+                  </div>
+                  {isKycApproved && (
+                    <div style={{ background: 'rgba(0,200,83,0.15)', border: '1px solid #00C853', color: '#00C853', padding: '4px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '4px', boxShadow: '0 0 10px rgba(0,200,83,0.3)' }}>
+                      ✓ FULLY VERIFIED
                     </div>
-                  )
-                }) : <p className="document-empty-state">No documents submitted. Your uploaded files will appear here with their review status.</p>}
+                  )}
+                </div>
               </div>
             </div>
+
+            <form className="verification-form identity-form" onSubmit={(event) => void handleProfileSubmit(event)}>
+              <div className="verification-form-heading">
+                <h4>Your Identity</h4>
+                <span>Account details</span>
+              </div>
+              <label className="verification-field">
+                <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Display Name <Pencil size={12} /></span>
+                  {isKycApproved && <span style={{ color: '#00C853', fontSize: '11px', fontWeight: 700 }}>✓ Verified</span>}
+                </span>
+                <input required readOnly={isKycApproved} value={profileDraft.displayName} onChange={(event) => !isKycApproved && setProfileDraft((current) => ({ ...current, displayName: event.target.value }))} placeholder="Your full name" />
+              </label>
+              <label className="verification-field">
+                <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Account Email <Pencil size={12} /></span>
+                  {isKycApproved && <span style={{ color: '#00C853', fontSize: '11px', fontWeight: 700 }}>✓ Verified</span>}
+                </span>
+                <input required type="email" readOnly={isKycApproved} value={profileDraft.email} onChange={(event) => !isKycApproved && setProfileDraft((current) => ({ ...current, email: event.target.value }))} placeholder="name@example.com" />
+              </label>
+              <label className="verification-field">
+                <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Primary Phone Number <Pencil size={12} /></span>
+                  {isKycApproved && <span style={{ color: '#00C853', fontSize: '11px', fontWeight: 700 }}>✓ Verified</span>}
+                </span>
+                <div className="verification-phone-row">
+                  <select aria-label="Phone region" disabled={isKycApproved} value={profileDraft.country} onChange={(event) => setProfileDraft((current) => ({ ...current, country: event.target.value }))}>
+                    <option>Global</option><option>Kenya</option><option>United States</option><option>United Kingdom</option><option>India</option><option>South Africa</option>
+                  </select>
+                  <input type="tel" readOnly={isKycApproved} value={profileDraft.phone} onChange={(event) => !isKycApproved && setProfileDraft((current) => ({ ...current, phone: event.target.value }))} placeholder="+XXX XXX XXX XXX" />
+                </div>
+              </label>
+              <label className="verification-field">
+                <span><Mail size={13} /> Recovery Email <Pencil size={12} /><em>Optional</em></span>
+                <input type="email" value={profileDraft.recoveryEmail} onChange={(event) => setProfileDraft((current) => ({ ...current, recoveryEmail: event.target.value }))} placeholder="recovery@example.com" />
+              </label>
+              {!isKycApproved && (
+                <button type="submit" className="verification-primary-button"><Check size={16} /> Update My Profile Details</button>
+              )}
+            </form>
           </article>
 
-          <article className="verification-panel suitability-panel">
-            <div className="verification-panel-title">
-              <div>
-                <span className="verification-eyebrow">CLIENT CLASSIFICATION</span>
-                <h3>Institutional On-boarding Questionnaire</h3>
+          <div className="verification-right-column">
+            <article className="verification-panel document-panel">
+              <div className="verification-panel-title">
+                <div>
+                  <span className="verification-eyebrow">IDENTIFY HUB | GLOBAL DOCUMENT CENTRE</span>
+                  <h3>Document Centre &amp; Global Verification Hub</h3>
+                </div>
+                <span className="verification-step">02</span>
               </div>
-              <span className="verification-step">03</span>
-            </div>
+
+              <div className="document-details-grid">
+                <label className="verification-field">
+                  <span>Home Address <Pencil size={12} /></span>
+                  <input readOnly={isKycApproved} value={profileDraft.homeAddress} onChange={(event) => !isKycApproved && setProfileDraft((current) => ({ ...current, homeAddress: event.target.value }))} placeholder="Street, city, postal code" />
+                </label>
+                <label className="verification-field">
+                  <span><Globe size={13} /> Document Issuing Region</span>
+                  <select disabled={isKycApproved} value={profileDraft.issuingRegion} onChange={(event) => setProfileDraft((current) => ({ ...current, issuingRegion: event.target.value }))}>
+                    <option>Global</option><option>Kenya</option><option>United States</option><option>United Kingdom</option><option>India</option><option>South Africa</option>
+                  </select>
+                </label>
+                <label className="verification-field">
+                  <span>National ID Document Type</span>
+                  <select disabled={isKycApproved} value={profileDraft.documentType} onChange={(event) => setProfileDraft((current) => ({ ...current, documentType: event.target.value }))}>
+                    <option>ID Card</option><option>Passport</option><option>Driver License</option><option>Residence Permit</option>
+                  </select>
+                </label>
+                <label className="verification-field">
+                  <span>National ID / Document Number <b>PRIMARY</b></span>
+                  <input readOnly={isKycApproved} value={isKycApproved ? '*****-1234' : profileDraft.documentNumber} onChange={(event) => !isKycApproved && setProfileDraft((current) => ({ ...current, documentNumber: event.target.value }))} placeholder="Enter document number" />
+                </label>
+              </div>
+
+              {isKycApproved ? (
+                <div className="verification-complete-card">
+                  <div className="verification-complete-icon"><FileText size={32} color="#00C853" /></div>
+                  <h4>VERIFICATION COMPLETE.</h4>
+                  <p>All Identity documents are approved and validated.</p>
+                  <div className="verification-logs-list">
+                    <div><Check size={13} color="#00C853" /> National ID: Verified on 2026-10-12</div>
+                    <div><Check size={13} color="#00C853" /> Documents: Verified on 2026-10-12</div>
+                    <div><Check size={13} color="#00C853" /> Verified IN: Verified on 2026-10-12</div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="upload-section-heading">
+                    <h4>Required Document Uploads</h4>
+                    <span>Private · JPEG or PDF · Max 5MB</span>
+                  </div>
+                  <div className="document-upload-row">
+                    <div className="document-upload-column">
+                      <label className="verification-field upload-type-field">
+                        <span>Select Document Type</span>
+                        <select value={documentUploadType} onChange={(event) => setDocumentUploadType(event.target.value)}>
+                          <option>National ID</option><option>Proof of Address</option><option>Income Proof</option><option>Passport</option><option>Other Supporting Document</option>
+                        </select>
+                      </label>
+                      <label className="document-dropzone" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); void handleVerificationDocument(event.dataTransfer.files[0]) }}>
+                        <input className="visually-hidden-input" type="file" accept="image/jpeg,application/pdf" onChange={(event) => { void handleVerificationDocument(event.currentTarget.files?.[0]); event.currentTarget.value = '' }} />
+                        <span className="document-upload-icon"><Upload size={21} /><Plus size={12} /></span>
+                        <strong>UPLOAD HERE</strong>
+                        <span>Drag file or click to browse</span>
+                        <small>JPEG or PDF · Maximum 5MB</small>
+                      </label>
+                    </div>
+                    <div className="document-status-column">
+                      <div className="document-status-heading"><h4>Status / Pending Documents</h4><span>{verificationDocuments.length.toString().padStart(2, '0')}</span></div>
+                      {verificationDocuments.length ? verificationDocuments.map((document) => {
+                        const isVerified = document.status === 'verified'
+                        const isLocal = document.status === 'local'
+                        const statusText = isVerified ? 'VERIFIED' : isLocal ? 'LOCAL PREVIEW · NOT SUBMITTED' : `QUEUED FOR REVIEW (${formatEATTime(new Date(document.submittedAt))} EAT)`
+                        return (
+                          <div className={`document-status-item ${isVerified ? 'is-verified' : isLocal ? 'is-local' : 'is-pending'}`} key={document.id}>
+                            <FileText size={17} />
+                            <div><strong>{document.name}</strong><span>{document.documentType} · {statusText}</span></div>
+                          </div>
+                        )
+                      }) : <p className="document-empty-state">No documents submitted. Your uploaded files will appear here with their review status.</p>}
+                    </div>
+                  </div>
+                </>
+              )}
+            </article>
+
+            <article className="verification-panel suitability-panel">
+              <div className="verification-panel-title">
+                <div>
+                  <span className="verification-eyebrow">CLIENT CLASSIFICATION</span>
+                  <h3>Institutional On-boarding Questionnaire</h3>
+                </div>
+                <span className="verification-step">03</span>
+              </div>
             <form className="suitability-form" onSubmit={(event) => void handleQuestionnaireSubmit(event)}>
               <fieldset className="suitability-question">
                 <legend><BarChart3 size={15} /> 1. What is your primary investment goal on this platform?</legend>
@@ -3093,6 +3141,7 @@ export default function App() {
       </footer>
     </section>
   )
+  }
 
   // VIEW 8: FUNDS MANAGEMENT (FundsHub)
   const renderFundsManagement = () => (
