@@ -3621,25 +3621,27 @@ export default function App() {
       <main className="main-area">
         {/* TOPBAR */}
         <header className="topbar">
-          <button type="button" className="mobile-menu-button" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-            <Menu size={18} />
-          </button>
+          <div className="topbar-main-row">
+            <button type="button" className="mobile-menu-button" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+              <Menu size={18} />
+            </button>
 
-          <div className="breadcrumb-container">
-            {activeView !== 'overview' && (
-              <button type="button" className="go-back-btn" onClick={goBack}>
-                {activeView === 'synthetic' ? <><X size={14} /> Close tab</> : <><ArrowLeft size={14} /> ← Go Back</>}
-              </button>
-            )}
+            <div className="breadcrumb-container">
+              {activeView !== 'overview' && (
+                <button type="button" className="go-back-btn" onClick={goBack}>
+                  {activeView === 'synthetic' ? <><X size={14} /> Close tab</> : <><ArrowLeft size={14} /> ← Go Back</>}
+                </button>
+              )}
 
-            <div className="breadcrumb">
-              <span>NEXSMARKETS</span>
-              <span>/</span>
-              <strong>{activeView === 'tiers' ? 'INVESTMENTS' : activeView.toUpperCase()}</strong>
+              <div className="breadcrumb">
+                <span>NEXSMARKETS</span>
+                <span>/</span>
+                <strong>{activeView === 'tiers' ? 'INVESTMENTS' : activeView.toUpperCase()}</strong>
+              </div>
             </div>
           </div>
 
-          <div className="topbar-actions">
+          <div className="topbar-subrow topbar-actions">
             {/* Theme Selector Dropdown */}
             <select
               className="unified-account-dropdown"
