@@ -250,12 +250,19 @@
       </div>
 
       <!-- RUNNING INDEXES BAR (Bottom Overlay over Chart) -->
-      <div class="bg-[#0f141e]/95 border-t border-gray-800/80 px-4 py-3 flex items-center justify-center shrink-0 z-10 backdrop-blur-md">
-        <div class="flex items-center justify-center w-full max-w-2xl">
-          <!-- 10 Running Digit Circles (0 - 9) -->
-          <div class="flex items-center gap-4 my-0" id="runningIndexesContainer">
-            <!-- Dynamically generated 0-9 digit items -->
+      <div class="bg-[#0f141e]/95 border-t border-gray-800/80 px-4 py-2.5 flex flex-col gap-1.5 shrink-0 z-10 backdrop-blur-md">
+        <div class="flex items-center justify-between">
+          <div class="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+            <i class="fa-solid fa-chart-pie text-teal-400 text-xs"></i> Last Digit Statistics (0 - 9)
           </div>
+          <div class="text-gray-500 text-xs hover:text-gray-300 cursor-pointer" title="Last Digit Stats">
+            <i class="fa-solid fa-circle-info"></i>
+          </div>
+        </div>
+
+        <!-- 10 Running Digit Circles (0 - 9) -->
+        <div class="flex items-center justify-between gap-2 overflow-x-auto my-1 py-1" id="runningIndexesContainer">
+          <!-- Dynamically generated 0-9 digit items -->
         </div>
       </div>
     </main>
