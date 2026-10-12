@@ -3191,7 +3191,14 @@ textarea:focus {
   z-index: 0;
 }
 
-/* ── Investment coins neon ─────────────────────────────────────────────────── */
+/* ── P&L Ticker Profit / Loss Colors ─────────────────────────────────────────── */
+.ticker-up {
+  color: #2979ff !important; /* Dark blue for profits */
+}
+
+.ticker-down {
+  color: #ff1744 !important; /* Red for losses */
+}
 .investment-coin-panel {
   border-color: rgba(0, 229, 255, 0.12) !important;
 }

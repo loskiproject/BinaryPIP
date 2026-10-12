@@ -1133,7 +1133,7 @@ export default function App() {
     setMobileMenuOpen(false)
     setTimeout(() => {
       setPageLoading(false)
-    }, 320)
+    }, 5000)
   }
 
   const goBack = () => {
