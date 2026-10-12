@@ -3866,7 +3866,7 @@ export default function App() {
       {pageLoading && (
         <div className="page-transition-loader">
           <div className="page-loader-spinner"></div>
-          <span className="page-loader-text">Loading Nexus Workspace...</span>
+          <span className="page-loader-text">Loading Nexsmarkets Terminal...</span>
         </div>
       )}
 
