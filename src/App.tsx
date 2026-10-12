@@ -163,11 +163,8 @@ type LoginForm = { email: string; password: string }
 type SignupForm = { fullName: string; email: string; phone: string; country: string; password: string; confirmPassword: string }
 
 const navigation: { id: View; label: string; icon: typeof LayoutDashboard }[] = [
-  { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'assets', label: 'Markets', icon: CandlestickChart },
-  { id: 'tiers', label: 'Investments', icon: CandlestickChart },
   { id: 'synthetic', label: 'Synthetic', icon: TrendingUp },
-  { id: 'positions', label: 'Positions', icon: List },
+  { id: 'tiers', label: 'Investments', icon: CandlestickChart },
   { id: 'funds', label: 'Funds', icon: Wallet },
   { id: 'profile', label: 'Profile', icon: UserRound },
 ]
@@ -738,8 +735,8 @@ function TradingViewCandlestickCanvas({
 }
 
 export default function App() {
-  const [activeView, setActiveView] = useState<View>('overview')
-  const [previousView, setPreviousView] = useState<View>('overview')
+  const [activeView, setActiveView] = useState<View>('synthetic')
+  const [previousView, setPreviousView] = useState<View>('synthetic')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [modal, setModal] = useState<'deposit' | 'withdraw' | 'pine_script' | 'indicator_menu' | 'order' | 'create_demo' | null>(null)
   const [amount, setAmount] = useState('500')
@@ -3622,26 +3619,42 @@ export default function App() {
         {/* TOPBAR */}
         <header className="topbar">
           <div className="topbar-main-row">
-            <button type="button" className="mobile-menu-button" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-              <Menu size={18} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button type="button" className="mobile-menu-button" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+                <Menu size={20} />
+              </button>
 
-            <div className="breadcrumb-container">
-              {activeView !== 'overview' && (
-                <button type="button" className="go-back-btn" onClick={goBack}>
-                  {activeView === 'synthetic' ? <><X size={14} /> Close tab</> : <><ArrowLeft size={14} /> ← Go Back</>}
+              <div className="breadcrumb-container" style={{ gap: '8px' }}>
+                <button type="button" className="go-back-btn" onClick={goBack} style={{ padding: '4px 8px' }}>
+                  <ArrowLeft size={14} />
                 </button>
-              )}
-
-              <div className="breadcrumb">
-                <span>NEXSMARKETS</span>
-                <span>/</span>
-                <strong>{activeView === 'tiers' ? 'INVESTMENTS' : activeView.toUpperCase()}</strong>
+                <div className="breadcrumb" style={{ fontSize: '12px' }}>
+                  <strong>{activeView.toUpperCase()}</strong>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="topbar-subrow topbar-actions">
+            <div className="topbar-actions" style={{ flex: 'none', width: 'auto' }}>
+              <select
+                className="unified-account-dropdown"
+                style={{ width: '130px' }}
+                value={accountType}
+                onChange={(e) => {
+                  const nextType = e.target.value as AccountType
+                  if (nextType === 'demo' && !demoAccountName) {
+                    setModal('create_demo')
+                    return
+                  }
+                  setAccountType(nextType)
+                  showNotice(`Switched to ${nextType === 'none' ? 'no account' : demoAccountName}.`)
+                }}
+              >
+                <option value="none">Select Account</option>
+                <option value="demo">🟡 {demoAccountName || 'Demo'} (${demoBalance.toFixed(0)})</option>
+              </select>
+            </div>
+          </div>
+        </header>
             {/* Theme Selector Dropdown */}
             <select
               className="unified-account-dropdown"
@@ -3876,9 +3889,8 @@ export default function App() {
 
       <nav className="mobile-bottom-nav" aria-label="Primary">
         {([
-          { id: 'overview' as View, label: 'Home', icon: LayoutDashboard },
-          { id: 'assets' as View, label: 'Markets', icon: CandlestickChart },
           { id: 'synthetic' as View, label: 'Trade', icon: TrendingUp },
+          { id: 'tiers' as View, label: 'Invest', icon: CandlestickChart },
           { id: 'funds' as View, label: 'Funds', icon: Wallet },
           { id: 'profile' as View, label: 'Profile', icon: UserRound },
         ]).map((item) => {
