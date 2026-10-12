@@ -163,6 +163,7 @@ type LoginForm = { email: string; password: string }
 type SignupForm = { fullName: string; email: string; phone: string; country: string; password: string; confirmPassword: string }
 
 const navigation: { id: View; label: string; icon: typeof LayoutDashboard }[] = [
+  { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'synthetic', label: 'Synthetic', icon: TrendingUp },
   { id: 'tiers', label: 'Investments', icon: CandlestickChart },
   { id: 'funds', label: 'Funds', icon: Wallet },
@@ -1345,7 +1346,7 @@ export default function App() {
     setAuthSubmitting(true)
     const { error } = await supabase.auth.signInWithPassword({ email: loginForm.email, password: loginForm.password })
     if (error) showNotice(error.message)
-    else setActiveView('overview')
+    else setActiveView('synthetic')
     setAuthSubmitting(false)
   }
 
@@ -1380,7 +1381,7 @@ export default function App() {
       showNotice('Check your email to confirm your account, then sign in.')
       setAuthMode('login')
     } else {
-      setActiveView('overview')
+      setActiveView('synthetic')
     }
     setAuthSubmitting(false)
   }
@@ -2393,45 +2394,17 @@ export default function App() {
                       Invest ${coinStake.toLocaleString()}
                     </button>
 
-                    {/* TRADE button — choose market then open chart */}
-                    <div className="inv-trade-wrap">
-                      <select
-                        className="inv-market-select"
-                        defaultValue="synthetic"
-                        id={`trade-market-${coin.id}`}
-                        onClick={e => e.stopPropagation()}
-                      >
-                        <option value="synthetic">Synthetic Market</option>
-                        <option value="live">Live Market</option>
-                      </select>
-                      <button
-                        type="button"
-                        className="inv-cta-btn inv-cta-trade"
-                        onClick={() => {
-                          const sel = document.getElementById(`trade-market-${coin.id}`) as HTMLSelectElement
-                          const mkt = sel?.value ?? 'synthetic'
-                          setSelectedInvestmentTier(coin.id)
-                          setMarketMode(mkt === 'live' ? 'live' : 'synthetic')
-                          if (mkt === 'live') {
-                            setSelectedAsset(coin.symbol)
-                            setTimeframe('1m')
-                            setSelectedChartRange('1D')
-                            setChartStyle('Candlesticks')
-                            setSelectedChartTool('crosshair')
-                            setInvestmentStartedAt(Date.now())
-                            setInvestmentCountdown(21 * 24 * 60 * 60)
-                            changeView('overview')
-                            showNotice(`Live Market chart opened for ${coin.id} — ${coin.symbol}`)
-                          } else {
-                            openInvestmentChart(coin.id)
-                          }
-                        }}
-                      >
-                        <Zap size={14} />
-                        Trade
-                        <Activity size={12} />
-                      </button>
-                    </div>
+                    {/* TRADE button — navigate directly to synthetic page */}
+                    <button
+                      type="button"
+                      className="inv-cta-btn inv-cta-trade"
+                      style={{ width: '100%' }}
+                      onClick={() => openInvestmentChart(coin.id)}
+                    >
+                      <Zap size={14} />
+                      Trade Now
+                      <Activity size={12} />
+                    </button>
                   </div>
                 </div>
               </article>
@@ -2463,7 +2436,7 @@ export default function App() {
               onClick={() => openInvestmentChart(activeInvestment.id)}
               style={{ marginTop: '12px', width: '100%' }}
             >
-              <Zap size={14} /> Open Live Chart &amp; Trade Terminal
+              <Zap size={14} /> Open Synthetic Chart &amp; Trade Terminal
             </button>
           </div>
 
@@ -3283,7 +3256,7 @@ export default function App() {
       // Local fallback — accept any credentials instantly
       const name = email.includes('@') ? email.split('@')[0] : email
       setUser({ id: 'local-live-user', fullName: name || 'Trader', email, phone: '', country: '', avatarPath: null, role: 'client', emailVerified: true, accountStatus: 'active' })
-      setActiveView('overview')
+      setActiveView('synthetic')
       return null
     }
     setAuthSubmitting(true)
@@ -3296,12 +3269,12 @@ export default function App() {
       }
       if (error.message.toLowerCase().includes('email') && error.message.toLowerCase().includes('confirm')) {
         // Treat unconfirmed email as successful — we disabled confirmation
-        setActiveView('overview')
+        setActiveView('synthetic')
         return null
       }
       return error.message
     }
-    setActiveView('overview')
+    setActiveView('synthetic')
     return null
   }
 
@@ -3324,7 +3297,7 @@ export default function App() {
         setDemoBalance(10000)
         setAccountType('demo')
       }
-      setActiveView('overview')
+      setActiveView('synthetic')
       showNotice(`Welcome to NEXSMARKETS, ${payload.fullName}! Your account is ready.`)
       return null
     }
@@ -3366,7 +3339,7 @@ export default function App() {
         setDemoBalance(10000)
         setAccountType('demo')
       }
-      setActiveView('overview')
+      setActiveView('synthetic')
       showNotice(`Welcome to NEXSMARKETS, ${payload.fullName}! Your account is ready.`)
       return null
     }
@@ -3375,7 +3348,7 @@ export default function App() {
       setDemoBalance(10000)
       setAccountType('demo')
     }
-    setActiveView('overview')
+    setActiveView('synthetic')
     showNotice(`Welcome to NEXSMARKETS, ${payload.fullName}!`)
     return null
   }
@@ -3384,7 +3357,7 @@ export default function App() {
     if (!supabase) {
       // Local fallback for Google — create a demo Google user
       setUser({ id: 'google-demo-user', fullName: 'Google User', email: 'google@example.com', phone: '', country: '', avatarPath: null, role: 'client', emailVerified: true, accountStatus: 'active' })
-      setActiveView('overview')
+      setActiveView('synthetic')
       showNotice('Google sign-in simulated in local mode.')
       return
     }
@@ -3412,7 +3385,7 @@ export default function App() {
     setDemoAccountName('Demo Account')
     setDemoBalance(10000)
     setAccountType('demo')
-    setActiveView('overview')
+    setActiveView('synthetic')
     showNotice('Demo loaded — $10,000 virtual funds. Trades are simulated.')
   }
 
@@ -3634,7 +3607,24 @@ export default function App() {
               </div>
             </div>
 
-            <div className="topbar-actions" style={{ flex: 'none', width: 'auto' }}>
+            <div className="topbar-actions" style={{ flex: 'none', width: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {/* Theme Selector Dropdown */}
+              <select
+                className="unified-account-dropdown"
+                value={theme}
+                onChange={(e) => {
+                  const nextTheme = e.target.value as Theme
+                  setTheme(nextTheme)
+                  showNotice(`Theme switched to ${nextTheme.toUpperCase()}`)
+                }}
+              >
+                <option value="dark">🌑 Dark Slate</option>
+                <option value="light">☀️ Clean Light</option>
+                <option value="midnight">🌌 Midnight Blue</option>
+                <option value="cyberpunk">⚡ Cyberpunk Neon</option>
+              </select>
+
+              {/* Unified Single Account Switcher Dropdown (Header Spec #4) */}
               <select
                 className="unified-account-dropdown"
                 style={{ width: '130px' }}
@@ -3649,74 +3639,37 @@ export default function App() {
                   showNotice(`Switched to ${nextType === 'none' ? 'no account' : demoAccountName}.`)
                 }}
               >
-                <option value="none">Select Account</option>
-                <option value="demo">🟡 {demoAccountName || 'Demo'} (${demoBalance.toFixed(0)})</option>
+                <option value="none">Select an account</option>
+                <option value="demo">🟡 {demoAccountName || 'Create demo account'} ({demoBalance.toFixed(2)})</option>
               </select>
+
+              {accountType === 'demo' && demoAccountName ? (
+                <button type="button" className="button button-outline" style={{ padding: '6px 10px', fontSize: '11px' }} onClick={handleQuickDemoDeposit}>
+                  <RefreshCw size={12} /> Reset Demo
+                </button>
+              ) : accountType === 'none' ? (
+                <button type="button" className="button button-outline" style={{ padding: '6px 10px', fontSize: '11px' }} onClick={() => setModal('create_demo')}>
+                  <Plus size={12} /> Create Demo
+                </button>
+              ) : null}
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(15,23,42,0.6)', padding: '5px 10px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+                <Search size={14} color="var(--text-muted)" />
+                <input
+                  type="search"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '11px', width: '90px', padding: 0 }}
+                />
+              </label>
             </div>
           </div>
         </header>
-            {/* Theme Selector Dropdown */}
-            <select
-              className="unified-account-dropdown"
-              value={theme}
-              onChange={(e) => {
-                const nextTheme = e.target.value as Theme
-                setTheme(nextTheme)
-                showNotice(`Theme switched to ${nextTheme.toUpperCase()}`)
-              }}
-            >
-              <option value="dark">🌑 Dark Slate</option>
-              <option value="light">☀️ Clean Light</option>
-              <option value="midnight">🌌 Midnight Blue</option>
-              <option value="cyberpunk">⚡ Cyberpunk Neon</option>
-            </select>
 
-            {/* Unified Single Account Switcher Dropdown (Header Spec #4) */}
-            <select
-              className="unified-account-dropdown"
-              value={accountType}
-              onChange={(e) => {
-                const nextType = e.target.value as AccountType
-                if (nextType === 'demo' && !demoAccountName) {
-                  setModal('create_demo')
-                  return
-                }
-                setAccountType(nextType)
-                showNotice(`Switched to ${nextType === 'none' ? 'no account' : demoAccountName}.`)
-              }}
-            >
-              <option value="none">Select an account</option>
-              <option value="demo">🟡 {demoAccountName || 'Create demo account'} ({demoBalance.toFixed(2)})</option>
-            </select>
-
-            {accountType === 'demo' && demoAccountName ? (
-              <button type="button" className="button button-outline" style={{ padding: '6px 10px', fontSize: '11px' }} onClick={handleQuickDemoDeposit}>
-                <RefreshCw size={12} /> Reset Demo
-              </button>
-            ) : accountType === 'none' ? (
-              <button type="button" className="button button-outline" style={{ padding: '6px 10px', fontSize: '11px' }} onClick={() => setModal('create_demo')}>
-                <Plus size={12} /> Create Demo
-              </button>
-            ) : null}
-
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(15,23,42,0.6)', padding: '5px 10px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
-              <Search size={14} color="var(--text-muted)" />
-              <input
-                type="search"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '11px', width: '90px', padding: 0 }}
-              />
-            </label>
-          </div>
-        </header>
-
-        <div className={`page-content ${activeView === 'synthetic' ? 'page-content-synthetic' : ''}`}>
-          {activeView === 'overview' && renderTradingViewWorkspace()}
-          {activeView === 'assets' && renderAssetSuite()}
+        <div className={`page-content ${(activeView === 'synthetic' || activeView === 'overview' || activeView === 'assets') ? 'page-content-synthetic' : ''}`}>
+          {(activeView === 'overview' || activeView === 'assets' || activeView === 'synthetic') && renderSyntheticContracts()}
           {activeView === 'tiers' && renderCryptoAllocationLevels()}
-          {activeView === 'synthetic' && renderSyntheticContracts()}
           {activeView === 'institutions' && renderInstitutionsView()}
           {activeView === 'positions' && renderOpenAndClosedTrades()}
           {activeView === 'funds' && renderFundsManagement()}
@@ -3889,10 +3842,11 @@ export default function App() {
 
       <nav className="mobile-bottom-nav" aria-label="Primary">
         {([
+          { id: 'overview' as View, label: 'Overview', icon: LayoutDashboard },
           { id: 'synthetic' as View, label: 'Trade', icon: TrendingUp },
           { id: 'tiers' as View, label: 'Invest', icon: CandlestickChart },
           { id: 'funds' as View, label: 'Funds', icon: Wallet },
-          { id: 'profile' as View, label: 'Profile', icon: UserRound },
+          { id: 'profile', label: 'Profile', icon: UserRound },
         ]).map((item) => {
           const Icon = item.icon
           const isActive = activeView === item.id || (item.id === 'overview' && activeView === 'positions')
