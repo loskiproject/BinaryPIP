@@ -906,18 +906,25 @@ export default function App() {
   const syncSyntheticTerminalAccount = useCallback(() => {
     const frameWindow = syntheticTerminalRef.current?.contentWindow
     if (!frameWindow) return
+
+    const realAccName = (user?.fullName && user.fullName !== 'Demo Trader' && user.fullName !== 'Demo')
+      ? `${user.fullName} Real Account`
+      : 'Real Account'
+
     const accounts = [
-      ...(demoAccountName ? [{ type: 'demo', name: demoAccountName, balance: demoBalance }] : []),
-      ...(liveAccountCreated ? [{ type: 'live', name: `${user?.fullName || 'User'} Live Account`, balance: liveBalance }] : []),
+      ...(demoAccountName ? [{ type: 'demo', name: demoAccountName || 'Demo Account', balance: demoBalance }] : []),
+      { type: 'live', name: realAccName, balance: liveBalance },
     ]
+    const currentName = accountType === 'demo' ? (demoAccountName || 'Demo Account') : realAccName
+
     frameWindow.postMessage({
       type: 'EXSTRADE_ACCOUNT_SYNC',
       accountType,
-      accountName: accountType === 'demo' ? demoAccountName : accountType === 'live' ? `${user?.fullName || 'User'} Live Account` : '',
+      accountName: currentName,
       balance: activeBalance,
       accounts,
     }, window.location.origin)
-  }, [accountType, activeBalance, demoAccountName, demoBalance, liveAccountCreated, liveBalance, user?.fullName])
+  }, [accountType, activeBalance, demoAccountName, demoBalance, liveBalance, user?.fullName])
 
   useEffect(() => {
     syncSyntheticTerminalAccount()
@@ -2720,10 +2727,12 @@ export default function App() {
 
             const accountSelect = document.createElement('select')
             accountSelect.id = 'exstradeAccountSelector'
-            accountSelect.className = 'bg-gray-900 border border-gray-700/70 rounded-lg px-2 py-2 text-xs text-white'
+            accountSelect.className = 'bg-gray-900 border border-gray-700/70 rounded-lg px-2.5 py-2 text-xs text-white font-bold'
             accountSelect.setAttribute('aria-label', 'Select created account')
             headerActions.insertBefore(accountSelect, accountPanel)
             resetButton?.remove()
+
+            if (accountPanel) (accountPanel as HTMLElement).style.display = 'none'
 
             const createButton = document.createElement('button')
             createButton.type = 'button'
@@ -2735,9 +2744,6 @@ export default function App() {
             createButton.addEventListener('click', () => parent.postMessage({ type: 'EXSTRADE_CREATE_DEMO' }, location.origin))
 
             let selectedAccountType = 'none'
-            const publishBalance = () => {
-              if (selectedAccountType === 'demo') parent.postMessage({ type: 'EXSTRADE_BALANCE_UPDATE', accountType: 'demo', balance: accountBalance }, location.origin)
-            }
             accountSelect.addEventListener('change', () => parent.postMessage({ type: 'EXSTRADE_ACCOUNT_SELECT', accountType: accountSelect.value }, location.origin))
             window.addEventListener('message', (event) => {
               if (event.origin !== location.origin || event.source !== parent || event.data?.type !== 'EXSTRADE_ACCOUNT_SYNC') return
@@ -2753,7 +2759,7 @@ export default function App() {
                 accounts.forEach((account) => {
                   const option = document.createElement('option')
                   option.value = account.type
-                  option.textContent = account.name + ' · $' + Number(account.balance).toFixed(2)
+                  option.textContent = (account.type === 'live' ? '🟢 ' : '🟡 ') + account.name + ' · $' + Number(account.balance).toFixed(2)
                   accountSelect.append(option)
                 })
               }
@@ -2761,8 +2767,8 @@ export default function App() {
               accountSelect.value = selectedAccountType
               accountBalance = Number(state.balance) || 0
               accountBalanceDisplay.textContent = '$' + accountBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USD'
-              if (accountLabel) accountLabel.textContent = state.accountName || 'No account selected'
-              createButton.hidden = accounts.some((account) => account.type === 'demo')
+              if (accountLabel) accountLabel.textContent = state.accountName || 'Real Account'
+              createButton.style.display = selectedAccountType === 'live' ? 'none' : 'inline-block'
               const demoSelected = selectedAccountType === 'demo'
               ;[upButton, downButton].forEach((button) => {
                 if (button) {
@@ -3814,12 +3820,19 @@ export default function App() {
                 <Menu size={20} />
               </button>
 
-              <div className="breadcrumb-container" style={{ gap: '8px' }}>
+              <div className="breadcrumb-container" style={{ gap: '8px', display: 'flex', alignItems: 'center' }}>
                 <button type="button" className="go-back-btn" onClick={goBack} style={{ padding: '4px 8px' }}>
                   <ArrowLeft size={14} />
                 </button>
-                <div className="breadcrumb" style={{ fontSize: '12px' }}>
-                  <strong>{activeView.toUpperCase()}</strong>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <svg width="22" height="22" viewBox="0 0 40 40" fill="none" style={{ flexShrink: 0 }}>
+                    <polygon points="20,2 37,11 37,29 20,38 3,29 3,11" fill="rgba(0,229,255,0.12)" stroke="#00e5ff" strokeWidth="1.6"/>
+                    <polyline points="11,27 17,14 20,21 23,14 29,27" stroke="#00e676" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    <circle cx="20" cy="20" r="2.5" fill="#00e5ff"/>
+                  </svg>
+                  <div className="breadcrumb" style={{ fontSize: '12px' }}>
+                    <strong>{activeView.toUpperCase()}</strong>
+                  </div>
                 </div>
               </div>
             </div>
@@ -3887,6 +3900,26 @@ export default function App() {
           {activeView === 'profile' && renderDedicatedProfilePage()}
           {activeView === 'help' && renderHelpCenter()}
         </div>
+
+        {/* GLOBAL NEXSMARKETS FOOTER */}
+        <footer className="global-platform-footer">
+          <div className="global-footer-inner">
+            <div className="global-footer-brand">
+              <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
+                <polygon points="20,2 37,11 37,29 20,38 3,29 3,11" fill="rgba(0,229,255,0.15)" stroke="#00e5ff" strokeWidth="1.8" />
+                <polyline points="11,27 17,14 20,21 23,14 29,27" stroke="#00e676" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="20" cy="20" r="2.5" fill="#00e5ff" />
+              </svg>
+              <span className="global-footer-brand-title">NEXSMARKETS PRO TERMINAL</span>
+            </div>
+            <div className="global-footer-copy">
+              © {new Date().getFullYear()} NEXSMARKETS Terminal. All rights reserved. Ultra-low latency synthetic &amp; multi-asset trading engine.
+            </div>
+            <div className="global-footer-status">
+              <span className="global-footer-dot"></span> System Operational • 1s Synthetic Ticks Active
+            </div>
+          </div>
+        </footer>
       </main>
 
       {modal === 'create_demo' && (

@@ -5268,6 +5268,70 @@ body.theme-light .page-transition-loader {
   }
 }
 
+/* GLOBAL PLATFORM FOOTER STYLING */
+.global-platform-footer {
+  width: 100%;
+  padding: 16px 24px;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--glass-border);
+  margin-top: auto;
+}
+
+.global-footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  max-width: 1400px;
+  margin: 0 auto;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.global-footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.global-footer-brand-title {
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--text-main);
+  font-size: 12px;
+}
+
+.global-footer-copy {
+  text-align: center;
+}
+
+.global-footer-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-code);
+  font-size: 10.5px;
+  color: var(--mint-teal);
+}
+
+.global-footer-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--bull-green);
+  box-shadow: 0 0 8px var(--bull-green);
+}
+
+body.theme-light .global-platform-footer {
+  background: #ffffff !important;
+  border-top-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+body.theme-light .global-footer-brand-title {
+  color: #0f172a !important;
+}
+
 body.theme-light .dot-circle-item::before {
   background: #0284c7 !important;
   box-shadow: 0 0 8px rgba(2, 132, 199, 0.5) !important;

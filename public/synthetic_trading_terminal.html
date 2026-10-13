@@ -287,7 +287,7 @@
   <div class="flex-1 flex overflow-hidden">
     <!-- Aside 1: Left Vertical Tool Rail (First child) -->
     <aside class="w-12 bg-[#111622] border-r border-gray-800/80 flex flex-col items-center py-3 gap-3 shrink-0 z-10">
-      <button type="button" title="1 Tick Interval" aria-pressed="true" class="w-8 h-8 rounded-lg glass-button flex items-center justify-center text-xs font-bold text-teal-400">
+      <button type="button" id="toolInterval" title="1 Tick Interval Speed (1s)" aria-pressed="true" class="w-8 h-8 rounded-lg glass-button flex items-center justify-center text-xs font-bold text-teal-400">
         1T
       </button>
       <button type="button" id="toolCrosshair" title="Crosshair Mode" aria-pressed="false" class="w-8 h-8 rounded-lg glass-button flex items-center justify-center text-gray-400 hover:text-white transition">
@@ -671,6 +671,34 @@
       executeTrade(direction);
     };
 
+    // Custom Chart.js Plugin for Drawing Overlay
+    const customOverlayPlugin = {
+      id: 'customOverlayPlugin',
+      afterDraw: (chart) => {
+        const { ctx: chartCtx, chartArea } = chart;
+        if (!chartArea || !userDrawings || userDrawings.length === 0) return;
+
+        chartCtx.save();
+        chartCtx.strokeStyle = '#2dd4bf';
+        chartCtx.lineWidth = 2.2;
+        chartCtx.lineCap = 'round';
+        chartCtx.lineJoin = 'round';
+
+        userDrawings.forEach(path => {
+          if (!path || path.length < 2) return;
+          chartCtx.beginPath();
+          chartCtx.moveTo(path[0].x, path[0].y);
+          for (let i = 1; i < path.length; i++) {
+            chartCtx.lineTo(path[i].x, path[i].y);
+          }
+          chartCtx.stroke();
+        });
+        chartCtx.restore();
+      }
+    };
+
+    Chart.register(customOverlayPlugin);
+
     // Chart Setup
     const ctx = document.getElementById('liveTickChart').getContext('2d');
     const gradient = ctx.createLinearGradient(0, 0, 0, 320);
@@ -992,9 +1020,9 @@
       }).join('');
     }
 
-    // Tick Simulator Loop (1 second per tick)
-    setInterval(() => {
-      const lastPrice = priceHistory[priceHistory.length - 1];
+    // ── TICK STEP SIMULATOR ENGINE ──
+    function tickStep() {
+      const lastPrice = priceHistory[priceHistory.length - 1] || activeMarket.basePrice;
       const change = (Math.random() - 0.49) * activeMarket.volatility;
       const newPrice = Number((lastPrice + change).toFixed(2));
 
@@ -1005,6 +1033,25 @@
       const lastDigit = parseInt(priceStr.slice(-1), 10);
       digitHistory.push(lastDigit);
       if (digitHistory.length > 100) digitHistory.shift();
+
+      // Update Chart Datasets according to current Chart Style & Indicators
+      if (currentChartStyleIndex === 2) {
+        tickChart.data.datasets[0].data = [...priceHistory];
+        tickChart.data.datasets[0].backgroundColor = priceHistory.map((p, i) =>
+          i === 0 ? '#22c55e' : p >= priceHistory[i - 1] ? '#22c55e' : '#ef4444'
+        );
+      } else {
+        tickChart.data.labels = priceHistory.map((_, i) => i + 1);
+        tickChart.data.datasets[0].data = [...priceHistory];
+        tickChart.data.datasets[0].pointRadius = priceHistory.map((_, i) => i === priceHistory.length - 1 ? 5 : 0);
+        tickChart.data.datasets[0].borderColor = change >= 0 ? '#2dd4bf' : '#f43f5e';
+      }
+
+      if (currentIndicatorMode !== 'off') {
+        updateChartIndicators();
+      } else {
+        tickChart.update('none');
+      }
 
       // Update Displays
       const currentPriceDisplay = document.getElementById('currentPriceDisplay');
@@ -1027,16 +1074,18 @@
         chartOverlayDirection.className = change >= 0 ? 'text-teal-400 text-[9px]' : 'text-rose-400 text-[9px]';
       }
 
-      // Process open trades settlement (Demo = 75% win, Live = loss unless admin override)
+      updateRunningIndexesUI();
+
+      // Process open trades settlement
       openTrades.forEach(trade => {
         if (trade.status === 'OPEN') {
           trade.ticksLeft--;
           if (trade.ticksLeft <= 0) {
             let won = false;
             if (selectedAccountType === 'demo') {
-              won = Math.random() < 0.75; // 75% win probability on demo
+              won = Math.random() < 0.75;
             } else {
-              won = window.adminOverrideWinner === true ? (Math.random() < 0.85) : false; // Live account loses unless admin profit control override is active
+              won = window.adminOverrideWinner === true ? (Math.random() < 0.85) : false;
             }
 
             trade.status = won ? 'WON' : 'LOST';
@@ -1053,6 +1102,213 @@
           }
         }
       });
+      renderLogTable();
+    }
+
+    // Default Tick Timer Loop (1s)
+    let currentIntervalSec = 1;
+    let tickTimer = setInterval(tickStep, currentIntervalSec * 1000);
+
+    function startTickIntervalTimer() {
+      if (tickTimer) clearInterval(tickTimer);
+      tickTimer = setInterval(tickStep, currentIntervalSec * 1000);
+    }
+
+    // ── 5 LEFT VERTICAL TOOL RAIL INTERACTIVE BUTTON HANDLERS ──
+
+    // 1. Tick Interval Speed Button (#toolInterval)
+    const intervalBtn = document.getElementById('toolInterval');
+    if (intervalBtn) {
+      intervalBtn.addEventListener('click', () => {
+        if (currentIntervalSec === 1) currentIntervalSec = 2;
+        else if (currentIntervalSec === 2) currentIntervalSec = 5;
+        else currentIntervalSec = 1;
+
+        intervalBtn.textContent = currentIntervalSec + 'T';
+        intervalBtn.title = currentIntervalSec + ' Tick Interval Speed (' + currentIntervalSec + 's)';
+
+        const subDisplay = document.querySelector('header .text-gray-400 span');
+        if (subDisplay) subDisplay.textContent = currentIntervalSec + 's Ticks';
+
+        startTickIntervalTimer();
+      });
+    }
+
+    // 2. Crosshair Mode Button (#toolCrosshair)
+    let isCrosshairActive = false;
+    const crosshairBtn = document.getElementById('toolCrosshair');
+
+    if (crosshairBtn) {
+      crosshairBtn.addEventListener('click', () => {
+        isCrosshairActive = !isCrosshairActive;
+        crosshairBtn.setAttribute('aria-pressed', isCrosshairActive ? 'true' : 'false');
+
+        if (isCrosshairActive) {
+          crosshairBtn.className = 'w-8 h-8 rounded-lg glass-button flex items-center justify-center text-teal-400 bg-teal-500/20 border-teal-500/50 shadow-sm transition';
+          ctx.canvas.style.cursor = 'crosshair';
+        } else {
+          crosshairBtn.className = 'w-8 h-8 rounded-lg glass-button flex items-center justify-center text-gray-400 hover:text-white transition';
+          ctx.canvas.style.cursor = 'default';
+        }
+      });
+    }
+
+    // 3. Freehand / Trend Line Drawing Tool (#toolDrawing)
+    let isDrawingActive = false;
+    let userDrawings = [];
+    let currentDrawingPath = null;
+    const drawingBtn = document.getElementById('toolDrawing');
+
+    if (drawingBtn) {
+      drawingBtn.addEventListener('click', () => {
+        isDrawingActive = !isDrawingActive;
+        drawingBtn.setAttribute('aria-pressed', isDrawingActive ? 'true' : 'false');
+
+        if (isDrawingActive) {
+          drawingBtn.className = 'w-8 h-8 rounded-lg glass-button flex items-center justify-center text-teal-400 bg-teal-500/20 border-teal-500/50 shadow-sm transition';
+          ctx.canvas.style.cursor = 'crosshair';
+        } else {
+          drawingBtn.className = 'w-8 h-8 rounded-lg glass-button flex items-center justify-center text-gray-400 hover:text-white transition';
+          ctx.canvas.style.cursor = 'default';
+        }
+      });
+    }
+
+    // Interactive Drawing Pointer Listeners on Live Chart Canvas
+    const canvasEl = document.getElementById('liveTickChart');
+    if (canvasEl) {
+      let isMouseDown = false;
+
+      canvasEl.addEventListener('pointerdown', (e) => {
+        if (!isDrawingActive) return;
+        isMouseDown = true;
+        const rect = canvasEl.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        currentDrawingPath = [{ x, y }];
+        userDrawings.push(currentDrawingPath);
+      });
+
+      canvasEl.addEventListener('pointermove', (e) => {
+        if (!isDrawingActive || !isMouseDown || !currentDrawingPath) return;
+        const rect = canvasEl.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        currentDrawingPath.push({ x, y });
+        tickChart.update('none');
+      });
+
+      canvasEl.addEventListener('pointerup', () => { isMouseDown = false; currentDrawingPath = null; });
+      canvasEl.addEventListener('pointerleave', () => { isMouseDown = false; currentDrawingPath = null; });
+    }
+
+    // 4. Moving Average / Technical Indicator Tool (#toolIndicator)
+    let currentIndicatorMode = 'off'; // 'off' | 'sma' | 'bollinger'
+    const indicatorBtn = document.getElementById('toolIndicator');
+
+    if (indicatorBtn) {
+      indicatorBtn.addEventListener('click', () => {
+        if (currentIndicatorMode === 'off') currentIndicatorMode = 'sma';
+        else if (currentIndicatorMode === 'sma') currentIndicatorMode = 'bollinger';
+        else currentIndicatorMode = 'off';
+
+        indicatorBtn.setAttribute('aria-pressed', currentIndicatorMode !== 'off' ? 'true' : 'false');
+
+        if (currentIndicatorMode === 'sma') {
+          indicatorBtn.className = 'w-8 h-8 rounded-lg glass-button flex items-center justify-center text-teal-400 bg-teal-500/20 border-teal-500/50 shadow-sm transition';
+          indicatorBtn.title = 'SMA 10 Moving Average Overlay';
+        } else if (currentIndicatorMode === 'bollinger') {
+          indicatorBtn.className = 'w-8 h-8 rounded-lg glass-button flex items-center justify-center text-amber-400 bg-amber-500/20 border-amber-500/50 shadow-sm transition';
+          indicatorBtn.title = 'Bollinger Bands Overlay';
+        } else {
+          indicatorBtn.className = 'w-8 h-8 rounded-lg glass-button flex items-center justify-center text-gray-400 hover:text-white transition';
+          indicatorBtn.title = 'Moving Average Indicator';
+        }
+
+        updateChartIndicators();
+      });
+    }
+
+    function updateChartIndicators() {
+      if (currentIndicatorMode === 'off') {
+        tickChart.data.datasets = [tickChart.data.datasets[0]];
+      } else if (currentIndicatorMode === 'sma') {
+        const smaData = priceHistory.map((val, idx) => {
+          if (idx < 9) return val;
+          const slice = priceHistory.slice(idx - 9, idx + 1);
+          return slice.reduce((a, b) => a + b, 0) / slice.length;
+        });
+
+        tickChart.data.datasets = [
+          tickChart.data.datasets[0],
+          {
+            label: 'SMA (10)',
+            data: smaData,
+            borderColor: '#c084fc',
+            borderWidth: 1.8,
+            pointRadius: 0,
+            fill: false,
+            tension: 0.2
+          }
+        ];
+      } else if (currentIndicatorMode === 'bollinger') {
+        const upper = [];
+        const lower = [];
+        priceHistory.forEach((val, idx) => {
+          if (idx < 9) { upper.push(val + 5); lower.push(val - 5); return; }
+          const slice = priceHistory.slice(idx - 9, idx + 1);
+          const mean = slice.reduce((a, b) => a + b, 0) / slice.length;
+          const variance = slice.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / slice.length;
+          const stdDev = Math.sqrt(variance);
+          upper.push(mean + stdDev * 2);
+          lower.push(mean - stdDev * 2);
+        });
+
+        tickChart.data.datasets = [
+          tickChart.data.datasets[0],
+          { label: 'Upper Band', data: upper, borderColor: '#38bdf8', borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: false },
+          { label: 'Lower Band', data: lower, borderColor: '#38bdf8', borderWidth: 1, borderDash: [3, 3], pointRadius: 0, fill: false }
+        ];
+      }
+      tickChart.update('none');
+    }
+
+    // 5. Chart Style Toggle Button (#toolChartStyle)
+    let currentChartStyleIndex = 0; // 0 = Line/Area, 1 = Stepped Line, 2 = Bar Chart
+    const chartStyleBtn = document.getElementById('toolChartStyle');
+
+    if (chartStyleBtn) {
+      chartStyleBtn.addEventListener('click', () => {
+        currentChartStyleIndex = (currentChartStyleIndex + 1) % 3;
+
+        if (currentChartStyleIndex === 0) {
+          tickChart.config.type = 'line';
+          tickChart.data.datasets[0].stepped = false;
+          tickChart.data.datasets[0].fill = true;
+          tickChart.data.datasets[0].borderColor = '#2dd4bf';
+          chartStyleBtn.title = 'Chart Style: Line / Area';
+          chartStyleBtn.className = 'w-8 h-8 rounded-lg glass-button flex items-center justify-center text-teal-400 bg-teal-500/20 border-teal-500/50 shadow-sm transition';
+        } else if (currentChartStyleIndex === 1) {
+          tickChart.config.type = 'line';
+          tickChart.data.datasets[0].stepped = true;
+          tickChart.data.datasets[0].fill = false;
+          tickChart.data.datasets[0].borderColor = '#38bdf8';
+          chartStyleBtn.title = 'Chart Style: Stepped Line';
+          chartStyleBtn.className = 'w-8 h-8 rounded-lg glass-button flex items-center justify-center text-sky-400 bg-sky-500/20 border-sky-500/50 shadow-sm transition';
+        } else if (currentChartStyleIndex === 2) {
+          tickChart.config.type = 'bar';
+          tickChart.data.datasets[0].stepped = false;
+          tickChart.data.datasets[0].fill = false;
+          tickChart.data.datasets[0].backgroundColor = priceHistory.map((p, i) =>
+            i === 0 ? '#22c55e' : p >= priceHistory[i - 1] ? '#22c55e' : '#ef4444'
+          );
+          chartStyleBtn.title = 'Chart Style: Bar Histogram';
+          chartStyleBtn.className = 'w-8 h-8 rounded-lg glass-button flex items-center justify-center text-amber-400 bg-amber-500/20 border-amber-500/50 shadow-sm transition';
+        }
+
+        tickChart.update();
+      });
+    }
 
       // Update Chart Dataset
       tickChart.data.labels = priceHistory.map((_, i) => i + 1);
