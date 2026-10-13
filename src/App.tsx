@@ -781,6 +781,8 @@ export default function App() {
   const [selectedNetwork, setSelectedNetwork] = useState('USDT-TRC20')
   const [notice, setNotice] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchFocused, setSearchFocused] = useState(false)
+  const searchContainerRef = useRef<HTMLDivElement>(null)
   const [_authMode, setAuthMode] = useState<AuthMode>('login')
   const [_showLoginPassword, setShowLoginPassword] = useState(false)
   const [loginForm, setLoginForm] = useState<LoginForm>(initialLoginForm)
@@ -807,6 +809,63 @@ export default function App() {
 
   // KYC prompt — show once per session if user has no submitted documents
   const [kycPromptDismissed, setKycPromptDismissed] = useState(false)
+
+  // Close search popover on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setSearchFocused(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Comprehensive System-Wide Search Items
+  const searchPages = [
+    { id: 'p-overview', title: 'Overview Dashboard', desc: 'Main trading dashboard & portfolio summary', view: 'overview' as View, icon: LayoutDashboard },
+    { id: 'p-synthetic', title: 'Synthetic Trading', desc: '1s Synthetic indices & contract trading terminal', view: 'synthetic' as View, icon: TrendingUp },
+    { id: 'p-tiers', title: 'Investments & Plans', desc: '21-day yield curve investment tiers', view: 'tiers' as View, icon: CandlestickChart },
+    { id: 'p-funds', title: 'Funds & Treasury', desc: 'M-Pesa & Crypto deposits (+50% Bonus), withdrawals', view: 'funds' as View, icon: Wallet },
+    { id: 'p-positions', title: 'Open Positions & History', desc: 'Active running trades and P&L history', view: 'positions' as View, icon: Clock },
+    { id: 'p-profile', title: 'Profile & Verification', desc: 'User identity KYC verification & settings', view: 'profile' as View, icon: UserRound },
+    { id: 'p-settings', title: 'Admin Dashboard', desc: 'Platform management and audit controls', view: 'settings' as View, icon: Settings },
+    { id: 'p-institutions', title: 'Institutions', desc: 'Institutional liquidity and accounts', view: 'institutions' as View, icon: Globe },
+    { id: 'p-help', title: 'Help & Live Support', desc: 'Guides, FAQs, and live support desk', view: 'help' as View, icon: Lightbulb },
+  ]
+
+  const searchAssets = [
+    { id: 'a-vol25', title: 'Volatility 25 (1s) Index', desc: 'Synthetic index 1s ticks', asset: 'Volatility 25 (1s) Index', badge: 'Synthetic' },
+    { id: 'a-vol10', title: 'Volatility 10 (1s) Index', desc: 'Synthetic index 1s ticks', asset: 'Volatility 10 (1s) Index', badge: 'Synthetic' },
+    { id: 'a-vol50', title: 'Volatility 50 (1s) Index', desc: 'Synthetic index 1s ticks', asset: 'Volatility 50 (1s) Index', badge: 'Synthetic' },
+    { id: 'a-vol75', title: 'Volatility 75 (1s) Index', desc: 'Synthetic index 1s ticks', asset: 'Volatility 75 (1s) Index', badge: 'Synthetic' },
+    { id: 'a-vol100', title: 'Volatility 100 (1s) Index', desc: 'Synthetic index 1s ticks', asset: 'Volatility 100 (1s) Index', badge: 'Synthetic' },
+    { id: 'a-crash500', title: 'Crash 500 Index', desc: 'Synthetic spike & crash market', asset: 'Crash 500 Index', badge: 'Synthetic' },
+    { id: 'a-boom500', title: 'Boom 500 Index', desc: 'Synthetic spike & boom market', asset: 'Boom 500 Index', badge: 'Synthetic' },
+    { id: 'a-eurusd', title: 'EUR/USD', desc: 'Euro / US Dollar', asset: 'EUR/USD', badge: 'Forex' },
+    { id: 'a-gbpusd', title: 'GBP/USD', desc: 'British Pound / US Dollar', asset: 'GBP/USD', badge: 'Forex' },
+    { id: 'a-usdjpy', title: 'USD/JPY', desc: 'US Dollar / Japanese Yen', asset: 'USD/JPY', badge: 'Forex' },
+    { id: 'a-btcusd', title: 'BTC/USD', desc: 'Bitcoin / US Dollar', asset: 'BTC/USD', badge: 'Crypto' },
+    { id: 'a-ethusd', title: 'ETH/USD', desc: 'Ethereum / US Dollar', asset: 'ETH/USD', badge: 'Crypto' },
+    { id: 'a-xauusd', title: 'Gold (XAU/USD)', desc: 'Gold Spot / US Dollar', asset: 'XAU/USD', badge: 'Commodity' },
+  ]
+
+  const searchActions = [
+    { id: 'c-deposit', title: 'Deposit Funds (+50% Bonus)', desc: 'Deposit M-Pesa or Crypto to Real Account', action: () => changeView('funds'), icon: Plus },
+    { id: 'c-withdraw', title: 'Withdraw Funds', desc: 'Submit withdrawal request', action: () => changeView('funds'), icon: Wallet },
+    { id: 'c-demo', title: 'Create Demo Account', desc: 'Configure virtual practice balance', action: () => setModal('create_demo'), icon: Plus },
+    { id: 'c-indicators', title: 'Technical Indicators Library', desc: 'VWMA, MACD, RSI, Bollinger Bands', action: () => setModal('indicator_menu'), icon: Sliders },
+    { id: 'c-theme', title: 'Toggle Dark / Light Theme', desc: 'Switch system-wide appearance theme', action: () => toggleTheme(), icon: Sun },
+    { id: 'c-kyc', title: 'Verify Identity & KYC', desc: 'Submit government ID & proof of address', action: () => changeView('profile'), icon: ShieldCheck },
+  ]
+
+  // Filter Search Results
+  const cleanQuery = searchQuery.trim().toLowerCase()
+  const matchingPages = searchPages.filter(p => !cleanQuery || p.title.toLowerCase().includes(cleanQuery) || p.desc.toLowerCase().includes(cleanQuery))
+  const matchingAssets = searchAssets.filter(a => !cleanQuery || a.title.toLowerCase().includes(cleanQuery) || a.desc.toLowerCase().includes(cleanQuery) || a.badge.toLowerCase().includes(cleanQuery))
+  const matchingActions = searchActions.filter(c => !cleanQuery || c.title.toLowerCase().includes(cleanQuery) || c.desc.toLowerCase().includes(cleanQuery))
+
+  const totalSearchMatches = matchingPages.length + matchingAssets.length + matchingActions.length
 
   // Active investment principal (for penalty mechanic)
   const [activePrincipal, setActivePrincipal] = useState(0)
@@ -2704,7 +2763,7 @@ export default function App() {
             body > header { height: auto !important; min-height: 56px; flex-wrap: wrap; justify-content: flex-start !important; gap: 8px; padding: 8px !important; }
             body > header > div:first-child, body > header > div:last-child { width: 100%; flex-wrap: wrap; justify-content: space-between; gap: 8px !important; }
             body > div.flex-1.flex.overflow-hidden { flex: none !important; flex-direction: column; overflow: visible !important; }
-            body > div.flex-1.flex.overflow-hidden > aside:first-child { display: none !important; }
+            body > div.flex-1.flex.overflow-hidden > aside:first-child { display: flex !important; order: 2 !important; width: 100% !important; height: auto !important; flex-direction: row !important; justify-content: space-around !important; align-items: center !important; padding: 8px 12px !important; gap: 8px !important; background: rgba(18, 24, 38, 0.95) !important; border-top: 1px solid rgba(255, 255, 255, 0.08) !important; border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important; overflow-x: auto !important; }
             body > div.flex-1.flex.overflow-hidden > main { height: 48vh; min-height: 280px; flex: none !important; }
             body > div.flex-1.flex.overflow-hidden > aside:last-child { width: 100% !important; height: auto; flex: none !important; }
             body > footer { height: 128px !important; min-height: 128px; flex: none !important; }
@@ -3860,16 +3919,112 @@ export default function App() {
                 </button>
               ) : null}
 
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(15,23,42,0.6)', padding: '5px 10px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
-                <Search size={14} color="var(--text-muted)" />
-                <input
-                  type="search"
-                  placeholder="Search..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '11px', width: '90px', padding: 0 }}
-                />
-              </label>
+              {/* Interactive Global System Search */}
+              <div className="global-search-container" ref={searchContainerRef}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(15,23,42,0.6)', padding: '5px 10px', borderRadius: '8px', border: '1px solid var(--glass-border)', cursor: 'text' }}>
+                  <Search size={14} color="var(--text-muted)" />
+                  <input
+                    type="search"
+                    placeholder="Search pages, assets, actions..."
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value)
+                      setSearchFocused(true)
+                    }}
+                    onFocus={() => setSearchFocused(true)}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '11px', width: '130px', padding: 0 }}
+                  />
+                </label>
+
+                {searchFocused && (
+                  <div className="global-search-popover">
+                    {matchingPages.length > 0 && (
+                      <div>
+                        <div className="search-group-title">📌 Pages &amp; Navigation</div>
+                        {matchingPages.slice(0, 5).map(p => {
+                          const Icon = p.icon
+                          return (
+                            <button
+                              key={p.id}
+                              type="button"
+                              className="search-item-btn"
+                              onClick={() => {
+                                changeView(p.view)
+                                setSearchQuery('')
+                                setSearchFocused(false)
+                              }}
+                            >
+                              <div className="search-item-icon"><Icon size={14} /></div>
+                              <div className="search-item-info">
+                                <span className="search-item-title">{p.title}</span>
+                                <span className="search-item-desc">{p.desc}</span>
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+
+                    {matchingAssets.length > 0 && (
+                      <div>
+                        <div className="search-group-title">📈 Markets &amp; Assets</div>
+                        {matchingAssets.slice(0, 6).map(a => (
+                          <button
+                            key={a.id}
+                            type="button"
+                            className="search-item-btn"
+                            onClick={() => {
+                              handleTradeNavigation(a.asset)
+                              setSearchQuery('')
+                              setSearchFocused(false)
+                            }}
+                          >
+                            <div className="search-item-icon"><TrendingUp size={14} /></div>
+                            <div className="search-item-info">
+                              <span className="search-item-title">{a.title}</span>
+                              <span className="search-item-desc">{a.desc}</span>
+                            </div>
+                            <span className="search-item-badge">{a.badge}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {matchingActions.length > 0 && (
+                      <div>
+                        <div className="search-group-title">⚡ Quick Actions</div>
+                        {matchingActions.slice(0, 4).map(c => {
+                          const Icon = c.icon
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              className="search-item-btn"
+                              onClick={() => {
+                                c.action()
+                                setSearchQuery('')
+                                setSearchFocused(false)
+                              }}
+                            >
+                              <div className="search-item-icon"><Icon size={14} /></div>
+                              <div className="search-item-info">
+                                <span className="search-item-title">{c.title}</span>
+                                <span className="search-item-desc">{c.desc}</span>
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+
+                    {totalSearchMatches === 0 && (
+                      <div style={{ padding: '16px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>
+                        No pages, assets, or actions matching "<strong>{searchQuery}</strong>"
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Dark / Light Mode Icon Toggle Button (Top Right Header) */}
               <button

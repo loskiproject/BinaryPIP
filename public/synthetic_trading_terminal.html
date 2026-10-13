@@ -200,25 +200,30 @@
         flex: none !important;
       }
 
-      body > div.flex-1.flex.overflow-hidden > aside:last-child {
+      body > div.flex-1.flex.overflow-hidden > aside:first-child {
         order: 2 !important;
+        width: 100% !important;
+        height: auto !important;
+        flex-direction: row !important;
+        justify-content: space-around !important;
+        align-items: center !important;
+        gap: 8px !important;
+        padding: 8px 12px !important;
+        background: rgba(18, 24, 38, 0.95) !important;
+        border-right: none !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+      }
+
+      body > div.flex-1.flex.overflow-hidden > aside:last-child {
+        order: 3 !important;
         width: 100% !important;
         height: auto !important;
         border-left: none !important;
         border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
         padding: 14px 12px !important;
-      }
-
-      body > div.flex-1.flex.overflow-hidden > aside:first-child {
-        order: 3 !important;
-        width: 100% !important;
-        height: auto !important;
-        flex-direction: row !important;
-        justify-content: center !important;
-        gap: 10px !important;
-        padding: 6px 12px !important;
-        border-right: none !important;
-        border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
       }
 
       #runningIndexesContainer {
@@ -301,6 +306,9 @@
       </button>
       <button type="button" id="toolChartStyle" title="Chart Style" aria-pressed="false" class="w-8 h-8 rounded-lg glass-button flex items-center justify-center text-gray-400 hover:text-white transition">
         <i class="fa-solid fa-chart-simple text-sm"></i>
+      </button>
+      <button type="button" id="toolReset" title="Reset Chart & Tools to Default" aria-pressed="false" class="w-8 h-8 rounded-lg glass-button flex items-center justify-center text-gray-400 hover:text-teal-400 transition">
+        <i class="fa-solid fa-rotate-right text-sm"></i>
       </button>
     </aside>
 
@@ -511,6 +519,16 @@
     let currentTradeTypeIndex = 0;
     let inputMode = 'stake'; // 'stake' or 'payout'
     let currentZoom = 1.0;
+
+    // Tool Rail State Variables
+    let currentIntervalSec = 1;
+    let tickTimer = null;
+    let isCrosshairActive = false;
+    let isDrawingActive = false;
+    let userDrawings = [];
+    let currentDrawingPath = null;
+    let currentIndicatorMode = 'off'; // 'off' | 'sma' | 'bollinger'
+    let currentChartStyleIndex = 0; // 0 = Line/Area, 1 = Stepped, 2 = Bar
 
     // Synthetic Index Chart Markets List
     const markets = [
@@ -1106,8 +1124,7 @@
     }
 
     // Default Tick Timer Loop (1s)
-    let currentIntervalSec = 1;
-    let tickTimer = setInterval(tickStep, currentIntervalSec * 1000);
+    tickTimer = setInterval(tickStep, currentIntervalSec * 1000);
 
     function startTickIntervalTimer() {
       if (tickTimer) clearInterval(tickTimer);
@@ -1135,7 +1152,6 @@
     }
 
     // 2. Crosshair Mode Button (#toolCrosshair)
-    let isCrosshairActive = false;
     const crosshairBtn = document.getElementById('toolCrosshair');
 
     if (crosshairBtn) {
@@ -1154,9 +1170,6 @@
     }
 
     // 3. Freehand / Trend Line Drawing Tool (#toolDrawing)
-    let isDrawingActive = false;
-    let userDrawings = [];
-    let currentDrawingPath = null;
     const drawingBtn = document.getElementById('toolDrawing');
 
     if (drawingBtn) {
@@ -1203,7 +1216,6 @@
     }
 
     // 4. Moving Average / Technical Indicator Tool (#toolIndicator)
-    let currentIndicatorMode = 'off'; // 'off' | 'sma' | 'bollinger'
     const indicatorBtn = document.getElementById('toolIndicator');
 
     if (indicatorBtn) {
@@ -1274,7 +1286,6 @@
     }
 
     // 5. Chart Style Toggle Button (#toolChartStyle)
-    let currentChartStyleIndex = 0; // 0 = Line/Area, 1 = Stepped Line, 2 = Bar Chart
     const chartStyleBtn = document.getElementById('toolChartStyle');
 
     if (chartStyleBtn) {
@@ -1310,16 +1321,69 @@
       });
     }
 
-      // Update Chart Dataset
-      tickChart.data.labels = priceHistory.map((_, i) => i + 1);
-      tickChart.data.datasets[0].data = [...priceHistory];
-      tickChart.data.datasets[0].pointRadius = priceHistory.map((_, i) => i === priceHistory.length - 1 ? 5 : 0);
-      tickChart.data.datasets[0].borderColor = change >= 0 ? '#2dd4bf' : '#f43f5e';
-      tickChart.update('none');
+    // 6. Reset Chart, Tools & Market to Default Button (#toolReset)
+    const resetBtn = document.getElementById('toolReset');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        // Reset Tick Interval Speed to 1T
+        currentIntervalSec = 1;
+        const intervalBtn = document.getElementById('toolInterval');
+        if (intervalBtn) {
+          intervalBtn.textContent = '1T';
+          intervalBtn.title = '1 Tick Interval Speed (1s)';
+        }
+        startTickIntervalTimer();
 
-      updateRunningIndexesUI();
-      renderLogTable();
-    }, 1000);
+        // Reset Crosshair Mode
+        isCrosshairActive = false;
+        const crosshairBtn = document.getElementById('toolCrosshair');
+        if (crosshairBtn) {
+          crosshairBtn.setAttribute('aria-pressed', 'false');
+          crosshairBtn.className = 'w-8 h-8 rounded-lg glass-button flex items-center justify-center text-gray-400 hover:text-white transition';
+        }
+
+        // Reset Freehand Drawings
+        isDrawingActive = false;
+        userDrawings = [];
+        currentDrawingPath = null;
+        const drawingBtn = document.getElementById('toolDrawing');
+        if (drawingBtn) {
+          drawingBtn.setAttribute('aria-pressed', 'false');
+          drawingBtn.className = 'w-8 h-8 rounded-lg glass-button flex items-center justify-center text-gray-400 hover:text-white transition';
+        }
+
+        // Reset Technical Indicators
+        currentIndicatorMode = 'off';
+        const indicatorBtn = document.getElementById('toolIndicator');
+        if (indicatorBtn) {
+          indicatorBtn.setAttribute('aria-pressed', 'false');
+          indicatorBtn.className = 'w-8 h-8 rounded-lg glass-button flex items-center justify-center text-gray-400 hover:text-white transition';
+        }
+
+        // Reset Chart Style to Area Line
+        currentChartStyleIndex = 0;
+        tickChart.config.type = 'line';
+        tickChart.data.datasets[0].stepped = false;
+        tickChart.data.datasets[0].fill = true;
+        tickChart.data.datasets[0].borderColor = '#2dd4bf';
+        const chartStyleBtn = document.getElementById('toolChartStyle');
+        if (chartStyleBtn) {
+          chartStyleBtn.className = 'w-8 h-8 rounded-lg glass-button flex items-center justify-center text-teal-400 bg-teal-500/20 border-teal-500/50 shadow-sm transition';
+        }
+
+        // Reset Zoom
+        zoomChart(1.0);
+
+        // Reset to Default Market
+        selectMarket('vol25');
+
+        // Visual flash confirmation
+        resetBtn.className = 'w-8 h-8 rounded-lg glass-button flex items-center justify-center text-teal-400 bg-teal-500/20 border-teal-500/50 transition';
+        setTimeout(() => {
+          resetBtn.className = 'w-8 h-8 rounded-lg glass-button flex items-center justify-center text-gray-400 hover:text-teal-400 transition';
+        }, 500);
+      });
+    }
 
     // Initial Setup
     renderMarketList();
