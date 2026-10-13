@@ -61,6 +61,8 @@ import {
   Percent,
   Zap,
   LogOut,
+  Sun,
+  Moon,
 } from 'lucide-react'
 import './App.css'
 import './features/features.css'
@@ -260,6 +262,7 @@ function TradingViewCandlestickCanvas({
   drawingsLocked = false,
   clearSignal = 0,
   showTradeBox = true,
+  isMini = false,
   indicators,
   onExecuteTrade,
   hasEntryBarrier = false,
@@ -274,6 +277,7 @@ function TradingViewCandlestickCanvas({
   drawingsLocked?: boolean
   clearSignal?: number
   showTradeBox?: boolean
+  isMini?: boolean
   indicators: { macd: boolean; rsi: boolean; vwma: boolean; bollinger: boolean }
   onExecuteTrade?: (isBuy: boolean, quotePrice?: number) => void
   hasEntryBarrier?: boolean
@@ -400,10 +404,17 @@ function TradingViewCandlestickCanvas({
   const liveBidSellPrice = currentCandle.close - spread
   const liveSpreadPips = (spread / pipSize).toFixed(1)
 
-  // VWMA Smooth Line Points (rendered ONLY if VWMA indicator is enabled)
-  const candleSpacing = 533 / Math.max(1, candles.length - 1)
-  const candleX = (index: number) => 545 - (candles.length - 1 - index) * candleSpacing * zoomScale + panX
-  const vwmaPoints = candles.map((c, i) => `${candleX(i)},${220 - (((c.open + c.close) / 2 - min) / range) * 200}`).join(' ')
+  // Spacing & Mapping across 580x240 SVG viewbox (510px max X ensures the newest candle is 100% visible before the price axis)
+  const maxChartX = isMini ? 525 : 510
+  const minChartX = 15
+  const availableWidth = maxChartX - minChartX
+  const candleSpacing = availableWidth / Math.max(1, candles.length - 1)
+  const candleX = (index: number) => maxChartX - (candles.length - 1 - index) * candleSpacing * zoomScale + panX
+  const vwmaPoints = candles.map((c, i) => `${candleX(i)},${225 - (((c.open + c.close) / 2 - min) / range) * 210}`).join(' ')
+
+  const linePoints = candles.map((c, i) => `${candleX(i)},${225 - ((c.close - min) / range) * 210}`)
+  const linePathD = linePoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p}`).join(' ')
+  const areaPathD = `${linePathD} L ${candleX(candles.length - 1)},235 L ${candleX(0)},235 Z`
 
   const pointFromEvent = (event: ReactPointerEvent<SVGSVGElement>): ChartPoint => {
     const bounds = event.currentTarget.getBoundingClientRect()
@@ -418,8 +429,8 @@ function TradingViewCandlestickCanvas({
     const snappedCandle = candles[nearestIndex]
     const candlePrices = [snappedCandle.open, snappedCandle.high, snappedCandle.low, snappedCandle.close]
     const nearestPrice = candlePrices.reduce((closest, price) =>
-      Math.abs(220 - ((price - min) / range) * 200 - point.y) < Math.abs(220 - ((closest - min) / range) * 200 - point.y) ? price : closest, candlePrices[0])
-    return { x: candleX(nearestIndex), y: 220 - ((nearestPrice - min) / range) * 200 }
+      Math.abs(225 - ((price - min) / range) * 210 - point.y) < Math.abs(225 - ((closest - min) / range) * 210 - point.y) ? price : closest, candlePrices[0])
+    return { x: candleX(nearestIndex), y: 225 - ((nearestPrice - min) / range) * 210 }
   }
 
   const handleChartPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
@@ -537,20 +548,23 @@ function TradingViewCandlestickCanvas({
   }
 
   // Price Axis Ticks Calculation
-  const step = range / 6
-  const priceTicks = Array.from({ length: 7 }, (_, i) => max - i * step)
+  const tickCount = isMini ? 4 : 7
+  const step = range / Math.max(1, tickCount - 1)
+  const priceTicks = Array.from({ length: tickCount }, (_, i) => max - i * step)
 
   return (
-    <div className="candlestick-chart-box" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+    <div className={`candlestick-chart-box ${isMini ? 'mini-preview' : ''}`} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
       {/* Floating Interactive Canvas Zoom & Pan Control Bar */}
-      <div className="tv-floating-zoom-controls">
-        <button type="button" className="zoom-btn" title="Zoom In (+)" onClick={handleZoomIn}><ZoomIn size={14} /></button>
-        <button type="button" className="zoom-btn" title="Zoom Out (-)" onClick={handleZoomOut}><ZoomOut size={14} /></button>
-        <button type="button" className="zoom-btn" title="Reset Zoom" onClick={handleResetZoom}>↺</button>
-        <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font-code)', padding: '0 4px' }}>
-          {Math.round(zoomScale * 100)}% Zoom
-        </span>
-      </div>
+      {!isMini && (
+        <div className="tv-floating-zoom-controls">
+          <button type="button" className="zoom-btn" title="Zoom In (+)" onClick={handleZoomIn}><ZoomIn size={14} /></button>
+          <button type="button" className="zoom-btn" title="Zoom Out (-)" onClick={handleZoomOut}><ZoomOut size={14} /></button>
+          <button type="button" className="zoom-btn" title="Reset Zoom" onClick={handleResetZoom}>↺</button>
+          <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'var(--font-code)', padding: '0 4px' }}>
+            {Math.round(zoomScale * 100)}% Zoom
+          </span>
+        </div>
+      )}
 
       {showTradeBox && (
         <div className="tv-embedded-trade-box">
@@ -569,12 +583,20 @@ function TradingViewCandlestickCanvas({
       <svg
         viewBox="0 0 580 240"
         preserveAspectRatio="none"
-        style={{ width: '100%', height: '100%', minHeight: '220px', touchAction: 'pan-y pinch-zoom', cursor: tool === 'pan' ? (isPanning ? 'grabbing' : 'grab') : tool === 'text' ? 'text' : 'crosshair' }}
+        style={{ width: '100%', height: '100%', minHeight: isMini ? '0px' : '220px', touchAction: 'pan-y pinch-zoom', cursor: tool === 'pan' ? (isPanning ? 'grabbing' : 'grab') : tool === 'text' ? 'text' : 'crosshair' }}
         onPointerDown={handleChartPointerDown}
         onPointerMove={handleChartPointerMove}
         onPointerUp={handleChartPointerUp}
         onPointerLeave={() => setCursorPoint(null)}
       >
+        <defs>
+          <linearGradient id={`chartAreaGrad-${symbolSeed}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#00e676" stopOpacity="0.4" />
+            <stop offset="70%" stopColor="#00e676" stopOpacity="0.08" />
+            <stop offset="100%" stopColor="#00e676" stopOpacity="0.0" />
+          </linearGradient>
+        </defs>
+
         {/* Horizontal Dotted Price Grid Lines */}
         <line x1="0" y1="60" x2="580" y2="60" stroke="rgba(255,255,255,0.05)" strokeDasharray="3" />
         <line x1="0" y1="120" x2="580" y2="120" stroke="rgba(255,255,255,0.05)" strokeDasharray="3" />
@@ -593,17 +615,31 @@ function TradingViewCandlestickCanvas({
           </>
         )}
 
-        {/* VWMA Moving Average Smooth Blue Line Overlay (Rendered ONLY when VWMA indicator is toggled ON) */}
+        {/* VWMA Moving Average Smooth Blue Line Overlay */}
         {indicators.vwma && (
           <path d={`M ${vwmaPoints}`} stroke="#2979ff" strokeWidth="1.8" fill="none" opacity="0.85" />
         )}
 
-        {/* Bollinger Bands Overlay (Rendered ONLY when Bollinger indicator is toggled ON) */}
+        {/* Bollinger Bands Overlay */}
         {indicators.bollinger && (
           <>
             <line x1="0" y1="40" x2="580" y2="40" stroke="var(--neon-cyan)" strokeDasharray="2" opacity="0.6" />
             <line x1="0" y1="190" x2="580" y2="190" stroke="var(--neon-cyan)" strokeDasharray="2" opacity="0.6" />
           </>
+        )}
+
+        {/* Real-time horizontal price tracking line */}
+        {currentCandle && (
+          <line
+            x1="0"
+            y1={225 - ((currentCandle.close - min) / range) * 210}
+            x2="580"
+            y2={225 - ((currentCandle.close - min) / range) * 210}
+            stroke={currentCandle.close >= currentCandle.open ? 'var(--bull-green)' : 'var(--bear-red)'}
+            strokeWidth="1.2"
+            strokeDasharray="3 3"
+            opacity="0.85"
+          />
         )}
 
         {/* Candlesticks Rendering with Dynamic Zooming Scaling */}
@@ -615,10 +651,10 @@ function TradingViewCandlestickCanvas({
             const trendMix = Math.sin(i * 1.7 + symbolSeed) * 1.6
             const bodyVariance = 4.5 + ((trendMix + 2) * 2.4)
             const candleWidth = Math.min(Math.max(1.1, bodyVariance * zoomScale), Math.max(1.2, candleSpacing * 0.68 * zoomScale))
-            const yHigh = 220 - ((c.high - min) / range) * 200
-            const yLow = 220 - ((c.low - min) / range) * 200
-            const yOpen = 220 - ((c.open - min) / range) * 200
-            const yClose = 220 - ((c.close - min) / range) * 200
+            const yHigh = 225 - ((c.high - min) / range) * 210
+            const yLow = 225 - ((c.low - min) / range) * 210
+            const yOpen = 225 - ((c.open - min) / range) * 210
+            const yClose = 225 - ((c.close - min) / range) * 210
             const yBody = Math.min(yOpen, yClose)
             const hBody = Math.max(3, Math.abs(yOpen - yClose))
             const wickWidth = 1.2 + ((i + symbolSeed) % 3) * 0.38
@@ -670,12 +706,12 @@ function TradingViewCandlestickCanvas({
           })
         ) : (
           /* Line / Area Chart View */
-          <path
-            d={candles.map((c, i) => `${i === 0 ? 'M' : 'L'} ${candleX(i)} ${220 - ((c.close - min) / range) * 200}`).join(' ')}
-            stroke="var(--mint-teal)"
-            strokeWidth="2"
-            fill={chartStyle === 'Area' ? 'rgba(0,230,118,0.15)' : 'none'}
-          />
+          <g key="line-area-chart">
+            {chartStyle === 'Area' && (
+              <path d={areaPathD} fill={`url(#chartAreaGrad-${symbolSeed})`} />
+            )}
+            <path d={linePathD} stroke="var(--mint-teal)" strokeWidth="2" fill="none" />
+          </g>
         )}
 
         {drawings.map((drawing) => {
@@ -684,7 +720,7 @@ function TradingViewCandlestickCanvas({
           if (drawing.kind === 'horizontal') return <line key={drawing.id} x1="0" y1={start.y} x2="580" y2={start.y} stroke="#60a5fa" strokeWidth="1.5" />
           if (drawing.kind === 'vertical') return <line key={drawing.id} x1={start.x} y1="0" x2={start.x} y2="240" stroke="#60a5fa" strokeWidth="1.5" />
           if (drawing.kind === 'trendline' || drawing.kind === 'ruler') {
-            const priceDelta = Math.abs(((start.y - end.y) / 200) * range)
+            const priceDelta = Math.abs(((start.y - end.y) / 210) * range)
             return (
               <g key={drawing.id}>
                 <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke={drawing.kind === 'ruler' ? '#fbbf24' : '#60a5fa'} strokeWidth="1.5" strokeDasharray={drawing.kind === 'ruler' ? '4 3' : undefined} />
@@ -787,12 +823,42 @@ export default function App() {
   const [closedTrades, setClosedTrades] = useState<ClosedTrade[]>([])
   const positionIdRef = useRef(0)
 
-  // Theme State (`dark` | `light` | `midnight` | `cyberpunk`)
-  const [theme, setTheme] = useState<Theme>('dark')
+  // Theme State (`dark` | `light`) with automatic device theme preference detection
+  const [theme, setTheme] = useState<Theme>(() => {
+    const saved = localStorage.getItem('app_theme') as Theme | null
+    if (saved === 'dark' || saved === 'light') return saved
+    if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      return 'dark'
+    }
+    if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+      return 'light'
+    }
+    return 'dark'
+  })
 
   useEffect(() => {
     document.body.className = theme === 'dark' ? '' : `theme-${theme}`
+    localStorage.setItem('app_theme', theme)
   }, [theme])
+
+  // Sync with system device dark/light setting if user hasn't explicitly set localStorage override
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    const handleDeviceThemeChange = (e: MediaQueryListEvent) => {
+      if (!localStorage.getItem('app_theme')) {
+        setTheme(e.matches ? 'dark' : 'light')
+      }
+    }
+    mediaQuery.addEventListener('change', handleDeviceThemeChange)
+    return () => mediaQuery.removeEventListener('change', handleDeviceThemeChange)
+  }, [])
+
+  const toggleTheme = () => {
+    const nextTheme: Theme = theme === 'dark' ? 'light' : 'dark'
+    setTheme(nextTheme)
+    showNotice(`Switched to ${nextTheme === 'dark' ? 'Dark' : 'Light'} Mode`)
+  }
 
   // Forex Leverage & Risk Desk State
   const [leverage, setLeverage] = useState('1:500')
@@ -857,12 +923,26 @@ export default function App() {
     syncSyntheticTerminalAccount()
   }, [syncSyntheticTerminalAccount])
 
+  // Sync theme changes with embedded Synthetic Trading Terminal iframe
+  useEffect(() => {
+    if (syntheticTerminalRef.current && syntheticTerminalRef.current.contentWindow) {
+      try {
+        syntheticTerminalRef.current.contentWindow.postMessage({ type: 'EXSTRADE_THEME_CHANGE', theme }, '*')
+      } catch {
+        // ignore
+      }
+    }
+  }, [theme])
+
   useEffect(() => {
     const handleSyntheticMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin || event.source !== syntheticTerminalRef.current?.contentWindow) return
       const message = event.data
       if (message?.type === 'EXSTRADE_TERMINAL_READY') {
         syncSyntheticTerminalAccount()
+        if (syntheticTerminalRef.current && syntheticTerminalRef.current.contentWindow) {
+          syntheticTerminalRef.current.contentWindow.postMessage({ type: 'EXSTRADE_THEME_CHANGE', theme }, '*')
+        }
       } else if (message?.type === 'EXSTRADE_ACCOUNT_SELECT') {
         if (message.accountType === 'demo' && demoAccountName) setAccountType('demo')
         if (message.accountType === 'live' && liveAccountCreated) setAccountType('live')
@@ -879,7 +959,7 @@ export default function App() {
 
     window.addEventListener('message', handleSyntheticMessage)
     return () => window.removeEventListener('message', handleSyntheticMessage)
-  }, [activeView, demoAccountName, liveAccountCreated, syncSyntheticTerminalAccount])
+  }, [activeView, demoAccountName, liveAccountCreated, syncSyntheticTerminalAccount, theme])
 
   // Toast Notification Helper
   const showNotice = (message: string) => {
@@ -1122,7 +1202,7 @@ export default function App() {
 
   const [pageLoading, setPageLoading] = useState(false)
 
-  // Navigation Handler
+  // Navigation Handler - Exactly 3 seconds loading screen visibility
   const changeView = (nextView: View) => {
     if (nextView === activeView) return
     setPageLoading(true)
@@ -1131,7 +1211,7 @@ export default function App() {
     setMobileMenuOpen(false)
     setTimeout(() => {
       setPageLoading(false)
-    }, 5000)
+    }, 3000)
   }
 
   const goBack = () => {
@@ -1151,8 +1231,18 @@ export default function App() {
         return
       }
 
-      const fullName = String(sessionUser.user_metadata.full_name ?? '')
-      const avatarPath = typeof sessionUser.user_metadata.avatar_path === 'string' ? sessionUser.user_metadata.avatar_path : null
+      const fullName = String(
+        sessionUser.user_metadata.full_name ??
+        sessionUser.user_metadata.name ??
+        (sessionUser.email ? sessionUser.email.split('@')[0] : 'Real Trader')
+      )
+      const avatarPath = typeof sessionUser.user_metadata.avatar_url === 'string'
+        ? sessionUser.user_metadata.avatar_url
+        : typeof sessionUser.user_metadata.picture === 'string'
+          ? sessionUser.user_metadata.picture
+          : typeof sessionUser.user_metadata.avatar_path === 'string'
+            ? sessionUser.user_metadata.avatar_path
+            : null
       const role = sessionUser.app_metadata.role === 'admin' ? 'admin' : 'client'
       const phone = String(sessionUser.user_metadata.phone ?? '')
       const country = String(sessionUser.user_metadata.country ?? '')
@@ -1161,6 +1251,19 @@ export default function App() {
       // accountStatus: always active — admin approval wall removed
       const accountStatus = 'active' as const
       setUser({ id: sessionUser.id, fullName, email: sessionUser.email ?? '', phone, country, avatarPath, role, emailVerified, accountStatus })
+
+      // Auto-switch to Real Account after login if requested
+      if (sessionStorage.getItem('pending_real_account') === 'true') {
+        sessionStorage.removeItem('pending_real_account')
+        setAccountType('live')
+        setLiveAccountCreated(true)
+        if (liveBalance <= 0) {
+          changeView('funds')
+          showNotice(`🎉 Welcome ${fullName || 'Trader'}! Redirecting to Funds page to deposit (+50% Bonus!).`)
+        } else {
+          showNotice(`🎉 Welcome ${fullName || 'Trader'}! Your Real Account is active with 50% Deposit Bonus!`)
+        }
+      }
     }
 
     void client.auth.getSession().then(({ data }) => {
@@ -1235,14 +1338,24 @@ export default function App() {
       ...curr
     ])
 
-    if (accountType === 'demo') setDemoBalance((balance) => balance + pos.profit)
+    if (accountType === 'demo') {
+      setDemoBalance((balance) => balance + pos.profit)
+    } else if (accountType === 'live') {
+      setLiveBalance((balance) => Math.max(0, balance + pos.profit))
+    }
 
     showNotice(`Closed position #${posId} (${pos.symbol}) with P&L: $${pos.profit >= 0 ? '+' : ''}${pos.profit.toFixed(2)}`)
   }
 
   const handleExecuteTrade = (isBuy = true, symbol = selectedAsset, quotedPrice?: number) => {
-    if (accountType !== 'demo') {
-      showNotice('Create and select a demo account before placing a simulated order.')
+    if (accountType === 'none') {
+      showNotice('Please select an account (Demo or Real Account) before placing orders.')
+      return
+    }
+
+    if (accountType === 'live' && liveBalance <= 0) {
+      changeView('funds')
+      showNotice('⚠️ Your Real Account is unfunded ($0.00). Redirecting to Funds page to make your deposit (+50% Bonus!).')
       return
     }
 
@@ -1259,8 +1372,15 @@ export default function App() {
     const price = quotedPrice ?? quote.price
     const leverageRatio = Number.parseInt(leverage.split(':')[1] ?? '1', 10)
     const requiredMargin = price * lots * contractSize / Math.max(1, leverageRatio)
-    if (activeBalance - totalMarginUsed < requiredMargin) {
-      showNotice(`Insufficient free margin. Required: $${requiredMargin.toFixed(2)}.`)
+
+    if (accountType === 'live' && liveBalance < requiredMargin) {
+      changeView('funds')
+      showNotice(`⚠️ Insufficient Real Account balance ($${liveBalance.toFixed(2)}). Required margin: $${requiredMargin.toFixed(2)}. Taking you to Funds page.`)
+      return
+    }
+
+    if (accountType === 'demo' && demoBalance - totalMarginUsed < requiredMargin) {
+      showNotice(`Insufficient demo margin. Required: $${requiredMargin.toFixed(2)}.`)
       return
     }
 
@@ -1278,19 +1398,31 @@ export default function App() {
 
     setOpenPositions(curr => [newPos, ...curr])
     setModal(null)
-    showNotice(`Demo ${direction} ${lots} ${symbol} opened at ${newPos.openPrice.toFixed(isForex ? (symbol.endsWith('JPY') ? 3 : 5) : 2)}. Margin: $${requiredMargin.toFixed(2)}.`)
+    const accLabel = accountType === 'live' ? 'REAL' : 'DEMO'
+    showNotice(`✅ ${accLabel} ${direction} ${lots} ${symbol} opened at ${newPos.openPrice.toFixed(isForex ? (symbol.endsWith('JPY') ? 3 : 5) : 2)}. Margin: $${requiredMargin.toFixed(2)}.`)
   }
 
-  // Deposit Form Submit
+  // Navigation check for "Trade Now" / "Trade" CTAs
+  const handleTradeNavigation = (targetAsset?: string) => {
+    if (targetAsset) setSelectedAsset(targetAsset)
+
+    if (accountType === 'live' && liveBalance <= 0) {
+      changeView('funds')
+      showNotice('⚠️ Real Account balance is $0.00. Redirecting to Funds page to make your deposit (+50% Bonus!).')
+      return
+    }
+
+    changeView('synthetic')
+  }
 
   // AI Signal auto-trade handler
   const handleAiAutoTrade = (signal: AiSignal) => {
-    if (accountType !== 'demo') {
-      showNotice('Select a demo account to execute AI signals.')
+    if (accountType === 'live' && liveBalance <= 0) {
+      changeView('funds')
+      showNotice('⚠️ Real Account is unfunded ($0.00). Redirecting to Funds page to deposit.')
       return
     }
     handleExecuteTrade(signal.direction === 'BUY', signal.symbol, signal.entryPrice)
-    showNotice('AI Signal executed: ' + signal.direction + ' ' + signal.symbol + ' @ ' + signal.entryPrice.toFixed(2) + ' (' + signal.winProbability + '% win probability)')
   }
 
   // Multi-wallet transfer handler
@@ -1305,19 +1437,62 @@ export default function App() {
     })
   }
 
-  // Funds Hub deposit request handler
+  // Account Selector Handler (with Auth Login Check for Real Account & Funds Redirection)
+  const handleAccountSelectChange = (nextType: AccountType) => {
+    if (nextType === 'demo') {
+      if (!demoAccountName) {
+        setModal('create_demo')
+        return
+      }
+      setAccountType('demo')
+      showNotice(`🟡 Switched to Demo Account: ${demoAccountName}`)
+      return
+    }
+
+    if (nextType === 'live') {
+      if (!user) {
+        sessionStorage.setItem('pending_real_account', 'true')
+        setAccountType('none')
+        setActiveView('verification')
+        showNotice('🔒 Redirecting to Login page. Log in or sign up to access your Real Account & 50% Bonus.')
+        return
+      }
+
+      setAccountType('live')
+      setLiveAccountCreated(true)
+
+      if (liveBalance <= 0) {
+        changeView('funds')
+        showNotice('🟢 Real Account selected ($0.00 balance). Redirecting to Funds page to deposit (+50% Bonus!).')
+      } else {
+        showNotice(`🟢 Switched to Real Account. Balance: $${liveBalance.toFixed(2)} (50% Deposit Bonus Active!)`)
+      }
+      return
+    }
+
+    setAccountType('none')
+  }
+
+  // Funds Hub deposit request handler with 50% Bonus
   const handleFundsDepositRequest = (depositAmount: number, network: string, reference?: string) => {
+    const bonus = depositAmount * 0.5
+    const totalAdded = depositAmount + bonus
     const refNote = reference ? ' Ref: ' + reference : ''
-    showNotice('Deposit request of $' + depositAmount.toFixed(2) + ' via ' + network + ' submitted.' + refNote + ' Awaiting admin confirmation.')
+    setLiveBalance((curr) => curr + totalAdded)
+    setLiveAccountCreated(true)
+    setAccountType('live')
+    showNotice(`🎉 Real Account Deposit of $${depositAmount.toFixed(2)} + $${bonus.toFixed(2)} (50% Deposit Bonus) = $${totalAdded.toFixed(2)} credited!${refNote}`)
   }
 
   const handleDepositSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const depAmount = parseFloat(amount) || 500
-    setLiveBalance((curr) => curr + depAmount)
+    const bonus = depAmount * 0.5
+    const totalAdded = depAmount + bonus
+    setLiveBalance((curr) => curr + totalAdded)
     setLiveAccountCreated(true)
     setAccountType('live')
-    showNotice(`✅ Deposit of $${depAmount.toFixed(2)} approved & credited to LIVE account! Live balance: $${(liveBalance + depAmount).toFixed(2)}`)
+    showNotice(`🎉 Deposit of $${depAmount.toFixed(2)} + $${bonus.toFixed(2)} (50% Deposit Bonus) = $${totalAdded.toFixed(2)} credited to your Real Account!`)
     closeModal()
   }
 
@@ -2208,6 +2383,19 @@ export default function App() {
   const openInvestmentChart = (coinId: string) => {
     const coin = investmentCoinTiers.find((tier) => tier.id === coinId) ?? investmentCoinTiers[0]
     const stake = investmentStake[coin.id] ?? coin.minInvestment
+
+    if (accountType === 'live' && liveBalance <= 0) {
+      changeView('funds')
+      showNotice('⚠️ Your Real Account is unfunded ($0.00). Redirecting to Funds page to make your deposit (+50% Bonus!).')
+      return
+    }
+
+    if (accountType === 'live' && liveBalance < stake) {
+      changeView('funds')
+      showNotice(`⚠️ Real Account balance ($${liveBalance.toFixed(2)}) is lower than required investment ($${stake.toLocaleString()}). Taking you to Funds page.`)
+      return
+    }
+
     setSelectedInvestmentTier(coin.id)
     setSelectedAsset(coin.symbol)
     setTimeframe('1m')
@@ -2216,10 +2404,17 @@ export default function App() {
     setSelectedChartTool('crosshair')
     setInvestmentStartedAt(Date.now())
     setInvestmentCountdown(21 * 24 * 60 * 60)
-    // Set active principal and compute projected payout for penalty mechanic
+
     setActivePrincipal(stake)
     const midReturn = (coin.minReturn + coin.maxReturn) / 2 / 100
     setProjectedPayout(stake * midReturn)
+
+    if (accountType === 'live') {
+      setLiveBalance(prev => Math.max(0, prev - stake))
+    } else if (accountType === 'demo') {
+      setDemoBalance(prev => Math.max(0, prev - stake))
+    }
+
     changeView('synthetic')
   }
 
@@ -2296,36 +2491,21 @@ export default function App() {
                   <div><small>Duration</small><strong>{coin.durationDays}d</strong></div>
                 </div>
 
-                {/* ── TWO MINI CHARTS ─────────────────────────────── */}
-                <div className="investment-dual-charts">
-                  <div className="investment-mini-chart">
-                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700, padding: '4px 8px 0', letterSpacing: '0.5px' }}>
-                      PRICE — {coin.symbol}
-                    </div>
-                    <TradingViewCandlestickCanvas
-                      symbol={coin.symbol}
-                      chartStyle="Candlesticks"
-                      timeframe="1m"
-                      dateRange="1D"
-                      showTradeBox={false}
-                      indicators={{ macd: false, rsi: false, vwma: false, bollinger: false }}
-                      onExecuteTrade={() => {}}
-                    />
+                {/* ── YIELD CURVE AREA CHART ─────────────────────────── */}
+                <div className="investment-mini-chart secondary" style={{ marginTop: '10px' }}>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700, padding: '4px 8px 0', letterSpacing: '0.5px' }}>
+                    YIELD CURVE — {coin.symbol}
                   </div>
-                  <div className="investment-mini-chart secondary">
-                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700, padding: '4px 8px 0', letterSpacing: '0.5px' }}>
-                      YIELD CURVE
-                    </div>
-                    <TradingViewCandlestickCanvas
-                      symbol={coin.symbol}
-                      chartStyle="Area"
-                      timeframe="5m"
-                      dateRange="1D"
-                      showTradeBox={false}
-                      indicators={{ macd: false, rsi: false, vwma: true, bollinger: false }}
-                      onExecuteTrade={() => {}}
-                    />
-                  </div>
+                  <TradingViewCandlestickCanvas
+                    symbol={coin.symbol}
+                    chartStyle="Area"
+                    timeframe="5m"
+                    dateRange="1D"
+                    showTradeBox={false}
+                    isMini={true}
+                    indicators={{ macd: false, rsi: false, vwma: true, bollinger: false }}
+                    onExecuteTrade={() => {}}
+                  />
                 </div>
 
                 {/* ── INVEST AMOUNT + CTA ─────────────────────────── */}
@@ -2383,6 +2563,23 @@ export default function App() {
                       className="inv-cta-btn inv-cta-invest"
                       style={{ background: `linear-gradient(135deg, ${rc}cc, ${rc}66)`, boxShadow: `0 4px 16px ${rc}33` }}
                       onClick={() => {
+                        if (accountType === 'live' && liveBalance <= 0) {
+                          changeView('funds')
+                          showNotice('⚠️ Your Real Account is unfunded ($0.00). Redirecting to Funds page to make your deposit (+50% Bonus!).')
+                          return
+                        }
+                        if (accountType === 'live' && liveBalance < coinStake) {
+                          changeView('funds')
+                          showNotice(`⚠️ Real Account balance ($${liveBalance.toFixed(2)}) is lower than required investment ($${coinStake.toLocaleString()}). Taking you to Funds page.`)
+                          return
+                        }
+
+                        if (accountType === 'live') {
+                          setLiveBalance(prev => Math.max(0, prev - coinStake))
+                        } else if (accountType === 'demo') {
+                          setDemoBalance(prev => Math.max(0, prev - coinStake))
+                        }
+
                         setSelectedInvestmentTier(coin.id)
                         setActivePrincipal(coinStake)
                         const midReturn = (coin.minReturn + coin.maxReturn) / 2 / 100
@@ -2480,9 +2677,16 @@ export default function App() {
     <iframe
       ref={syntheticTerminalRef}
       className="synthetic-terminal-iframe"
-      src="/synthetic_trading_terminal.html"
+      src={`/synthetic_trading_terminal.html?theme=${theme}`}
       title="Synthetic Trading Terminal"
       onLoad={(event) => {
+        if (event.currentTarget.contentWindow) {
+          try {
+            event.currentTarget.contentWindow.postMessage({ type: 'EXSTRADE_THEME_CHANGE', theme }, '*')
+          } catch {
+            // ignore
+          }
+        }
         const frameDocument = event.currentTarget.contentDocument
         if (!frameDocument || frameDocument.getElementById('synthetic-compact-layout')) return
         const responsiveStyles = frameDocument.createElement('style')
@@ -3354,17 +3558,30 @@ export default function App() {
   }
 
   const handleAuthGoogle = async () => {
+    sessionStorage.setItem('pending_real_account', 'true')
+
     if (!supabase) {
-      // Local fallback for Google — create a demo Google user
-      setUser({ id: 'google-demo-user', fullName: 'Google User', email: 'google@example.com', phone: '', country: '', avatarPath: null, role: 'client', emailVerified: true, accountStatus: 'active' })
-      setActiveView('synthetic')
-      showNotice('Google sign-in simulated in local mode.')
+      showNotice('Connecting to Google OAuth... Please configure Supabase keys in .env for live OAuth redirect.')
       return
     }
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin },
-    })
+
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'select_account',
+          },
+        },
+      })
+      if (error) {
+        showNotice(`Google Sign-In Error: ${error.message}`)
+      }
+    } catch (err: any) {
+      showNotice(`Google Sign-In failed: ${err?.message || 'Unknown error'}`)
+    }
   }
 
   const handleAuthForgot = async (email: string) => {
@@ -3408,7 +3625,7 @@ export default function App() {
   }
 
   return (
-    <div className={`app-shell ${activeView === 'synthetic' ? 'app-shell-synthetic' : ''}`}>
+    <div className={`app-shell ${(activeView === 'synthetic' || activeView === 'overview' || activeView === 'assets') ? 'app-shell-synthetic' : ''}`}>
 
       {/* ── EMAIL VERIFICATION BANNER ────────────────────────────────── */}
       {user && !user.emailVerified && user.id !== 'local-demo-user' && user.email && (
@@ -3608,39 +3825,16 @@ export default function App() {
             </div>
 
             <div className="topbar-actions" style={{ flex: 'none', width: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {/* Theme Selector Dropdown */}
+              {/* Unified Single Account Switcher Dropdown */}
               <select
                 className="unified-account-dropdown"
-                value={theme}
-                onChange={(e) => {
-                  const nextTheme = e.target.value as Theme
-                  setTheme(nextTheme)
-                  showNotice(`Theme switched to ${nextTheme.toUpperCase()}`)
-                }}
-              >
-                <option value="dark">🌑 Dark Slate</option>
-                <option value="light">☀️ Clean Light</option>
-                <option value="midnight">🌌 Midnight Blue</option>
-                <option value="cyberpunk">⚡ Cyberpunk Neon</option>
-              </select>
-
-              {/* Unified Single Account Switcher Dropdown (Header Spec #4) */}
-              <select
-                className="unified-account-dropdown"
-                style={{ width: '130px' }}
+                style={{ minWidth: '175px' }}
                 value={accountType}
-                onChange={(e) => {
-                  const nextType = e.target.value as AccountType
-                  if (nextType === 'demo' && !demoAccountName) {
-                    setModal('create_demo')
-                    return
-                  }
-                  setAccountType(nextType)
-                  showNotice(`Switched to ${nextType === 'none' ? 'no account' : demoAccountName}.`)
-                }}
+                onChange={(e) => handleAccountSelectChange(e.target.value as AccountType)}
               >
                 <option value="none">Select an account</option>
-                <option value="demo">🟡 {demoAccountName || 'Create demo account'} ({demoBalance.toFixed(2)})</option>
+                <option value="demo">🟡 {demoAccountName || 'Demo Account'} (${demoBalance.toFixed(2)})</option>
+                <option value="live">🟢 Real Account (${liveBalance.toFixed(2)}) — +50% Bonus</option>
               </select>
 
               {accountType === 'demo' && demoAccountName ? (
@@ -3663,6 +3857,21 @@ export default function App() {
                   style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', fontSize: '11px', width: '90px', padding: 0 }}
                 />
               </label>
+
+              {/* Dark / Light Mode Icon Toggle Button (Top Right Header) */}
+              <button
+                type="button"
+                className="theme-toggle-btn"
+                onClick={toggleTheme}
+                title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                aria-label={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              >
+                {theme === 'dark' ? (
+                  <Moon size={18} className="theme-toggle-icon moon-icon" />
+                ) : (
+                  <Sun size={18} className="theme-toggle-icon sun-icon" />
+                )}
+              </button>
             </div>
           </div>
         </header>
@@ -3754,11 +3963,20 @@ export default function App() {
         <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) closeModal() }}>
           <section className="funds-modal">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3>Deposit Funds to Account</h3>
+              <h3>Deposit Funds to Real Account</h3>
               <button type="button" onClick={closeModal} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={18} /></button>
             </div>
 
-            <form onSubmit={handleDepositSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {/* 50% Deposit Bonus Highlight Box */}
+            <div style={{ background: 'linear-gradient(135deg, rgba(0, 230, 118, 0.15), rgba(0, 229, 255, 0.08))', border: '1px solid rgba(0, 230, 118, 0.35)', borderRadius: '10px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' }}>
+              <Sparkles size={22} color="#00e676" style={{ flexShrink: 0 }} />
+              <div style={{ fontSize: '11px' }}>
+                <strong style={{ color: '#00e676', display: 'block', fontSize: '12px', letterSpacing: '0.3px' }}>🎁 50% INSTANT REAL ACCOUNT DEPOSIT BONUS</strong>
+                <span style={{ color: 'var(--text-muted)' }}>Deposit ${(parseFloat(amount) || 500).toFixed(2)} + ${((parseFloat(amount) || 500) * 0.5).toFixed(2)} Bonus = <strong style={{ color: '#ffffff' }}>${((parseFloat(amount) || 500) * 1.5).toFixed(2)} Total</strong> credited to your Real Account balance.</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleDepositSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '10px' }}>
               <label style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Payment Asset Network
                 <select className="control-select" style={{ marginTop: '4px' }} value={selectedNetwork} onChange={(e) => setSelectedNetwork(e.target.value)}>
                   {adminAddresses.map((a) => <option key={a.id} value={a.network}>{a.assetName} ({a.network})</option>)}
@@ -3770,7 +3988,7 @@ export default function App() {
               </label>
 
               <button type="submit" className="button button-mint">
-                Confirm & Deposit to Live Balance
+                Confirm &amp; Claim 50% Bonus Deposit
               </button>
             </form>
           </section>
@@ -3832,9 +4050,23 @@ export default function App() {
       )}
 
       {pageLoading && (
-        <div className="page-transition-loader">
-          <div className="page-loader-spinner"></div>
-          <span className="page-loader-text">Loading Nexsmarkets Terminal...</span>
+        <div className="page-transition-loader" aria-live="polite">
+          <div className="page-loader-brand">
+            <svg width="42" height="42" viewBox="0 0 40 40" fill="none">
+              <polygon points="20,2 37,11 37,29 20,38 3,29 3,11" fill="rgba(0,229,255,0.15)" stroke="#00e5ff" strokeWidth="2" />
+              <polyline points="11,27 17,14 20,21 23,14 29,27" stroke="#00e676" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+
+          {/* Clockwise Colliding Dot Circle Spinner */}
+          <div className="dot-chase-spinner">
+            {Array.from({ length: 12 }, (_, i) => (
+              <div key={i} className="dot-circle-item" style={{ '--i': i } as React.CSSProperties} />
+            ))}
+          </div>
+
+          <span className="page-loader-text">Loading NEXSMARKETS Terminal...</span>
+          <div className="page-loader-bar"><div className="page-loader-progress"></div></div>
         </div>
       )}
 
@@ -3846,7 +4078,7 @@ export default function App() {
           { id: 'synthetic' as View, label: 'Trade', icon: TrendingUp },
           { id: 'tiers' as View, label: 'Invest', icon: CandlestickChart },
           { id: 'funds' as View, label: 'Funds', icon: Wallet },
-          { id: 'profile', label: 'Profile', icon: UserRound },
+          { id: 'profile' as View, label: 'Profile', icon: UserRound },
         ]).map((item) => {
           const Icon = item.icon
           const isActive = activeView === item.id || (item.id === 'overview' && activeView === 'positions')

@@ -2241,3 +2241,43 @@
     max-height: min(70dvh, 520px);
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LIGHT MODE STYLING FOR FEATURES (FUNDS HUB, AI SCANNER, LIVE CHAT)
+   ═══════════════════════════════════════════════════════════════════════════ */
+body.theme-light .th-shell,
+body.theme-light .th-panel,
+body.theme-light .th-balance-bar,
+body.theme-light .th-deposit-card,
+body.theme-light .th-wallet-item,
+body.theme-light .th-method-dropdown,
+body.theme-light .th-stk-push-box {
+  background: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  color: #0f172a !important;
+}
+
+body.theme-light .th-hero-title,
+body.theme-light .th-panel-title,
+body.theme-light .th-balance-value,
+body.theme-light .th-wallet-name {
+  color: #0f172a !important;
+}
+
+body.theme-light .th-hero-sub,
+body.theme-light .th-balance-label,
+body.theme-light .th-wallet-sub {
+  color: #64748b !important;
+}
+
+body.theme-light .th-tab {
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+body.theme-light .th-tab-active {
+  background: #ffffff !important;
+  color: #0284c7 !important;
+  border-color: #0284c7 !important;
+}
