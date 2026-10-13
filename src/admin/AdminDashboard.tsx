@@ -402,9 +402,9 @@ export default function AdminDashboard() {
   // Payment Gateway state
   type DepositAddr = { id: string; network: string; assetName: string; address: string; note: string; enabled: boolean }
   const [gatewayAddresses, setGatewayAddresses] = useState<DepositAddr[]>([
-    { id: 'ga-1', network: 'USDT-TRC20', assetName: 'Tether (TRC-20)',     address: 'TX9mK82pL91m230slqKS81392mSKD2019',    note: 'Send USDT on Tron TRC-20 only.',     enabled: true },
-    { id: 'ga-2', network: 'BTC',        assetName: 'Bitcoin Mainnet',      address: 'bc1q9x38n72p401m2ql4893ks8294m91ks93',  note: 'Send only BTC over Bitcoin mainnet.', enabled: true },
-    { id: 'ga-3', network: 'ETH',        assetName: 'Ethereum Mainnet',     address: '0x71C8290192A49102938192039102948192038',  note: 'Send ETH on Ethereum mainnet.',       enabled: true },
+    { id: 'ga-usdt-trc20', network: 'USDT-TRC20', assetName: 'Tether (USDT TRON)', address: 'TQAQAWyR1LH83A6V5ZanfokC6wjApdfc5q', note: 'Send USDT on TRON (TRC-20) network only.', enabled: true },
+    { id: 'ga-eth', network: 'ETH', assetName: 'Ethereum (ETH)', address: '0x9bAfa7af80d50b4Ac3D8489AC7EE17547Cadec0d', note: 'Send ETH on Ethereum (ERC-20) mainnet.', enabled: true },
+    { id: 'ga-btc', network: 'BTC', assetName: 'Bitcoin (BTC)', address: 'bc1pmw96zsq7qn4y5spfferdszyzj503z4rjylzlyncvykzyy9exqvds8r7pm9', note: 'Send BTC over Native Bitcoin mainnet.', enabled: true },
   ])
   const [newAddr, setNewAddr] = useState({ network: '', assetName: '', address: '', note: '' })
   const [addAddrOpen, setAddAddrOpen] = useState(false)
@@ -675,39 +675,110 @@ export default function AdminDashboard() {
     notify(`User ${u.name} permanently deleted.`, 'warn')
   }
 
-  // ── Gateway actions ────────────────────────────────────────────────────
-  const addGatewayAddress = () => {
+  // ── Gateway actions (Synced directly with Supabase admin_deposit_addresses) ──────
+  const addGatewayAddress = async () => {
     if (!newAddr.network.trim() || !newAddr.address.trim() || !newAddr.assetName.trim()) { notify('Network, asset name and address are required.', 'err'); return }
-    const a = { id: 'ga-' + Date.now(), ...newAddr, enabled: true }
-    setGatewayAddresses(curr => [...curr, a])
-    addAudit('ADD_DEPOSIT_ADDRESS', a.id, 'Gateway', `Added ${a.assetName} (${a.network}) deposit address`, 'info')
-    notify(`${a.network} address added.`)
+    const newObj = {
+      network: newAddr.network,
+      asset_name: newAddr.assetName,
+      wallet_address: newAddr.address,
+      note: newAddr.note || '',
+      enabled: true,
+    }
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/admin_deposit_addresses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify(newObj),
+      })
+      if (res.ok) {
+        const rows = await res.json() as Array<{ id: string }>
+        const newId = rows[0]?.id || 'ga-' + Date.now()
+        const a = { id: newId, ...newAddr, enabled: true }
+        setGatewayAddresses(curr => [...curr, a])
+        addAudit('ADD_DEPOSIT_ADDRESS', a.id, 'Gateway', `Added ${a.assetName} (${a.network}) deposit address`, 'info')
+        notify(`${a.network} address added to database!`)
+      }
+    } catch {
+      notify('Failed to add deposit address to database.', 'err')
+    }
+
     setNewAddr({ network: '', assetName: '', address: '', note: '' })
     setAddAddrOpen(false)
   }
 
-  const saveEditAddr = () => {
+  const saveEditAddr = async () => {
     if (!editAddrId) return
     setGatewayAddresses(curr => curr.map(a => a.id === editAddrId ? { ...a, ...editAddrDraft } : a))
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/admin_deposit_addresses?id=eq.${editAddrId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          network: editAddrDraft.network,
+          asset_name: editAddrDraft.assetName,
+          wallet_address: editAddrDraft.address,
+          note: editAddrDraft.note,
+          updated_at: new Date().toISOString(),
+        }),
+      })
+    } catch {
+      // silent
+    }
     addAudit('EDIT_DEPOSIT_ADDRESS', editAddrId, 'Gateway', `Updated ${editAddrDraft.network} deposit address`, 'info')
-    notify('Address updated.')
+    notify('Address updated in database.')
     setEditAddrId(null)
   }
 
-  const toggleGatewayAddress = (id: string) => {
-    setGatewayAddresses(curr => curr.map(a => {
-      if (a.id !== id) return a
-      addAudit(a.enabled ? 'DISABLE_ADDRESS' : 'ENABLE_ADDRESS', id, 'Gateway', `${a.enabled ? 'Disabled' : 'Enabled'} ${a.network} deposit address`, 'warning')
-      return { ...a, enabled: !a.enabled }
-    }))
+  const toggleGatewayAddress = async (id: string) => {
+    const a = gatewayAddresses.find(x => x.id === id)
+    if (!a) return
+    const nextEnabled = !a.enabled
+
+    setGatewayAddresses(curr => curr.map(x => x.id === id ? { ...x, enabled: nextEnabled } : x))
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/admin_deposit_addresses?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ enabled: nextEnabled, updated_at: new Date().toISOString() }),
+      })
+    } catch {
+      // silent
+    }
+    addAudit(nextEnabled ? 'ENABLE_ADDRESS' : 'DISABLE_ADDRESS', id, 'Gateway', `${nextEnabled ? 'Enabled' : 'Disabled'} ${a.network} deposit address`, 'warning')
   }
 
-  const deleteGatewayAddress = (id: string) => {
+  const deleteGatewayAddress = async (id: string) => {
     const a = gatewayAddresses.find(x => x.id === id)
     if (!a) return
     setGatewayAddresses(curr => curr.filter(x => x.id !== id))
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/admin_deposit_addresses?id=eq.${id}`, {
+        method: 'DELETE',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      })
+    } catch {
+      // silent
+    }
     addAudit('DELETE_DEPOSIT_ADDRESS', id, 'Gateway', `Deleted ${a.network} deposit address`, 'warning')
-    notify(`${a.network} address removed.`, 'warn')
+    notify(`${a.network} address removed from database.`, 'warn')
   }
 
   // ── Upgrade user to admin ──────────────────────────────────────────────

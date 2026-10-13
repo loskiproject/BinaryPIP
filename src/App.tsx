@@ -127,6 +127,7 @@ type DepositAddress = {
   assetName: string
   address: string
   note: string
+  enabled?: boolean
 }
 
 type DepositRequest = {
@@ -211,9 +212,9 @@ const initialLoginForm: LoginForm = { email: '', password: '' }
 const initialSignupForm: SignupForm = { fullName: '', email: '', phone: '', country: 'Kenya', password: '', confirmPassword: '' }
 
 const defaultAdminAddresses: DepositAddress[] = [
-  { id: 'addr-1', network: 'USDT-TRC20', assetName: 'Tether (Tron TRC-20)', address: 'TX9mK82pL91m230slqKS81392mSKD2019', note: 'Send USDT on Tron TRC-20 network.' },
-  { id: 'addr-2', network: 'BTC', assetName: 'Bitcoin Mainnet', address: 'bc1q9x38n72p401m2ql4893ks8294m91ks93', note: 'Send only BTC over Bitcoin mainnet.' },
-  { id: 'addr-3', network: 'ETH', assetName: 'Ethereum Mainnet', address: '0x71C8290192A49102938192039102948192038', note: 'Send ETH on Ethereum mainnet.' },
+  { id: 'addr-usdt-trc20', network: 'USDT-TRC20', assetName: 'Tether (USDT TRON)', address: 'TQAQAWyR1LH83A6V5ZanfokC6wjApdfc5q', note: 'Send USDT on TRON (TRC-20) network only.', enabled: true },
+  { id: 'addr-eth', network: 'ETH', assetName: 'Ethereum (ETH)', address: '0x9bAfa7af80d50b4Ac3D8489AC7EE17547Cadec0d', note: 'Send ETH on Ethereum (ERC-20) mainnet.', enabled: true },
+  { id: 'addr-btc', network: 'BTC', assetName: 'Bitcoin (BTC)', address: 'bc1pmw96zsq7qn4y5spfferdszyzj503z4rjylzlyncvykzyy9exqvds8r7pm9', note: 'Send BTC over Native Bitcoin mainnet.', enabled: true },
 ]
 
 function createInitialCandles(
@@ -1264,19 +1265,24 @@ export default function App() {
   const [minDepositUSD, setMinDepositUSD] = useState(10)
   const [minDepositKES, setMinDepositKES] = useState(1300)
 
+  // Fetch live deposit receiving addresses from Supabase admin_deposit_addresses
   useEffect(() => {
     const client = supabase
     if (!client) return
-    const fetchSettings = async () => {
-      const { data } = await client.from('system_settings').select('*')
-      if (data) {
-        data.forEach((r: { key: string; value: string }) => {
-          if (r.key === 'min_deposit_usd') setMinDepositUSD(parseFloat(r.value) || 10)
-          if (r.key === 'min_deposit_kes') setMinDepositKES(parseFloat(r.value) || 1300)
-        })
+    const fetchAdminDepositAddresses = async () => {
+      const { data } = await client.from('admin_deposit_addresses').select('*').eq('enabled', true)
+      if (data && data.length > 0) {
+        setAdminAddresses(data.map((a: { id: string; network: string; asset_name: string; wallet_address: string; note: string; enabled: boolean }) => ({
+          id: a.id,
+          network: a.network,
+          assetName: a.asset_name,
+          address: a.wallet_address,
+          note: a.note || '',
+          enabled: a.enabled,
+        })))
       }
     }
-    void fetchSettings()
+    void fetchAdminDepositAddresses()
   }, [])
 
   // Fetch real wallet balances and trade history directly from Supabase

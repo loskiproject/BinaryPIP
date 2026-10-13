@@ -370,15 +370,34 @@ export default function FundsHub({
               </div>
             )}
 
-            {/* Crypto amount input */}
+            {/* Crypto receiving address card */}
             {depositMethod !== 'mpesa' && stkStep === 'form' && (
               <div className="th-crypto-fields">
-                {activeAddr && (
+                {activeAddr ? (
+                  <div style={{ background: 'rgba(0, 229, 255, 0.05)', border: '1px solid rgba(0, 229, 255, 0.25)', borderRadius: '12px', padding: '14px', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '10.5px', fontWeight: 800, color: 'var(--mint-teal)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                        🎯 OFFICIAL DEPOSIT ADDRESS ({activeAddr.network})
+                      </span>
+                      <button
+                        type="button"
+                        className="th-copy-btn"
+                        onClick={copyAddr}
+                        style={{ padding: '5px 12px', fontSize: '11px', fontWeight: 700, borderRadius: '6px', cursor: 'pointer' }}
+                      >
+                        {copied ? <><CheckCircle2 size={12}/> Copied!</> : <><Copy size={12}/> Copy Address</>}
+                      </button>
+                    </div>
+                    <div style={{ background: '#090d16', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '10px 12px', wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '12.5px', color: '#ffffff', fontWeight: 700, letterSpacing: '0.3px', userSelect: 'all' }}>
+                      {activeAddr.address}
+                    </div>
+                    <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginTop: '6px' }}>
+                      💡 {activeAddr.note || `Send only ${activeAddr.assetName} (${activeAddr.network}) to this deposit receiving address.`}
+                    </div>
+                  </div>
+                ) : (
                   <div className="th-addr-bar">
-                    <span className="th-addr-text">{activeAddr.address}</span>
-                    <button className="th-copy-btn" onClick={copyAddr}>
-                      {copied ? <><CheckCircle2 size={11}/> Copied</> : <><Copy size={11}/> Copy</>}
-                    </button>
+                    <span className="th-addr-text">No active receiving address for {depositMethod}</span>
                   </div>
                 )}
                 <label className="th-field-label">
