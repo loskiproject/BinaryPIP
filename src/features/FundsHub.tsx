@@ -316,10 +316,12 @@ export default function FundsHub({
                   Amount (KES)
                   <div className="th-input-wrap">
                     <span className="th-input-pre">KES</span>
-                    <input className="th-input" type="number" min={minDepositKES} placeholder="0"
+                    <input className="th-input" type="number" min={minDepositKES} placeholder={minDepositKES.toString()}
                       value={mpKes} onChange={e => setMpKes(e.target.value)} />
                   </div>
-                  <span className="th-hint">Min KES {minDepositKES} · ~${((parseFloat(mpKes)||0)/130).toFixed(2)} USD</span>
+                  <span className="th-hint">
+                    Min KES {minDepositKES.toLocaleString()} · ~${(parseFloat(mpKes) > 0 ? (parseFloat(mpKes) / 130) : minDepositUSD).toFixed(2)} USD
+                  </span>
                 </label>
               </div>
             )}
@@ -383,10 +385,12 @@ export default function FundsHub({
                   Amount (USD)
                   <div className="th-input-wrap">
                     <span className="th-input-pre">$</span>
-                    <input className="th-input" type="number" min={minDepositUSD} placeholder="0.00"
+                    <input className="th-input" type="number" min={minDepositUSD} placeholder={minDepositUSD.toFixed(2)}
                       value={amount} onChange={e => setAmount(e.target.value)} />
                   </div>
-                  <span className="th-hint">Min ${minDepositUSD}</span>
+                  <span className="th-hint">
+                    Min ${minDepositUSD} USD · ~KES {(parseFloat(amount) > 0 ? (parseFloat(amount) * 130) : (minDepositUSD * 130)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </span>
                 </label>
               </div>
             )}

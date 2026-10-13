@@ -649,6 +649,32 @@ export default function AdminDashboard() {
     setTimeout(() => { setNotifyModal(null); setNotifySent(false); setNotifySubject(''); setNotifyMessage('') }, 2000)
   }
 
+  const deleteUser = async (u: PlatformUser) => {
+    if (!canAccess('canManageUsers')) { notify('No permission to delete users.', 'err'); return }
+    if (!window.confirm(`⚠️ ARE YOU SURE you want to permanently delete user ${u.name} (${u.email})? This action CANNOT be undone.`)) return
+
+    // 1. Remove from local state
+    setUsers(curr => curr.filter(x => x.id !== u.id))
+    if (selectedUser?.id === u.id) setSelectedUser(null)
+
+    // 2. Delete from Supabase Database
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, {
+        method: 'DELETE',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+      })
+      await fetch(`${SUPABASE_URL}/rest/v1/wallets?user_id=eq.${u.id}`, {
+        method: 'DELETE',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+      })
+    } catch {
+      // silent
+    }
+
+    addAudit('DELETE_USER', u.id, 'User', `Permanently deleted user ${u.name} (${u.email}) from database`, 'critical')
+    notify(`User ${u.name} permanently deleted.`, 'warn')
+  }
+
   // ── Gateway actions ────────────────────────────────────────────────────
   const addGatewayAddress = () => {
     if (!newAddr.network.trim() || !newAddr.address.trim() || !newAddr.assetName.trim()) { notify('Network, asset name and address are required.', 'err'); return }
@@ -1406,6 +1432,9 @@ export default function AdminDashboard() {
                             )}
                             <button className="sa-btn-xs sa-btn-xs-outline" title="Edit details" onClick={() => openEditUser(u)}>
                               <Pencil size={11} />
+                            </button>
+                            <button className="sa-btn-xs sa-btn-xs-danger" title="Permanently delete user" onClick={() => deleteUser(u)}>
+                              <Trash2 size={11} /> Delete
                             </button>
                           </div>
                         </td>

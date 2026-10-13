@@ -1260,6 +1260,25 @@ export default function App() {
     return () => { mounted = false }
   }, [user])
 
+  // Dynamic Minimum Deposit Settings (Admin Configurable via Supabase system_settings)
+  const [minDepositUSD, setMinDepositUSD] = useState(10)
+  const [minDepositKES, setMinDepositKES] = useState(1300)
+
+  useEffect(() => {
+    const client = supabase
+    if (!client) return
+    const fetchSettings = async () => {
+      const { data } = await client.from('system_settings').select('*')
+      if (data) {
+        data.forEach((r: { key: string; value: string }) => {
+          if (r.key === 'min_deposit_usd') setMinDepositUSD(parseFloat(r.value) || 10)
+          if (r.key === 'min_deposit_kes') setMinDepositKES(parseFloat(r.value) || 1300)
+        })
+      }
+    }
+    void fetchSettings()
+  }, [])
+
   // Fetch real wallet balances and trade history directly from Supabase
   useEffect(() => {
     const client = supabase
@@ -3499,7 +3518,7 @@ export default function App() {
       <div>
         <span className="section-kicker">TREASURY CENTRE</span>
         <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', marginTop: '4px' }}>Funds &amp; Multi-Wallet Hub</h3>
-        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Manage balances, transfer between wallets, deposit via crypto or M-Pesa (Min $10 USD), and withdraw.</p>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Manage balances, transfer between wallets, deposit via crypto or M-Pesa (Min ${minDepositUSD} USD), and withdraw.</p>
       </div>
       <FundsHub
         wallets={walletBalances}
@@ -3507,8 +3526,8 @@ export default function App() {
         onDepositRequest={handleFundsDepositRequest}
         adminAddresses={adminAddresses.map(a => ({ ...a, enabled: true }))}
         showNotice={showNotice}
-        minDepositUSD={10}
-        minDepositKES={100}
+        minDepositUSD={minDepositUSD}
+        minDepositKES={minDepositKES}
         minWithdrawalUSD={10}
       />
     </section>

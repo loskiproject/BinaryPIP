@@ -2508,27 +2508,47 @@ input:focus, select:focus {
   backdrop-filter: blur(12px);
 }
 
+/* VISUALLY HIDDEN FILE INPUT — Completely hides native browser 'Choose File' button overlay */
+.visually-hidden-input {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 /* BINANCE-STYLE PROFILE & KYC VERIFICATION HUB */
 .verification-page {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 20px;
-  max-width: 1200px;
+  max-width: 1100px;
   margin: 0 auto;
   width: 100%;
+  box-sizing: border-box;
+  padding: 8px 12px 32px;
 }
 
 .verification-page-heading {
+  width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
   background: rgba(18, 24, 38, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
-  padding: 16px 24px;
+  padding: 18px 24px;
   backdrop-filter: blur(12px);
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 16px;
+  box-sizing: border-box;
 }
 
 .verification-page-heading h2 {
@@ -4286,22 +4306,50 @@ textarea:focus {
   }
 }
 
-/* Responsive adjustments for Profile and Verification Hub across all screen sizes in both Demo and Customer modes */
+/* Responsive adjustments for Profile and Verification Hub across all screen sizes */
 @media (max-width: 900px) {
   .dedicated-profile-card {
     padding: 20px 16px !important;
     border-radius: 14px !important;
   }
   .verification-page {
-    padding: 0 8px !important;
+    padding: 6px 8px 40px !important;
+    width: 100% !important;
+    align-items: center !important;
+  }
+  .verification-page-heading {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    padding: 16px !important;
+    gap: 12px !important;
   }
   .verification-layout {
     grid-template-columns: 1fr !important;
+    gap: 16px !important;
+    width: 100% !important;
   }
-  .profile-user-card {
+  .identity-person {
     flex-direction: column !important;
-    align-items: flex-start !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+  .identity-holder-copy {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+  .access-level-insignia {
+    align-items: center !important;
+  }
+  .document-details-grid {
+    grid-template-columns: 1fr !important;
     gap: 12px !important;
+  }
+  .document-upload-row {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
   }
 }
 
@@ -4311,12 +4359,18 @@ textarea:focus {
   }
   .verification-panel {
     padding: 16px 12px !important;
+    align-items: center !important;
   }
   .verification-page-heading {
-    padding: 14px 16px !important;
+    padding: 14px 12px !important;
     flex-direction: column !important;
-    align-items: flex-start !important;
-    gap: 8px !important;
+    align-items: center !important;
+    text-align: center !important;
+    gap: 10px !important;
+  }
+  .suitability-choice-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
   }
 }
 
