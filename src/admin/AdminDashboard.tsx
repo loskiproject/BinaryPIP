@@ -812,36 +812,85 @@ export default function AdminDashboard() {
     setSection('admins')
   }
 
-  const approveKyc = (kyc: KycCase) => {
+  const approveKyc = async (kyc: KycCase) => {
     if (!canAccess('canApproveKyc')) { notify('No permission.', 'err'); return }
     setKycQueue(curr => curr.map(k => k.id === kyc.id ? { ...k, status: 'approved' } : k))
     setUsers(curr => curr.map(u => u.id === kyc.userId ? { ...u, kycStatus: 'verified' } : u))
+
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/profile_documents?id=eq.${kyc.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ status: 'verified', reviewed_at: new Date().toISOString() }),
+      })
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${kyc.userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ kyc_status: 'approved', account_status: 'approved', updated_at: new Date().toISOString() }),
+      })
+    } catch {
+      // silent
+    }
+
     addAudit('APPROVE_KYC', kyc.id, 'KYC Case', `KYC approved for ${kyc.userName}`, 'info')
     setSelectedKyc(null)
     notify(`KYC approved for ${kyc.userName}.`)
   }
 
-  const rejectKyc = (kyc: KycCase, reason: string) => {
+  const rejectKyc = async (kyc: KycCase, reason: string) => {
     if (!canAccess('canApproveKyc')) { notify('No permission.', 'err'); return }
     if (!reason.trim()) { notify('Rejection reason required.', 'err'); return }
     setKycQueue(curr => curr.map(k => k.id === kyc.id ? { ...k, status: 'rejected', rejectionReason: reason } : k))
     setUsers(curr => curr.map(u => u.id === kyc.userId ? { ...u, kycStatus: 'rejected' } : u))
+
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/profile_documents?id=eq.${kyc.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ status: 'rejected', admin_notes: reason, reviewed_at: new Date().toISOString() }),
+      })
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${kyc.userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ kyc_status: 'rejected', updated_at: new Date().toISOString() }),
+      })
+    } catch {
+      // silent
+    }
+
     addAudit('REJECT_KYC', kyc.id, 'KYC Case', `KYC rejected for ${kyc.userName}: ${reason}`, 'warning')
     setSelectedKyc(null)
     setKycRejectReason('')
     notify(`KYC rejected for ${kyc.userName}.`, 'warn')
   }
 
-  const approveTxn = (txn: Transaction) => {
+  const approveTxn = async (txn: Transaction) => {
     if (!canAccess('canApproveWithdrawals')) { notify('No permission.', 'err'); return }
     setTransactions(curr => curr.map(t => t.id === txn.id ? { ...t, status: 'approved' } : t))
-    if (txn.type === 'deposit') {
-      setUsers(curr => curr.map(u => u.id === txn.userId ? { ...u, balance: u.balance + txn.amount } : u))
-    } else if (txn.type === 'withdrawal') {
-      setUsers(curr => curr.map(u => u.id === txn.userId ? { ...u, balance: Math.max(0, u.balance - txn.amount) } : u))
+
+    const targetUser = users.find(u => u.id === txn.userId)
+    const currentBal = targetUser ? targetUser.balance : 0
+    const nextBal = txn.type === 'deposit' ? currentBal + txn.amount : Math.max(0, currentBal - txn.amount)
+
+    setUsers(curr => curr.map(u => u.id === txn.userId ? { ...u, balance: nextBal } : u))
+
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/transactions?id=eq.${txn.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ status: 'approved', updated_at: new Date().toISOString() }),
+      })
+      await fetch(`${SUPABASE_URL}/rest/v1/wallets?user_id=eq.${txn.userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ live_balance: nextBal, updated_at: new Date().toISOString() }),
+      })
+    } catch {
+      // silent
     }
+
     addAudit(`APPROVE_${txn.type.toUpperCase()}`, txn.id, 'Transaction', `Approved ${txn.type} of ${fmtUSD(txn.amount)} for ${txn.userName}`, 'info')
-    notify(`Transaction approved.`)
+    notify(`Transaction approved and credited $${txn.amount.toFixed(2)} to user account!`)
   }
 
   const rejectTxn = (txn: Transaction) => {

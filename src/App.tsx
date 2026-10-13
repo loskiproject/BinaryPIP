@@ -75,7 +75,7 @@ import LiveChat from './features/LiveChat'
 import FundsHub from './features/FundsHub'
 import AuthPortal, { type SignupPayload } from './auth/AuthPortal'
 
-type View = 'overview' | 'assets' | 'tiers' | 'synthetic' | 'institutions' | 'settings' | 'kyc_hub' | 'profile' | 'funds' | 'help' | 'positions' | 'verification' | 'verification'
+type View = 'overview' | 'assets' | 'tiers' | 'synthetic' | 'institutions' | 'settings' | 'kyc_hub' | 'profile' | 'wallet' | 'funds' | 'help' | 'positions' | 'verification'
 type AuthMode = 'login' | 'signup'
 type AccountType = 'none' | 'demo' | 'live'
 type Theme = 'dark' | 'light' | 'midnight' | 'cyberpunk'
@@ -169,7 +169,7 @@ const navigation: { id: View; label: string; icon: typeof LayoutDashboard }[] = 
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'synthetic', label: 'Synthetic', icon: TrendingUp },
   { id: 'tiers', label: 'Investments', icon: CandlestickChart },
-  { id: 'funds', label: 'Funds', icon: Wallet },
+  { id: 'funds', label: 'Wallet', icon: Wallet },
   { id: 'profile', label: 'Profile', icon: UserRound },
 ]
 
@@ -827,7 +827,7 @@ export default function App() {
     { id: 'p-overview', title: 'Overview Dashboard', desc: 'Main trading dashboard & portfolio summary', view: 'overview' as View, icon: LayoutDashboard },
     { id: 'p-synthetic', title: 'Synthetic Trading', desc: '1s Synthetic indices & contract trading terminal', view: 'synthetic' as View, icon: TrendingUp },
     { id: 'p-tiers', title: 'Investments & Plans', desc: '21-day yield curve investment tiers', view: 'tiers' as View, icon: CandlestickChart },
-    { id: 'p-funds', title: 'Funds & Treasury', desc: 'M-Pesa & Crypto deposits (+50% Bonus), withdrawals', view: 'funds' as View, icon: Wallet },
+    { id: 'p-wallet', title: 'Wallet & Treasury', desc: 'M-Pesa & Crypto deposits (+50% Bonus), withdrawals', view: 'wallet' as View, icon: Wallet },
     { id: 'p-positions', title: 'Open Positions & History', desc: 'Active running trades and P&L history', view: 'positions' as View, icon: Clock },
     { id: 'p-profile', title: 'Profile & Verification', desc: 'User identity KYC verification & settings', view: 'profile' as View, icon: UserRound },
     { id: 'p-settings', title: 'Admin Dashboard', desc: 'Platform management and audit controls', view: 'settings' as View, icon: Settings },
@@ -852,8 +852,8 @@ export default function App() {
   ]
 
   const searchActions = [
-    { id: 'c-deposit', title: 'Deposit Funds (+50% Bonus)', desc: 'Deposit M-Pesa or Crypto to Real Account', action: () => changeView('funds'), icon: Plus },
-    { id: 'c-withdraw', title: 'Withdraw Funds', desc: 'Submit withdrawal request', action: () => changeView('funds'), icon: Wallet },
+    { id: 'c-deposit', title: 'Deposit Funds (+50% Bonus)', desc: 'Deposit M-Pesa or Crypto to Real Account', action: () => changeView('wallet'), icon: Plus },
+    { id: 'c-withdraw', title: 'Withdraw Funds', desc: 'Submit withdrawal request', action: () => changeView('wallet'), icon: Wallet },
     { id: 'c-demo', title: 'Create Demo Account', desc: 'Configure virtual practice balance', action: () => setModal('create_demo'), icon: Plus },
     { id: 'c-indicators', title: 'Technical Indicators Library', desc: 'VWMA, MACD, RSI, Bollinger Bands', action: () => setModal('indicator_menu'), icon: Sliders },
     { id: 'c-theme', title: 'Toggle Dark / Light Theme', desc: 'Switch system-wide appearance theme', action: () => toggleTheme(), icon: Sun },
@@ -1406,8 +1406,8 @@ export default function App() {
         setAccountType('live')
         setLiveAccountCreated(true)
         if (liveBalance <= 0) {
-          changeView('funds')
-          showNotice(`🎉 Welcome ${fullName || 'Trader'}! Redirecting to Funds page to deposit (+50% Bonus!).`)
+          changeView('wallet')
+          showNotice(`🎉 Welcome ${fullName || 'Trader'}! Redirecting to Wallet page to deposit (+50% Bonus!).`)
         } else {
           showNotice(`🎉 Welcome ${fullName || 'Trader'}! Your Real Account is active with 50% Deposit Bonus!`)
         }
@@ -1502,8 +1502,8 @@ export default function App() {
     }
 
     if (accountType === 'live' && liveBalance <= 0) {
-      changeView('funds')
-      showNotice('⚠️ Your Real Account is unfunded ($0.00). Redirecting to Funds page to make your deposit (+50% Bonus!).')
+      changeView('wallet')
+      showNotice('⚠️ Your Real Account is unfunded ($0.00). Redirecting to Wallet page to make your deposit (+50% Bonus!).')
       return
     }
 
@@ -1522,8 +1522,8 @@ export default function App() {
     const requiredMargin = price * lots * contractSize / Math.max(1, leverageRatio)
 
     if (accountType === 'live' && liveBalance < requiredMargin) {
-      changeView('funds')
-      showNotice(`⚠️ Insufficient Real Account balance ($${liveBalance.toFixed(2)}). Required margin: $${requiredMargin.toFixed(2)}. Taking you to Funds page.`)
+      changeView('wallet')
+      showNotice(`⚠️ Insufficient Real Account balance ($${liveBalance.toFixed(2)}). Required margin: $${requiredMargin.toFixed(2)}. Taking you to Wallet page.`)
       return
     }
 
@@ -1555,8 +1555,8 @@ export default function App() {
     if (targetAsset) setSelectedAsset(targetAsset)
 
     if (accountType === 'live' && liveBalance <= 0) {
-      changeView('funds')
-      showNotice('⚠️ Real Account balance is $0.00. Redirecting to Funds page to make your deposit (+50% Bonus!).')
+      changeView('wallet')
+      showNotice('⚠️ Real Account balance is $0.00. Redirecting to Wallet page to make your deposit (+50% Bonus!).')
       return
     }
 
@@ -1566,8 +1566,8 @@ export default function App() {
   // AI Signal auto-trade handler
   const handleAiAutoTrade = (signal: AiSignal) => {
     if (accountType === 'live' && liveBalance <= 0) {
-      changeView('funds')
-      showNotice('⚠️ Real Account is unfunded ($0.00). Redirecting to Funds page to deposit.')
+      changeView('wallet')
+      showNotice('⚠️ Real Account is unfunded ($0.00). Redirecting to Wallet page to deposit.')
       return
     }
     handleExecuteTrade(signal.direction === 'BUY', signal.symbol, signal.entryPrice)
@@ -1610,8 +1610,8 @@ export default function App() {
       setLiveAccountCreated(true)
 
       if (liveBalance <= 0) {
-        changeView('funds')
-        showNotice('🟢 Real Account selected ($0.00 balance). Redirecting to Funds page to deposit (+50% Bonus!).')
+        changeView('wallet')
+        showNotice('🟢 Real Account selected ($0.00 balance). Redirecting to Wallet page to deposit (+50% Bonus!).')
       } else {
         showNotice(`🟢 Switched to Real Account. Balance: $${liveBalance.toFixed(2)} (50% Deposit Bonus Active!)`)
       }
@@ -2580,14 +2580,14 @@ export default function App() {
     const stake = investmentStake[coin.id] ?? coin.minInvestment
 
     if (accountType === 'live' && liveBalance <= 0) {
-      changeView('funds')
-      showNotice('⚠️ Your Real Account is unfunded ($0.00). Redirecting to Funds page to make your deposit (+50% Bonus!).')
+      changeView('wallet')
+      showNotice('⚠️ Your Real Account is unfunded ($0.00). Redirecting to Wallet page to make your deposit (+50% Bonus!).')
       return
     }
 
     if (accountType === 'live' && liveBalance < stake) {
-      changeView('funds')
-      showNotice(`⚠️ Real Account balance ($${liveBalance.toFixed(2)}) is lower than required investment ($${stake.toLocaleString()}). Taking you to Funds page.`)
+      changeView('wallet')
+      showNotice(`⚠️ Real Account balance ($${liveBalance.toFixed(2)}) is lower than required investment ($${stake.toLocaleString()}). Taking you to Wallet page.`)
       return
     }
 
@@ -2759,13 +2759,13 @@ export default function App() {
                       style={{ background: `linear-gradient(135deg, ${rc}cc, ${rc}66)`, boxShadow: `0 4px 16px ${rc}33` }}
                       onClick={() => {
                         if (accountType === 'live' && liveBalance <= 0) {
-                          changeView('funds')
-                          showNotice('⚠️ Your Real Account is unfunded ($0.00). Redirecting to Funds page to make your deposit (+50% Bonus!).')
+                          changeView('wallet')
+                          showNotice('⚠️ Your Real Account is unfunded ($0.00). Redirecting to Wallet page to make your deposit (+50% Bonus!).')
                           return
                         }
                         if (accountType === 'live' && liveBalance < coinStake) {
-                          changeView('funds')
-                          showNotice(`⚠️ Real Account balance ($${liveBalance.toFixed(2)}) is lower than required investment ($${coinStake.toLocaleString()}). Taking you to Funds page.`)
+                          changeView('wallet')
+                          showNotice(`⚠️ Real Account balance ($${liveBalance.toFixed(2)}) is lower than required investment ($${coinStake.toLocaleString()}). Taking you to Wallet page.`)
                           return
                         }
 
@@ -4169,7 +4169,7 @@ export default function App() {
           {activeView === 'tiers' && renderCryptoAllocationLevels()}
           {activeView === 'institutions' && renderInstitutionsView()}
           {activeView === 'positions' && renderOpenAndClosedTrades()}
-          {activeView === 'funds' && renderFundsManagement()}
+          {(activeView === 'wallet' || activeView === 'funds') && renderFundsManagement()}
           {activeView === 'settings' && renderAdminSettings()}
           {activeView === 'kyc_hub' && renderKycHub()}
           {activeView === 'profile' && renderDedicatedProfilePage()}
@@ -4378,7 +4378,7 @@ export default function App() {
           { id: 'overview' as View, label: 'Overview', icon: LayoutDashboard },
           { id: 'synthetic' as View, label: 'Trade', icon: TrendingUp },
           { id: 'tiers' as View, label: 'Invest', icon: CandlestickChart },
-          { id: 'funds' as View, label: 'Funds', icon: Wallet },
+          { id: 'funds' as View, label: 'Wallet', icon: Wallet },
           { id: 'profile' as View, label: 'Profile', icon: UserRound },
         ]).map((item) => {
           const Icon = item.icon
