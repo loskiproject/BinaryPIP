@@ -3391,11 +3391,11 @@ export default function App() {
 
   // VIEW 8: FUNDS MANAGEMENT (FundsHub)
   const renderFundsManagement = () => (
-    <section className="profile-monitor-card" style={{ maxWidth: '760px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <section className="profile-monitor-card" style={{ width: '100%', maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '16px', boxSizing: 'border-box' }}>
       <div>
         <span className="section-kicker">TREASURY CENTRE</span>
         <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', marginTop: '4px' }}>Funds &amp; Multi-Wallet Hub</h3>
-        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Manage balances, transfer between wallets, deposit via crypto or M-Pesa, and withdraw.</p>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Manage balances, transfer between wallets, deposit via crypto or M-Pesa (Min $10 USD), and withdraw.</p>
       </div>
       <FundsHub
         wallets={walletBalances}
@@ -4172,7 +4172,7 @@ export default function App() {
               </label>
 
               <label style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Deposit Allocation Amount ($)
-                <input type="number" min="50" value={amount} onChange={(e) => setAmount(e.target.value)} required />
+                <input type="number" min="10" value={amount} onChange={(e) => setAmount(e.target.value)} required />
               </label>
 
               <button type="submit" className="button button-mint">
