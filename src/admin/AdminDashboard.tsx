@@ -80,6 +80,9 @@ type KycCase = {
   rejectionReason?: string
   docFrontUrl?: string
   docBackUrl?: string
+  storagePath?: string
+  mimeType?: string
+  fileUrl?: string
 }
 
 type Transaction = {
@@ -396,6 +399,7 @@ export default function AdminDashboard() {
   const [selectedUser, setSelectedUser] = useState<PlatformUser | null>(null)
   const [selectedKyc, setSelectedKyc] = useState<KycCase | null>(null)
   const [kycRejectReason, setKycRejectReason] = useState('')
+  const [previewImageModal, setPreviewImageModal] = useState<{ url: string; title: string } | null>(null)
   const [balanceModal, setBalanceModal] = useState<{ user: PlatformUser; amount: string; mode: 'credit' | 'debit'; reason: string } | null>(null)
   const [addAdminModal, setAddAdminModal] = useState(false)
   const [newAdmin, setNewAdmin] = useState({ name: '', email: '', role: 'kyc_admin' as AdminRole })
@@ -665,6 +669,7 @@ export default function AdminDashboard() {
       const rows = await res.json() as Array<{
         id: string
         user_id: string
+        storage_path?: string
         original_name: string
         document_type: string
         mime_type: string
@@ -673,17 +678,31 @@ export default function AdminDashboard() {
         admin_notes: string
       }>
       if (Array.isArray(rows) && rows.length > 0) {
-        setKycQueue(rows.map(r => ({
-          id: r.id,
-          userId: r.user_id,
-          userName: `User #${r.user_id.substring(0, 8)}`,
-          userEmail: `user_${r.user_id.substring(0, 6)}@exstrade.com`,
-          documentType: (r.document_type as any) || 'National ID',
-          documentUrl: r.original_name,
-          submittedAt: r.submitted_at,
-          status: r.status === 'verified' ? 'approved' : r.status === 'rejected' ? 'rejected' : 'pending',
-          rejectionReason: r.admin_notes || '',
-        })))
+        setKycQueue(rows.map(r => {
+          let fileUrl = ''
+          if (r.storage_path) {
+            fileUrl = `${SUPABASE_URL}/storage/v1/object/public/kyc-documents/${r.storage_path}`
+          } else if (r.original_name && (r.original_name.startsWith('http') || r.original_name.startsWith('data:'))) {
+            fileUrl = r.original_name
+          } else {
+            fileUrl = '/generic-profile-portrait.svg'
+          }
+
+          return {
+            id: r.id,
+            userId: r.user_id,
+            userName: `User #${r.user_id.substring(0, 8)}`,
+            userEmail: `user_${r.user_id.substring(0, 6)}@exstrade.com`,
+            documentType: (r.document_type as any) || 'National ID',
+            documentUrl: fileUrl,
+            storagePath: r.storage_path,
+            mimeType: r.mime_type || 'image/jpeg',
+            fileUrl,
+            submittedAt: r.submitted_at,
+            status: r.status === 'verified' ? 'approved' : r.status === 'rejected' ? 'rejected' : 'pending',
+            rejectionReason: r.admin_notes || '',
+          }
+        }))
       }
     } catch {
       // silent
@@ -1828,15 +1847,39 @@ export default function AdminDashboard() {
                       </div>
                     )}
                     {/* Simulated document preview thumbnails */}
-                    <div className="sa-kyc-docs">
-                      <div className="sa-doc-thumb" title="Front side">
-                        <FileText size={22} color="var(--sa-muted)" />
-                        <span>Front</span>
-                      </div>
-                      <div className="sa-doc-thumb" title="Back side">
-                        <FileText size={22} color="var(--sa-muted)" />
-                        <span>Back</span>
-                      </div>
+                    {/* Real submitted KYC document image or PDF viewer */}
+                    <div className="sa-kyc-docs" style={{ margin: '10px 0' }}>
+                      {kyc.mimeType?.includes('pdf') ? (
+                        <a
+                          href={kyc.fileUrl || '/generic-profile-portrait.svg'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="sa-doc-pdf-link"
+                          title="Open submitted PDF document"
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <FileText size={28} color="#00e5ff" />
+                          <span>View Submitted PDF File</span>
+                        </a>
+                      ) : (
+                        <div
+                          className="sa-doc-image-preview"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setPreviewImageModal({ url: kyc.fileUrl || '/generic-profile-portrait.svg', title: `${kyc.userName} - ${kyc.documentType}` })
+                          }}
+                          title="Click to view full resolution document image"
+                        >
+                          <img
+                            src={kyc.fileUrl || '/generic-profile-portrait.svg'}
+                            alt={`${kyc.userName} ${kyc.documentType}`}
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).src = '/generic-profile-portrait.svg'
+                            }}
+                          />
+                          <span className="sa-doc-zoom-tag"><Eye size={12} /> Inspect ID Image</span>
+                        </div>
+                      )}
                     </div>
                     {kyc.status === 'pending' && (
                       <div className="sa-kyc-actions">
@@ -1854,6 +1897,34 @@ export default function AdminDashboard() {
                   <div className="sa-empty"><CheckCircle2 size={28} color="#1ccf84" /><p>All caught up — no documents pending.</p></div>
                 )}
               </div>
+
+              {/* Lightbox Image Inspection Modal */}
+              {previewImageModal && (
+                <div className="sa-drawer-overlay" onClick={() => setPreviewImageModal(null)}>
+                  <div className="sa-image-lightbox-modal" onClick={e => e.stopPropagation()}>
+                    <div className="sa-drawer-head" style={{ width: '100%' }}>
+                      <h3>KYC Document Inspection — {previewImageModal.title}</h3>
+                      <button className="sa-icon-btn" onClick={() => setPreviewImageModal(null)}><X size={16} /></button>
+                    </div>
+                    <img src={previewImageModal.url} alt="KYC Document Full Resolution Preview" />
+                    <div style={{ display: 'flex', gap: '10px', width: '100%', justifyContent: 'center' }}>
+                      <a
+                        href={previewImageModal.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download
+                        className="sa-btn sa-btn-primary"
+                        style={{ textDecoration: 'none' }}
+                      >
+                        <Download size={14} /> Download Document
+                      </a>
+                      <button className="sa-btn sa-btn-ghost" onClick={() => setPreviewImageModal(null)}>
+                        Close Inspection
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Reject modal */}
               {selectedKyc && (

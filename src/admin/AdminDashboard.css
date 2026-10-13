@@ -1248,6 +1248,100 @@
   flex: 1;
 }
 
+/* KYC Document Storage Image Previews & Lightbox */
+.sa-doc-image-preview {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 229, 255, 0.25);
+  background: #090d16;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sa-doc-image-preview:hover {
+  border-color: var(--sa-cyan);
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.25);
+  transform: scale(1.02);
+}
+
+.sa-doc-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sa-doc-zoom-tag {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(9, 13, 22, 0.85);
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--sa-cyan);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sa-doc-pdf-link {
+  width: 100%;
+  height: 110px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  background: rgba(0, 229, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--sa-cyan);
+  font-size: 12px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.sa-doc-pdf-link:hover {
+  background: rgba(0, 229, 255, 0.12);
+  border-color: var(--sa-cyan);
+  color: #ffffff;
+}
+
+/* Lightbox Modal */
+.sa-image-lightbox-modal {
+  background: rgba(9, 13, 22, 0.96);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  border-radius: 16px;
+  padding: 20px;
+  max-width: 800px;
+  width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.8);
+}
+
+.sa-image-lightbox-modal img {
+  max-width: 100%;
+  max-height: 65vh;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid var(--sa-border);
+}
+
 .sa-setting-card strong { font-size: 13px; display: block; margin-bottom: 3px; }
 .sa-setting-card p { font-size: 11.5px; line-height: 1.4; }
 
