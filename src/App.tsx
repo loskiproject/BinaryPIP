@@ -75,7 +75,7 @@ import LiveChat from './features/LiveChat'
 import FundsHub from './features/FundsHub'
 import AuthPortal, { type SignupPayload } from './auth/AuthPortal'
 
-type View = 'overview' | 'assets' | 'tiers' | 'synthetic' | 'institutions' | 'settings' | 'kyc_hub' | 'profile' | 'funds' | 'help' | 'positions'
+type View = 'overview' | 'assets' | 'tiers' | 'synthetic' | 'institutions' | 'settings' | 'kyc_hub' | 'profile' | 'funds' | 'help' | 'positions' | 'verification' | 'verification'
 type AuthMode = 'login' | 'signup'
 type AccountType = 'none' | 'demo' | 'live'
 type Theme = 'dark' | 'light' | 'midnight' | 'cyberpunk'
