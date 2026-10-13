@@ -1184,6 +1184,7 @@ export default function App() {
     const client = supabase
     if (!client || !user || user.id === 'local-demo-user') return
     let mounted = true
+
     const loadVerificationProfile = async () => {
       // Fetch only the base columns that always exist.
       // Optional columns (recovery_email, home_address, etc.) are fetched
@@ -1198,9 +1199,13 @@ export default function App() {
       // Profile base — silently ignore errors (columns may not exist yet)
       if (!profileResult.error && profileResult.data) {
         const profile = profileResult.data as Record<string, unknown>
-        if (profile.avatar_path && supabase) {
-          const { data } = await supabase.storage.from('profile-avatars').createSignedUrl(profile.avatar_path as string, 3600)
-          if (mounted && data?.signedUrl) setAvatarUrl(data.signedUrl)
+        const avatarPath = typeof profile.avatar_path === 'string' ? profile.avatar_path : null
+
+        if (avatarPath) {
+          const { data } = await client.storage.from('profile-avatars').createSignedUrl(avatarPath, 3600)
+          if (mounted && data?.signedUrl) {
+            setAvatarUrl(data.signedUrl)
+          }
         }
       }
 
@@ -1216,10 +1221,10 @@ export default function App() {
         const ext = extResult.data as Record<string, unknown>
         setProfileDraft((current) => ({
           ...current,
-          recoveryEmail:  (ext.recovery_email  as string) ?? '',
-          homeAddress:    (ext.home_address    as string) ?? '',
-          issuingRegion:  (ext.document_region as string) ?? 'Global',
-          documentType:   (ext.document_type  as string) ?? 'ID Card',
+          recoveryEmail: (ext.recovery_email as string) ?? '',
+          homeAddress: (ext.home_address as string) ?? '',
+          issuingRegion: (ext.document_region as string) ?? 'Global',
+          documentType: (ext.document_type as string) ?? 'ID Card',
           documentNumber: (ext.document_number as string) ?? '',
         }))
       }
@@ -1250,18 +1255,20 @@ export default function App() {
         setQuestionnaireSubmitted(true)
       }
     }
+
     void loadVerificationProfile()
     return () => { mounted = false }
   }, [user])
 
   // Fetch real wallet balances and trade history directly from Supabase
   useEffect(() => {
-    if (!supabase || !user) return
+    const client = supabase
+    if (!client || !user) return
     let mounted = true
 
     const loadRealData = async () => {
       // 1. Fetch real wallet balances from public.wallets
-      const { data: walletData } = await supabase
+      const { data: walletData } = await client
         .from('wallets')
         .select('live_balance, demo_balance')
         .eq('user_id', user.id)
@@ -1277,7 +1284,7 @@ export default function App() {
       }
 
       // 2. Fetch real trades history from public.trades
-      const { data: tradesData } = await supabase
+      const { data: tradesData } = await client
         .from('trades')
         .select('*')
         .eq('user_id', user.id)
