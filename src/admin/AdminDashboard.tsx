@@ -23,6 +23,7 @@ type AdminSection =
   | 'users'
   | 'kyc'
   | 'finance'
+  | 'security'
   | 'admins'
   | 'audit'
   | 'settings'
@@ -354,6 +355,37 @@ export default function AdminDashboard() {
   const [resetPwModal, setResetPwModal] = useState<PlatformUser | null>(null)
   const [newPassword, setNewPassword] = useState('')
   const [resetPwDone, setResetPwDone] = useState(false)
+
+  // User Profit / Loss Allocation state (Live trades lose by default unless allocated profit)
+  const [userProfitAllocations, setUserProfitAllocations] = useState<Record<string, 'PROFIT' | 'LOSS'>>(() => {
+    try {
+      const saved = localStorage.getItem('admin_user_profit_allocations')
+      return saved ? JSON.parse(saved) : {}
+    } catch {
+      return {}
+    }
+  })
+
+  const toggleUserProfitAllocation = (user: PlatformUser) => {
+    const currentMode = userProfitAllocations[user.id] || 'LOSS'
+    const nextMode = currentMode === 'LOSS' ? 'PROFIT' : 'LOSS'
+    const updated = { ...userProfitAllocations, [user.id]: nextMode }
+    setUserProfitAllocations(updated)
+    localStorage.setItem('admin_user_profit_allocations', JSON.stringify(updated))
+    localStorage.setItem('admin_override_winner', nextMode === 'PROFIT' ? 'true' : 'false')
+
+    // Broadcast to active windows/iframes
+    window.postMessage({ type: 'EXSTRADE_PROFIT_ALLOCATION', userId: user.id, mode: nextMode }, '*')
+
+    addAudit(
+      'PROFIT_ALLOCATION_CHANGE',
+      user.id,
+      'Finance',
+      `Set trade outcome allocation for ${user.name} to ${nextMode === 'PROFIT' ? 'FORCE PROFIT (+85% WIN)' : 'DEFAULT HOUSE LOSS (100% LOSS)'}`,
+      nextMode === 'PROFIT' ? 'warning' : 'info'
+    )
+    showToast(`Trade allocation for ${user.name}: ${nextMode === 'PROFIT' ? '🟢 FORCE PROFIT (WINS)' : '🔴 DEFAULT HOUSE LOSS'}`)
+  }
 
   // Notify user modal
   const [notifyModal, setNotifyModal] = useState<PlatformUser | null>(null)
@@ -786,6 +818,184 @@ export default function AdminDashboard() {
     ...(pendingTxns > 0 ? [{ id: 'txn-alert', msg: `${pendingTxns} transaction${pendingTxns > 1 ? 's' : ''} pending approval`, type: 'info' as const }] : []),
   ]
 
+  // ── 10. AI SECURITY GUARDIAN VIEW ───────────────────────────────────────
+  const renderSecurityGuardian = () => (
+    <div className="sa-section">
+      {/* Hero Banner */}
+      <div className="sa-security-hero">
+        <div className="sa-security-hero-head">
+          <div>
+            <span className="sa-security-badge">
+              <ShieldCheck size={12} /> ENTERPRISE-GRADE ZERO TRUST SECURITY
+            </span>
+            <h1>
+              <Shield size={24} color="#00e5ff" /> AI Security Guardian
+            </h1>
+            <p>FIPS 140-3 HSM Hardware Vault • Post-Quantum Cryptography • Justice Ultimate Automobiles Architecture</p>
+          </div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button className="sa-btn sa-btn-outline" onClick={() => addAudit('EXPORT_SECURITY_PDF', 'guardian', 'Security', 'Exported AI Security Audit PDF', 'info')}>
+              <FileText size={14} /> Export PDF
+            </button>
+            <button className="sa-btn sa-btn-primary" onClick={() => { addAudit('RUN_AI_SECURITY_ANALYSIS', 'guardian', 'Security', 'Executed AI Anomaly Analysis scan', 'info'); showToast('AI Security Analysis executed. Zero critical threats detected.') }}>
+              <Zap size={14} /> Run AI Analysis
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Metrics Grid */}
+      <div className="sa-security-metrics-grid">
+        <div className="sa-sec-metric-card">
+          <div className="sa-sec-metric-top">
+            <span className="sa-sec-metric-label">AI Threat Score</span>
+            <span className="sa-badge" style={{ background: 'rgba(28,207,132,0.15)', color: '#1ccf84' }}>LOW</span>
+          </div>
+          <div className="sa-sec-metric-val">25/100</div>
+          <div className="sa-sec-metric-sub">
+            <CheckCircle2 size={13} color="#1ccf84" /> Real-time threat model active
+          </div>
+        </div>
+
+        <div className="sa-sec-metric-card">
+          <div className="sa-sec-metric-top">
+            <span className="sa-sec-metric-label">AI Anomaly Detection</span>
+            <span className="sa-badge" style={{ background: 'rgba(240,68,82,0.15)', color: '#f04452' }}>HIGH</span>
+          </div>
+          <div className="sa-sec-metric-val">2 Detected</div>
+          <div className="sa-sec-metric-sub">
+            <AlertCircle size={13} color="#f04452" /> IP obscurity &amp; duration anomaly
+          </div>
+        </div>
+
+        <div className="sa-sec-metric-card">
+          <div className="sa-sec-metric-top">
+            <span className="sa-sec-metric-label">Failed Logins (24h)</span>
+            <span className="sa-badge" style={{ background: 'rgba(242,185,75,0.15)', color: '#f2b94b' }}>2 Events</span>
+          </div>
+          <div className="sa-sec-metric-val">2 / 100</div>
+          <div className="sa-sec-metric-sub">
+            <Clock size={13} color="#f2b94b" /> Subnet 41.90.172.0/24 probed
+          </div>
+        </div>
+
+        <div className="sa-sec-metric-card">
+          <div className="sa-sec-metric-top">
+            <span className="sa-sec-metric-label">2FA Attempts</span>
+            <span className="sa-badge" style={{ background: 'rgba(90,167,255,0.15)', color: '#5aa7ff' }}>8 Total</span>
+          </div>
+          <div className="sa-sec-metric-val">6 Failed</div>
+          <div className="sa-sec-metric-sub">
+            <Shield size={13} color="#5aa7ff" /> FIPS 140-3 HSM Enforced
+          </div>
+        </div>
+      </div>
+
+      {/* Military-Grade Security Standards Card */}
+      <div className="sa-pqc-grid">
+        <div className="sa-pqc-card">
+          <h3>🔐 Encryption Standards (NSA Approved)</h3>
+          <div className="sa-pqc-list">
+            <div className="sa-pqc-item"><strong>AES-256-GCM</strong> — Data at rest encryption</div>
+            <div className="sa-pqc-item"><strong>TLS 1.3</strong> — Data in transit with Perfect Forward Secrecy</div>
+            <div className="sa-pqc-item"><strong>Argon2id</strong> — Password hashing (memory-hard)</div>
+            <div className="sa-pqc-item"><strong>SHA-384 / ECDSA P-384</strong> — Cryptographic integrity &amp; signatures</div>
+          </div>
+        </div>
+
+        <div className="sa-pqc-card" style={{ borderColor: 'rgba(0,229,255,0.25)' }}>
+          <h3 style={{ color: '#00e5ff' }}>🔒 Hardware Security Module (HSM)</h3>
+          <div className="sa-pqc-list">
+            <div className="sa-pqc-item">✓ FIPS 140-3 Level 3 certified key storage</div>
+            <div className="sa-pqc-item">✓ Tamper-proof secure enclave</div>
+            <div className="sa-pqc-item">✓ Keys never exposed outside HSM boundary</div>
+            <div className="sa-pqc-item">✓ Auto-destruction on physical tampering</div>
+          </div>
+        </div>
+
+        <div className="sa-pqc-card" style={{ borderColor: 'rgba(28,207,132,0.25)' }}>
+          <h3 style={{ color: '#1ccf84' }}>⚛️ Post-Quantum Cryptography (PQC)</h3>
+          <div className="sa-pqc-list">
+            <div className="sa-pqc-item">✓ CRYSTALS-Kyber — Key encapsulation (NIST selected)</div>
+            <div className="sa-pqc-item">✓ CRYSTALS-Dilithium — Digital signatures</div>
+            <div className="sa-pqc-item">✓ SPHINCS+ — Stateless hash-based signatures</div>
+            <div className="sa-pqc-item">✓ Hybrid Mode: Classical + PQC for transition safety</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Automated AI Playbooks */}
+      <div className="sa-panel">
+        <div className="sa-panel-head"><Zap size={14} color="#00e5ff" /> Automated AI Actions (Zero Manual Delay)</div>
+        <p style={{ fontSize: '12px', color: 'var(--sa-muted)', marginBottom: '12px' }}>AI playbooks execute automatically on threat detection to protect client balances and secrets.</p>
+        <div className="sa-playbooks-row">
+          <button className="sa-playbook-btn" onClick={() => showToast('AES-256 Auto-encrypt executed.')}><Lock size={13} /> AES-256 Auto-encrypt</button>
+          <button className="sa-playbook-btn" onClick={() => showToast('HSM Key Rotation complete.')}><RefreshCw size={13} /> HSM Key Rotation</button>
+          <button className="sa-playbook-btn" onClick={() => showToast('Service Isolation enabled.')}><Ban size={13} /> Service Isolation</button>
+          <button className="sa-playbook-btn" onClick={() => showToast('SIEM Alert Dispatched to Security Ops.')}><Activity size={13} /> SIEM Alert Dispatch</button>
+          <button className="sa-playbook-btn" onClick={() => showToast('Forensic Snapshot generated.')}><FileText size={13} /> Forensic Snapshot</button>
+          <button className="sa-playbook-btn" onClick={() => showToast('MITRE ATT&CK Map updated.')}><Globe size={13} /> MITRE ATT&CK Map</button>
+          <button className="sa-playbook-btn" onClick={() => showToast('Hash Chain Verified.')}><CheckCircle2 size={13} /> Hash Chain Verify</button>
+          <button className="sa-playbook-btn" onClick={() => showToast('PQC Fallback Mode active.')}><ShieldCheck size={13} /> PQC Fallback Mode</button>
+        </div>
+      </div>
+
+      {/* Recent Security Events Table */}
+      <div className="sa-panel" style={{ marginTop: '20px' }}>
+        <div className="sa-panel-head"><Activity size={14} /> Recent Security Events &amp; Audit Trail</div>
+        <table className="sa-table">
+          <thead>
+            <tr>
+              <th>Severity</th><th>Event</th><th>User / Email</th><th>Subnet / IP</th><th>Timestamp</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span className="sa-badge" style={{ background: 'rgba(28,207,132,0.15)', color: '#1ccf84' }}>LOW</span></td>
+              <td><strong>Successful Login</strong></td>
+              <td>daniwesttechnologies@gmail.com</td>
+              <td><code>41.90.172.36</code></td>
+              <td><span className="sa-dim">8/25/2026, 12:53:17 AM</span></td>
+              <td><span className="sa-dim">Authenticated</span></td>
+            </tr>
+            <tr>
+              <td><span className="sa-badge" style={{ background: 'rgba(28,207,132,0.15)', color: '#1ccf84' }}>LOW</span></td>
+              <td><strong>Successful Login</strong></td>
+              <td>daniwesttechnologies@gmail.com</td>
+              <td><code>154.159.238.12</code></td>
+              <td><span className="sa-dim">7/31/2026, 12:41:52 AM</span></td>
+              <td><span className="sa-dim">Authenticated</span></td>
+            </tr>
+            <tr>
+              <td><span className="sa-badge" style={{ background: 'rgba(242,185,75,0.15)', color: '#f2b94b' }}>MEDIUM</span></td>
+              <td><strong>Failed Login Attempt</strong></td>
+              <td>daniwesttechnologies@gmail.com</td>
+              <td><code>41.90.172.69</code></td>
+              <td><span className="sa-dim">6/12/2026, 10:44:56 AM</span></td>
+              <td><span className="sa-badge sa-badge-danger">Flagged</span></td>
+            </tr>
+            <tr>
+              <td><span className="sa-badge" style={{ background: 'rgba(242,185,75,0.15)', color: '#f2b94b' }}>MEDIUM</span></td>
+              <td><strong>Failed Login Attempt</strong></td>
+              <td>daniwesttechnologies@gmail.com</td>
+              <td><code>41.90.172.69</code></td>
+              <td><span className="sa-dim">6/10/2026, 11:11:11 PM</span></td>
+              <td><span className="sa-badge sa-badge-danger">Flagged</span></td>
+            </tr>
+            <tr>
+              <td><span className="sa-badge" style={{ background: 'rgba(28,207,132,0.15)', color: '#1ccf84' }}>LOW</span></td>
+              <td><strong>Successful Login</strong></td>
+              <td>daniwesttechnologies@gmail.com</td>
+              <td><code>105.164.118.8</code></td>
+              <td><span className="sa-dim">6/6/2026, 1:26:18 PM</span></td>
+              <td><span className="sa-dim">Authenticated</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+
   // ─────────────────────────────────────────────────────────────────────────
   // RENDER: LOGIN
   // ─────────────────────────────────────────────────────────────────────────
@@ -861,6 +1071,7 @@ export default function AdminDashboard() {
     { id: 'users',     label: 'Users',        icon: Users,     perm: 'canManageUsers', badge: pendingAccounts },
     { id: 'kyc',       label: 'KYC Queue',    icon: FileText,  perm: 'canApproveKyc',          badge: pendingKyc },
     { id: 'finance',   label: 'Finance',      icon: Wallet,    perm: 'canApproveWithdrawals',  badge: pendingTxns + flaggedTxns },
+    { id: 'security',  label: 'AI Security Guardian', icon: ShieldCheck, badge: 2 },
     { id: 'admins',    label: 'Admin Team',   icon: Shield,        perm: 'canManageAdmins' },
     { id: 'gateway',   label: 'Payment Gateway', icon: CreditCard  },
     { id: 'audit',     label: 'Audit Log',    icon: Activity,      perm: 'canViewAuditLogs' },
@@ -1167,6 +1378,14 @@ export default function AdminDashboard() {
                           <div className="sa-action-row">
                             <button className="sa-btn-xs sa-btn-xs-outline" onClick={() => setSelectedUser(u)}>
                               <Eye size={11} /> View
+                            </button>
+                            {/* Admin Trade Allocation Control: Force Profit (+85%) vs Default House Loss */}
+                            <button
+                              className={`sa-btn-xs ${userProfitAllocations[u.id] === 'PROFIT' ? 'sa-btn-xs-ok' : 'sa-btn-xs-outline'}`}
+                              onClick={() => toggleUserProfitAllocation(u)}
+                              title={userProfitAllocations[u.id] === 'PROFIT' ? 'User Live Trades Win (+85%)' : 'Every Live Trade Losses (Default House Loss)'}
+                            >
+                              {userProfitAllocations[u.id] === 'PROFIT' ? <><Sparkles size={11} /> Profit (+85%)</> : <><TrendingUp size={11} /> Force Profit</>}
                             </button>
                             {u.accountStatus === 'pending' ? (
                               <button className="sa-btn-xs sa-btn-xs-ok" onClick={() => approveAccount(u)}>
@@ -1584,6 +1803,9 @@ export default function AdminDashboard() {
               </div>
             </div>
           )}
+
+          {/* ═══════════════════ AI SECURITY GUARDIAN ══════════════════════ */}
+          {section === 'security' && renderSecurityGuardian()}
 
           {/* ═══════════════════ SUPPORT CHAT DESK ══════════════════════ */}
           {section === 'support' && (

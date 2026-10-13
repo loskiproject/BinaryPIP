@@ -1121,6 +1121,19 @@
       renderLogTable();
     }
 
+    // Admin Profit Allocation Sync Listener
+    window.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'EXSTRADE_PROFIT_ALLOCATION') {
+        window.adminOverrideWinner = e.data.mode === 'PROFIT';
+      }
+    });
+
+    try {
+      if (localStorage.getItem('admin_override_winner') === 'true') {
+        window.adminOverrideWinner = true;
+      }
+    } catch (err) {}
+
     // Default Tick Timer Loop (1s)
     tickTimer = setInterval(tickStep, currentIntervalSec * 1000);
 
