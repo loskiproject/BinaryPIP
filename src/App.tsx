@@ -3908,12 +3908,7 @@ export default function App() {
       {/* COMPACT/EXPANDABLE SIDEBAR */}
       <aside className={`sidebar ${mobileMenuOpen ? 'sidebar-open' : ''}`}>
         <a className="brand" href="#overview" onClick={(e) => { e.preventDefault(); changeView('overview') }}>
-          {/* NEXSMARKETS inline hex logo — no external image dependency */}
-          <svg width="32" height="32" viewBox="0 0 40 40" fill="none" style={{ minWidth: 32, flexShrink: 0 }}>
-            <polygon points="20,2 37,11 37,29 20,38 3,29 3,11" fill="rgba(0,229,255,0.1)" stroke="#00e5ff" strokeWidth="1.4"/>
-            <polyline points="11,27 17,14 20,21 23,14 29,27" stroke="#00e676" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/>
-            <circle cx="20" cy="20" r="2.5" fill="#00e5ff"/>
-          </svg>
+          <img src="/logo.jpeg" alt="NEXSMARKETS Logo" style={{ width: 32, height: 32, borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }} />
           <span className="brand-text">NEXSMARKETS</span>
         </a>
 
@@ -3981,11 +3976,7 @@ export default function App() {
                   <ArrowLeft size={14} />
                 </button>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <svg width="22" height="22" viewBox="0 0 40 40" fill="none" style={{ flexShrink: 0 }}>
-                    <polygon points="20,2 37,11 37,29 20,38 3,29 3,11" fill="rgba(0,229,255,0.12)" stroke="#00e5ff" strokeWidth="1.6"/>
-                    <polyline points="11,27 17,14 20,21 23,14 29,27" stroke="#00e676" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    <circle cx="20" cy="20" r="2.5" fill="#00e5ff"/>
-                  </svg>
+                  <img src="/logo.jpeg" alt="NEXSMARKETS Logo" style={{ width: 22, height: 22, borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }} />
                   <div className="breadcrumb" style={{ fontSize: '12px' }}>
                     <strong>{activeView.toUpperCase()}</strong>
                   </div>
@@ -4157,11 +4148,7 @@ export default function App() {
         <footer className="global-platform-footer">
           <div className="global-footer-inner">
             <div className="global-footer-brand">
-              <svg width="28" height="28" viewBox="0 0 40 40" fill="none">
-                <polygon points="20,2 37,11 37,29 20,38 3,29 3,11" fill="rgba(0,229,255,0.15)" stroke="#00e5ff" strokeWidth="1.8" />
-                <polyline points="11,27 17,14 20,21 23,14 29,27" stroke="#00e676" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-                <circle cx="20" cy="20" r="2.5" fill="#00e5ff" />
-              </svg>
+              <img src="/logo.jpeg" alt="NEXSMARKETS Logo" style={{ width: 26, height: 26, borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }} />
               <span className="global-footer-brand-title">NEXSMARKETS PRO TERMINAL</span>
             </div>
             <div className="global-footer-copy">
@@ -4337,10 +4324,7 @@ export default function App() {
       {pageLoading && (
         <div className="page-transition-loader" aria-live="polite">
           <div className="page-loader-brand">
-            <svg width="42" height="42" viewBox="0 0 40 40" fill="none">
-              <polygon points="20,2 37,11 37,29 20,38 3,29 3,11" fill="rgba(0,229,255,0.15)" stroke="#00e5ff" strokeWidth="2" />
-              <polyline points="11,27 17,14 20,21 23,14 29,27" stroke="#00e676" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <img src="/logo.jpeg" alt="NEXSMARKETS Logo" style={{ width: 44, height: 44, borderRadius: '10px', objectFit: 'cover' }} />
           </div>
 
           {/* Clockwise Colliding Dot Circle Spinner */}

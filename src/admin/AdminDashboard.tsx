@@ -794,8 +794,8 @@ export default function AdminDashboard() {
       <div className="sa-login-shell">
         <div className="sa-login-bg" />
         <div className="sa-login-card">
-          <div className="sa-login-icon">
-            <Shield size={36} />
+          <div className="sa-login-icon" style={{ background: 'transparent', border: 'none' }}>
+            <img src="/logo.jpeg" alt="NEXSMARKETS Admin Logo" style={{ width: 52, height: 52, borderRadius: '12px', objectFit: 'cover', border: '1px solid var(--sa-amber)' }} />
           </div>
           <div className="sa-login-brand">NEXSMARKETS</div>
           <div className="sa-login-sub">ADMIN PORTAL</div>
@@ -888,8 +888,8 @@ export default function AdminDashboard() {
       {/* ── SIDEBAR ──────────────────────────────────────────────────────── */}
       <aside className="sa-sidebar">
         <div className="sa-sidebar-top">
-          <div className="sa-brand">
-            <Shield size={22} color="#f0b90b" />
+          <div className="sa-brand" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <img src="/logo.jpeg" alt="NEXSMARKETS Admin Logo" style={{ width: 28, height: 28, borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }} />
             {!sidebarCollapsed && <span>NEXSMARKETS <strong>ADMIN</strong></span>}
           </div>
           <button className="sa-collapse-btn" onClick={() => setSidebarCollapsed(p => !p)} title="Toggle sidebar">

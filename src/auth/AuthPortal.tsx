@@ -122,11 +122,11 @@ function LiveTicker() {
 
 function NexsLogo() {
   return (
-    <svg width="38" height="38" viewBox="0 0 40 40" fill="none">
-      <polygon points="20,2 38,11 38,29 20,38 2,29 2,11" fill="rgba(0,229,255,0.1)" stroke="#00e5ff" strokeWidth="1.4" />
-      <polyline points="10,27 17,14 20,21 23,14 30,27" stroke="#00e676" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="20" cy="20" r="2.5" fill="#00e5ff" />
-    </svg>
+    <img
+      src="/logo.jpeg"
+      alt="NEXSMARKETS Logo"
+      style={{ width: 38, height: 38, borderRadius: '10px', objectFit: 'cover', border: '1px solid rgba(0, 229, 255, 0.3)' }}
+    />
   )
 }
 
