@@ -3,7 +3,7 @@ import {
   ShieldCheck, LayoutDashboard, Users, FileText, Wallet, Settings,
   Activity, Bell, Lock, LogOut, Search, Eye, EyeOff,
   CheckCircle2, XCircle, AlertTriangle, Plus, Trash2, Ban,
-  Download, TrendingUp, TrendingDown,
+  Download, TrendingUp, TrendingDown, Zap, Sparkles,
   DollarSign, Clock, Shield, AlertCircle, X,
   Pencil, Globe, Wifi, RefreshCw,
   ServerCrash, ChevronRight, MessageSquare, KeyRound, CreditCard, ToggleLeft, ToggleRight, Copy,
@@ -339,6 +339,11 @@ export default function AdminDashboard() {
   const [txFilter, setTxFilter] = useState<'all' | 'pending' | 'flagged'>('all')
   const [kycFilter, setKycFilter] = useState<'all' | 'pending'>('pending')
   const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'err' | 'warn' } | null>(null)
+
+  const showToast = useCallback((msg: string, type: 'ok' | 'err' | 'warn' = 'ok') => {
+    setToast({ msg, type })
+  }, [])
+
   const [selectedUser, setSelectedUser] = useState<PlatformUser | null>(null)
   const [selectedKyc, setSelectedKyc] = useState<KycCase | null>(null)
   const [kycRejectReason, setKycRejectReason] = useState('')
@@ -368,8 +373,8 @@ export default function AdminDashboard() {
 
   const toggleUserProfitAllocation = (user: PlatformUser) => {
     const currentMode = userProfitAllocations[user.id] || 'LOSS'
-    const nextMode = currentMode === 'LOSS' ? 'PROFIT' : 'LOSS'
-    const updated = { ...userProfitAllocations, [user.id]: nextMode }
+    const nextMode: 'PROFIT' | 'LOSS' = currentMode === 'LOSS' ? 'PROFIT' : 'LOSS'
+    const updated: Record<string, 'PROFIT' | 'LOSS'> = { ...userProfitAllocations, [user.id]: nextMode }
     setUserProfitAllocations(updated)
     localStorage.setItem('admin_user_profit_allocations', JSON.stringify(updated))
     localStorage.setItem('admin_override_winner', nextMode === 'PROFIT' ? 'true' : 'false')
