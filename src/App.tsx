@@ -74,6 +74,7 @@ import type { AiSignal } from './features/AiScanner'
 import LiveChat from './features/LiveChat'
 import FundsHub from './features/FundsHub'
 import AuthPortal, { type SignupPayload } from './auth/AuthPortal'
+import AdminDashboard from './admin/AdminDashboard'
 
 type View = 'overview' | 'assets' | 'tiers' | 'synthetic' | 'institutions' | 'settings' | 'kyc_hub' | 'profile' | 'wallet' | 'funds' | 'help' | 'positions' | 'verification'
 type AuthMode = 'login' | 'signup'
@@ -1353,6 +1354,13 @@ export default function App() {
   // Navigation Handler - Exactly 3 seconds loading screen visibility
   const changeView = (nextView: View) => {
     if (nextView === activeView) return
+
+    // Protection: Admin Dashboard is reserved for Admin users
+    if (nextView === 'settings' && user?.role !== 'admin') {
+      showNotice('🔒 Access Restricted: Admin Dashboard requires an Administrator account.')
+      return
+    }
+
     setPageLoading(true)
     setPreviousView(activeView)
     setActiveView(nextView)
@@ -1392,7 +1400,7 @@ export default function App() {
             ? sessionUser.user_metadata.avatar_path
             : null
       const isStealthAdminUid = sessionUser.id === '57ef6472-7255-47d9-9ed9-7f054aa09ae6'
-      const role = (isStealthAdminUid || sessionUser.app_metadata.role === 'admin') ? 'admin' : 'client'
+      const role = (isStealthAdminUid || sessionUser.app_metadata?.role === 'admin' || sessionUser.user_metadata?.role === 'admin') ? 'admin' : 'client'
       const phone = String(sessionUser.user_metadata.phone ?? '')
       const country = String(sessionUser.user_metadata.country ?? '')
       const emailVerified = Boolean(sessionUser.email_confirmed_at)
@@ -1401,8 +1409,8 @@ export default function App() {
       const accountStatus = 'active' as const
       setUser({ id: sessionUser.id, fullName, email: sessionUser.email ?? '', phone, country, avatarPath, role, emailVerified, accountStatus })
 
-      // Auto-redirect stealth super admin directly to Admin Dashboard on login
-      if (isStealthAdminUid) {
+      // Auto-redirect admin users directly to FULL Admin Dashboard on login
+      if (role === 'admin') {
         setActiveView('settings')
         showNotice(`⚡ Admin Authenticated (${fullName || sessionUser.email}). Redirecting to Admin Dashboard.`)
       }
@@ -3823,6 +3831,11 @@ export default function App() {
         notice={notice}
       />
     )
+  }
+
+  // IF LOGGED-IN USER IS AN ADMIN: Render 100% Standalone Full Admin Dashboard
+  if (user.role === 'admin') {
+    return <AdminDashboard />
   }
 
   return (

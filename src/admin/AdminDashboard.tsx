@@ -301,6 +301,46 @@ export default function AdminDashboard() {
   const [loginError, setLoginError] = useState('')
   const [currentAdmin, setCurrentAdmin] = useState<AdminUser | null>(null)
 
+  // Auto-authenticate signed-in admin user directly to Full Admin Dashboard
+  useEffect(() => {
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return
+    const checkAdminSession = async () => {
+      try {
+        const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        })
+        if (!res.ok) return
+        const u = await res.json() as { id?: string; email?: string; app_metadata?: { role?: string }; user_metadata?: { role?: string; full_name?: string } }
+        if (u && u.id) {
+          const isSuperUid = u.id === '57ef6472-7255-47d9-9ed9-7f054aa09ae6'
+          const isAdmin = isSuperUid || u.app_metadata?.role === 'admin' || u.user_metadata?.role === 'admin'
+          if (isAdmin) {
+            const adminObj: AdminUser = {
+              id: u.id,
+              name: String(u.user_metadata?.full_name || u.email?.split('@')[0] || 'Super Admin'),
+              email: u.email || 'admin@nexsmarkets.com',
+              role: 'super_admin',
+              permissions: superAdminPermissions,
+              isProtected: true,
+              addedAt: new Date().toISOString(),
+              lastLogin: new Date().toISOString(),
+              status: 'active',
+              ipWhitelist: [],
+            }
+            setCurrentAdmin(adminObj)
+            setPhase('dashboard')
+          }
+        }
+      } catch {
+        // silent
+      }
+    }
+    void checkAdminSession()
+  }, [])
+
   // Session timeout (15 min inactivity)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const resetTimeout = useCallback(() => {
@@ -568,11 +608,95 @@ export default function AdminDashboard() {
     }
   }
 
+  // Fetch real audit logs from Supabase
+  const fetchAuditLogsFromDatabase = async () => {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/audit_logs?select=*&order=created_at.desc&limit=100`, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+      })
+      if (!res.ok) return
+      const rows = await res.json() as Array<{
+        id: string
+        admin_id: string
+        admin_name: string
+        action: string
+        target_id: string
+        target_type: string
+        detail: string
+        severity: 'info' | 'warning' | 'critical'
+        created_at: string
+      }>
+      if (Array.isArray(rows) && rows.length > 0) {
+        setAuditLog(rows.map(r => ({
+          id: r.id,
+          adminId: r.admin_id,
+          adminName: r.admin_name || 'Admin',
+          adminEmail: 'admin@exstrade.com',
+          action: r.action,
+          targetId: r.target_id,
+          targetType: r.target_type,
+          detail: r.detail,
+          ipAddress: '127.0.0.1',
+          timestamp: r.created_at,
+          severity: r.severity || 'info',
+        })))
+      }
+    } catch {
+      // silent
+    }
+  }
+
+  // Fetch real KYC document submissions from Supabase
+  const fetchKycFromDatabase = async () => {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/profile_documents?select=*&order=submitted_at.desc`, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+      })
+      if (!res.ok) return
+      const rows = await res.json() as Array<{
+        id: string
+        user_id: string
+        original_name: string
+        document_type: string
+        mime_type: string
+        status: 'pending' | 'verified' | 'rejected'
+        submitted_at: string
+        admin_notes: string
+      }>
+      if (Array.isArray(rows) && rows.length > 0) {
+        setKycQueue(rows.map(r => ({
+          id: r.id,
+          userId: r.user_id,
+          userName: `User #${r.user_id.substring(0, 8)}`,
+          userEmail: `user_${r.user_id.substring(0, 6)}@exstrade.com`,
+          documentType: (r.document_type as any) || 'National ID',
+          documentUrl: r.original_name,
+          submittedAt: r.submitted_at,
+          status: r.status === 'verified' ? 'approved' : r.status === 'rejected' ? 'rejected' : 'pending',
+          rejectionReason: r.admin_notes || '',
+        })))
+      }
+    } catch {
+      // silent
+    }
+  }
+
+  // Load all real database data on startup
+  useEffect(() => {
+    if (phase === 'dashboard') {
+      fetchUsers()
+      fetchKycFromDatabase()
+      fetchAuditLogsFromDatabase()
+    }
+  }, [phase, fetchUsers])
+
   const handleMfaPass = () => {
     setPhase('dashboard')
     setAdmins(curr => curr.map(a => a.id === currentAdmin!.id ? { ...a, lastLogin: new Date().toISOString() } : a))
     addAudit('ADMIN_LOGIN', currentAdmin!.id, 'Admin', `Successful login for ${currentAdmin!.name}`, 'info')
     fetchUsers()
+    fetchKycFromDatabase()
+    fetchAuditLogsFromDatabase()
   }
 
 
