@@ -1254,6 +1254,56 @@ export default function App() {
     return () => { mounted = false }
   }, [user])
 
+  // Fetch real wallet balances and trade history directly from Supabase
+  useEffect(() => {
+    if (!supabase || !user) return
+    let mounted = true
+
+    const loadRealData = async () => {
+      // 1. Fetch real wallet balances from public.wallets
+      const { data: walletData } = await supabase
+        .from('wallets')
+        .select('live_balance, demo_balance')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (mounted && walletData) {
+        if (Number.isFinite(Number(walletData.live_balance))) {
+          setLiveBalance(Number(walletData.live_balance))
+        }
+        if (Number.isFinite(Number(walletData.demo_balance))) {
+          setDemoBalance(Number(walletData.demo_balance))
+        }
+      }
+
+      // 2. Fetch real trades history from public.trades
+      const { data: tradesData } = await supabase
+        .from('trades')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (mounted && Array.isArray(tradesData) && tradesData.length > 0) {
+        const closed = tradesData
+          .filter(t => t.status !== 'OPEN')
+          .map(t => ({
+            id: t.id,
+            symbol: t.symbol,
+            type: t.direction as 'BUY' | 'SELL',
+            lots: Number(t.lots),
+            openPrice: Number(t.open_price),
+            closePrice: Number(t.close_price || t.open_price),
+            pnl: Number(t.profit_loss),
+            closedAt: new Date(t.closed_at || t.created_at).toISOString().replace('T', ' ').substring(0, 19),
+          }))
+        if (closed.length > 0) setClosedTrades(closed)
+      }
+    }
+
+    void loadRealData()
+    return () => { mounted = false }
+  }, [user])
+
   // Deposit Addresses
   const [adminAddresses, setAdminAddresses] = useState<DepositAddress[]>(defaultAdminAddresses)
   const [newNetCode, setNewNetCode] = useState('BNB')
@@ -1539,25 +1589,72 @@ export default function App() {
     setAccountType('none')
   }
 
-  // Funds Hub deposit request handler with 50% Bonus
-  const handleFundsDepositRequest = (depositAmount: number, network: string, reference?: string) => {
+  // Funds Hub deposit request handler with real Supabase sync
+  const handleFundsDepositRequest = async (depositAmount: number, network: string, reference?: string) => {
     const bonus = depositAmount * 0.5
     const totalAdded = depositAmount + bonus
     const refNote = reference ? ' Ref: ' + reference : ''
-    setLiveBalance((curr) => curr + totalAdded)
+    const nextLiveBalance = liveBalance + totalAdded
+
+    setLiveBalance(nextLiveBalance)
     setLiveAccountCreated(true)
     setAccountType('live')
+
+    if (supabase && user) {
+      // 1. Record transaction in Supabase
+      await supabase.from('transactions').insert({
+        user_id: user.id,
+        type: 'deposit',
+        amount: depositAmount,
+        bonus_amount: bonus,
+        total_amount: totalAdded,
+        gateway_network: network,
+        reference_code: reference || '',
+        status: 'approved',
+      })
+
+      // 2. Update wallet live balance in Supabase
+      await supabase.from('wallets').upsert({
+        user_id: user.id,
+        live_balance: nextLiveBalance,
+        updated_at: new Date().toISOString(),
+      })
+    }
+
     showNotice(`🎉 Real Account Deposit of $${depositAmount.toFixed(2)} + $${bonus.toFixed(2)} (50% Deposit Bonus) = $${totalAdded.toFixed(2)} credited!${refNote}`)
   }
 
-  const handleDepositSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleDepositSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const depAmount = parseFloat(amount) || 500
     const bonus = depAmount * 0.5
     const totalAdded = depAmount + bonus
-    setLiveBalance((curr) => curr + totalAdded)
+    const nextLiveBalance = liveBalance + totalAdded
+
+    setLiveBalance(nextLiveBalance)
     setLiveAccountCreated(true)
     setAccountType('live')
+
+    if (supabase && user) {
+      // 1. Record transaction in Supabase
+      await supabase.from('transactions').insert({
+        user_id: user.id,
+        type: 'deposit',
+        amount: depAmount,
+        bonus_amount: bonus,
+        total_amount: totalAdded,
+        gateway_network: selectedNetwork,
+        status: 'approved',
+      })
+
+      // 2. Update wallet live balance in Supabase
+      await supabase.from('wallets').upsert({
+        user_id: user.id,
+        live_balance: nextLiveBalance,
+        updated_at: new Date().toISOString(),
+      })
+    }
+
     showNotice(`🎉 Deposit of $${depAmount.toFixed(2)} + $${bonus.toFixed(2)} (50% Deposit Bonus) = $${totalAdded.toFixed(2)} credited to your Real Account!`)
     closeModal()
   }
@@ -2766,7 +2863,7 @@ export default function App() {
             body > div.flex-1.flex.overflow-hidden > aside:first-child { display: flex !important; order: 2 !important; width: 100% !important; height: auto !important; flex-direction: row !important; justify-content: space-around !important; align-items: center !important; padding: 8px 12px !important; gap: 8px !important; background: rgba(18, 24, 38, 0.95) !important; border-top: 1px solid rgba(255, 255, 255, 0.08) !important; border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important; overflow-x: auto !important; }
             body > div.flex-1.flex.overflow-hidden > main { height: 48vh; min-height: 280px; flex: none !important; }
             body > div.flex-1.flex.overflow-hidden > aside:last-child { width: 100% !important; height: auto; flex: none !important; }
-            body > footer { height: 128px !important; min-height: 128px; flex: none !important; }
+            body > footer { height: auto !important; min-height: 0 !important; flex: none !important; }
           }
           .synthetic-tool-active { color: #2dd4bf !important; background: rgba(20, 184, 166, 0.15) !important; border-color: rgba(45, 212, 191, 0.45) !important; }
         `

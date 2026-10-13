@@ -475,33 +475,55 @@ export default function AdminDashboard() {
     }
   }, [])
 
-  // Fallback: read profiles table directly via REST
+  // Read profiles and wallets tables directly via Supabase REST API
   const fetchUsersFromProfiles = async () => {
     try {
-      const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/profiles?select=id,full_name,phone,country,created_at&order=created_at.desc`,
-        {
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          },
-        }
-      )
-      if (!res.ok) { setUsersError('Could not load users.'); return }
-      const rows = await res.json() as Array<{ id: string; full_name: string; phone: string; country: string; created_at: string }>
+      const [profilesRes, walletsRes] = await Promise.all([
+        fetch(
+          `${SUPABASE_URL}/rest/v1/profiles?select=id,email,full_name,phone,country,kyc_status,account_status,created_at&order=created_at.desc`,
+          {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            },
+          }
+        ),
+        fetch(
+          `${SUPABASE_URL}/rest/v1/wallets?select=user_id,live_balance,demo_balance`,
+          {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            },
+          }
+        ),
+      ])
+
+      if (!profilesRes.ok) { setUsersError('Could not load profiles.'); return }
+      const rows = await profilesRes.json() as Array<{ id: string; email: string; full_name: string; phone: string; country: string; kyc_status: string; account_status: string; created_at: string }>
+
+      let walletMap: Record<string, number> = {}
+      if (walletsRes.ok) {
+        const walletRows = await walletsRes.json() as Array<{ user_id: string; live_balance: number }>
+        walletMap = walletRows.reduce((acc, w) => {
+          acc[w.user_id] = Number(w.live_balance) || 0
+          return acc
+        }, {} as Record<string, number>)
+      }
+
       const mapped: PlatformUser[] = rows.map(r => ({
         id: r.id,
-        name: r.full_name || '(no name)',
-        email: '—',
+        name: r.full_name || (r.email ? r.email.split('@')[0] : '(no name)'),
+        email: r.email || '—',
         phone: r.phone || '—',
         country: r.country || '—',
-        balance: 0,
+        balance: walletMap[r.id] ?? 0,
         accountType: 'LIVE' as const,
-        status: 'active' as const,
-        kycStatus: 'unverified' as const,
+        status: (r.account_status as any) || 'active',
+        kycStatus: (r.kyc_status as any) || 'unverified',
         accountStatus: 'approved' as const,
         registeredAt: new Date(r.created_at).toLocaleDateString('en-GB'),
-        lastSeen: '—',
+        lastSeen: 'Active Now',
       }))
       setUsers(mapped)
     } catch {
