@@ -1,7 +1,7 @@
 import { useState, useEffect, type FormEvent } from 'react'
 import {
   Eye, EyeOff, CheckCircle2, XCircle, ArrowRight,
-  Shield, Mail, Phone, User, Globe, Gift, AlertCircle,
+  Shield, ShieldCheck, Mail, Phone, User, Globe, Gift, AlertCircle,
   BarChart2, Activity, Lock, LogIn, Sparkles, AtSign,
 } from 'lucide-react'
 import './AuthPortal.css'
