@@ -159,7 +159,7 @@ const initialAdmins: AdminUser[] = [
   {
     id: 'adm-kyc-1',
     name: 'Amara Osei',
-    email: 'kyc@exstrade.com',
+    email: 'kyc@binarypip.com',
     role: 'kyc_admin',
     permissions: kycAdminPermissions,
     isProtected: false,
@@ -171,7 +171,7 @@ const initialAdmins: AdminUser[] = [
   {
     id: 'adm-fin-1',
     name: 'Priya Sharma',
-    email: 'finance@exstrade.com',
+    email: 'finance@binarypip.com',
     role: 'finance_admin',
     permissions: financeAdminPermissions,
     isProtected: false,
@@ -189,7 +189,7 @@ const initialKycQueue: KycCase[] = []
 const initialTransactions: Transaction[] = []
 
 const initialAuditLog: AuditEntry[] = [
-  { id: 'aud-init', adminName: 'System', adminEmail: 'system@nexsmarkets.com', action: 'SYSTEM_INIT', targetId: 'system', targetType: 'System', detail: 'Admin dashboard initialised. Awaiting live user data.', timestamp: new Date().toISOString(), ipAddress: '—', severity: 'info' },
+  { id: 'aud-init', adminName: 'System', adminEmail: 'system@binarypip.com', action: 'SYSTEM_INIT', targetId: 'system', targetType: 'System', detail: 'Admin dashboard initialised. Awaiting live user data.', timestamp: new Date().toISOString(), ipAddress: '—', severity: 'info' },
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -208,10 +208,10 @@ const roleLabel: Record<AdminRole, string> = {
 }
 
 const roleColor: Record<AdminRole, string> = {
-  super_admin: '#f0b90b',
-  kyc_admin: '#5aa7ff',
+  super_admin: '#20eb5a',
+  kyc_admin: '#20eb5a',
   finance_admin: '#1ccf84',
-  support_admin: '#8b5cf6',
+  support_admin: '#00b84a',
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -227,7 +227,7 @@ function StatusBadge({ status }: { status: string }) {
     verified:  { bg: 'rgba(28,207,132,0.15)', color: '#1ccf84', label: 'Verified' },
     unverified:{ bg: 'rgba(148,163,184,0.1)', color: '#9aa7b8', label: 'Unverified' },
     inactive:  { bg: 'rgba(148,163,184,0.1)', color: '#9aa7b8', label: 'Inactive' },
-    info:      { bg: 'rgba(90,167,255,0.12)', color: '#5aa7ff', label: 'Info' },
+    info:      { bg: 'rgba(32,235,90,0.12)', color: '#20eb5a', label: 'Info' },
     warning:   { bg: 'rgba(242,185,75,0.15)', color: '#f2b94b', label: 'Warning' },
     critical:  { bg: 'rgba(240,68,82,0.18)',  color: '#f04452', label: 'Critical' },
   }
@@ -331,7 +331,7 @@ export default function AdminDashboard() {
             const adminObj: AdminUser = {
               id: u.id,
               name: String(u.user_metadata?.full_name || u.email?.split('@')[0] || 'Super Admin'),
-              email: u.email || 'admin@nexsmarkets.com',
+              email: u.email || 'admin@binarypip.com',
               role: 'super_admin',
               permissions: superAdminPermissions,
               isProtected: true,
@@ -677,7 +677,7 @@ export default function AdminDashboard() {
           id: r.id,
           adminId: r.admin_id,
           adminName: r.admin_name || 'Admin',
-          adminEmail: 'admin@exstrade.com',
+          adminEmail: 'admin@binarypip.com',
           action: r.action,
           targetId: r.target_id,
           targetType: r.target_type,
@@ -753,7 +753,7 @@ export default function AdminDashboard() {
               id: r.id,
               userId: r.user_id,
               userName: userProf?.name || `User #${r.user_id.substring(0, 8)}`,
-              userEmail: userProf?.email || `user_${r.user_id.substring(0, 6)}@exstrade.com`,
+              userEmail: userProf?.email || `user_${r.user_id.substring(0, 6)}@binarypip.com`,
               documentType: (r.document_type || userProf?.docType || 'National ID') as any,
               documentUrl: fileUrl,
               storagePath: r.storage_path,
@@ -820,7 +820,7 @@ export default function AdminDashboard() {
           id: r.id,
           userId: r.user_id,
           userName: `User #${r.user_id.substring(0, 8)}`,
-          userEmail: `user_${r.user_id.substring(0, 6)}@exstrade.com`,
+          userEmail: `user_${r.user_id.substring(0, 6)}@binarypip.com`,
           type: r.type,
           amount: Number(r.total_amount || r.amount),
           network: r.gateway_network || 'MPESA',
@@ -1314,7 +1314,7 @@ export default function AdminDashboard() {
               <ShieldCheck size={12} /> ENTERPRISE-GRADE ZERO TRUST SECURITY
             </span>
             <h1>
-              <Shield size={24} color="#00e5ff" /> AI Security Guardian
+              <Shield size={24} color="#20eb5a" /> AI Security Guardian
             </h1>
             <p>FIPS 140-3 HSM Hardware Vault • Post-Quantum Cryptography • Justice Ultimate Automobiles Architecture</p>
           </div>
@@ -1367,11 +1367,11 @@ export default function AdminDashboard() {
         <div className="sa-sec-metric-card">
           <div className="sa-sec-metric-top">
             <span className="sa-sec-metric-label">2FA Attempts</span>
-            <span className="sa-badge" style={{ background: 'rgba(90,167,255,0.15)', color: '#5aa7ff' }}>8 Total</span>
+            <span className="sa-badge" style={{ background: 'rgba(32,235,90,0.15)', color: '#20eb5a' }}>8 Total</span>
           </div>
           <div className="sa-sec-metric-val">6 Failed</div>
           <div className="sa-sec-metric-sub">
-            <Shield size={13} color="#5aa7ff" /> FIPS 140-3 HSM Enforced
+            <Shield size={13} color="#20eb5a" /> FIPS 140-3 HSM Enforced
           </div>
         </div>
       </div>
@@ -1388,8 +1388,8 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="sa-pqc-card" style={{ borderColor: 'rgba(0,229,255,0.25)' }}>
-          <h3 style={{ color: '#00e5ff' }}>🔒 Hardware Security Module (HSM)</h3>
+        <div className="sa-pqc-card" style={{ borderColor: 'rgba(32,235,90,0.25)' }}>
+          <h3 style={{ color: '#20eb5a' }}>🔒 Hardware Security Module (HSM)</h3>
           <div className="sa-pqc-list">
             <div className="sa-pqc-item">✓ FIPS 140-3 Level 3 certified key storage</div>
             <div className="sa-pqc-item">✓ Tamper-proof secure enclave</div>
@@ -1411,7 +1411,7 @@ export default function AdminDashboard() {
 
       {/* Automated AI Playbooks */}
       <div className="sa-panel">
-        <div className="sa-panel-head"><Zap size={14} color="#00e5ff" /> Automated AI Actions (Zero Manual Delay)</div>
+        <div className="sa-panel-head"><Zap size={14} color="#20eb5a" /> Automated AI Actions (Zero Manual Delay)</div>
         <p style={{ fontSize: '12px', color: 'var(--sa-muted)', marginBottom: '12px' }}>AI playbooks execute automatically on threat detection to protect client balances and secrets.</p>
         <div className="sa-playbooks-row">
           <button className="sa-playbook-btn" onClick={() => showToast('AES-256 Auto-encrypt executed.')}><Lock size={13} /> AES-256 Auto-encrypt</button>
@@ -1490,9 +1490,9 @@ export default function AdminDashboard() {
         <div className="sa-login-bg" />
         <div className="sa-login-card">
           <div className="sa-login-icon" style={{ background: 'transparent', border: 'none' }}>
-            <img src="/logo.jpeg" alt="NEXSMARKETS Admin Logo" style={{ width: 52, height: 52, borderRadius: '12px', objectFit: 'cover', border: '1px solid var(--sa-amber)' }} />
+            <img src="/binarypip-mark.svg" alt="BinaryPip Admin logo" style={{ width: 52, height: 52, objectFit: 'contain' }} />
           </div>
-          <div className="sa-login-brand">NEXSMARKETS</div>
+          <div className="sa-login-brand">BinaryPip</div>
           <div className="sa-login-sub">ADMIN PORTAL</div>
           <p className="sa-login-desc">Restricted access. Unauthorized entry is a criminal offence and will be logged.</p>
 
@@ -1502,7 +1502,7 @@ export default function AdminDashboard() {
               <input
                 type="email"
                 className="sa-input"
-                placeholder="admin@exstrade.com"
+                placeholder="admin@binarypip.com"
                 value={email}
                 autoComplete="username"
                 onChange={e => { setEmail(e.target.value); setLoginError('') }}
@@ -1604,8 +1604,8 @@ export default function AdminDashboard() {
       <aside className="sa-sidebar">
         <div className="sa-sidebar-top">
           <div className="sa-brand" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <img src="/logo.jpeg" alt="NEXSMARKETS Admin Logo" style={{ width: 28, height: 28, borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }} />
-            {!sidebarCollapsed && <span>NEXSMARKETS <strong>ADMIN</strong></span>}
+            <img src="/binarypip-mark.svg" alt="BinaryPip Admin logo" style={{ width: 28, height: 28, objectFit: 'contain', flexShrink: 0 }} />
+            {!sidebarCollapsed && <span>BinaryPip <strong>ADMIN</strong></span>}
           </div>
           <button className="sa-collapse-btn" onClick={() => setSidebarCollapsed(p => !p)} title="Toggle sidebar">
             {sidebarCollapsed ? <ChevronRight size={14} /> : <ChevronRight size={14} style={{ transform: 'rotate(180deg)' }} />}
@@ -1741,7 +1741,7 @@ export default function AdminDashboard() {
                   <div className="sa-stat-sub">{kycQueue.filter(k => k.status === 'approved').length} approved</div>
                 </div>
                 <div className="sa-stat-card">
-                  <div className="sa-stat-icon" style={{ background: 'rgba(90,167,255,0.12)', color: '#5aa7ff' }}><Wallet size={20} /></div>
+                  <div className="sa-stat-icon" style={{ background: 'rgba(32,235,90,0.12)', color: '#20eb5a' }}><Wallet size={20} /></div>
                   <div>
                     <div className="sa-stat-val">{pendingTxns}</div>
                     <div className="sa-stat-lbl">Pending Txns</div>
@@ -1749,7 +1749,7 @@ export default function AdminDashboard() {
                   <div className="sa-stat-sub">{flaggedTxns > 0 ? `${flaggedTxns} flagged ⚠` : 'No flags'}</div>
                 </div>
                 <div className="sa-stat-card">
-                  <div className="sa-stat-icon" style={{ background: 'rgba(139,92,246,0.12)', color: '#8b5cf6' }}><DollarSign size={20} /></div>
+                  <div className="sa-stat-icon" style={{ background: 'rgba(0,184,74,0.12)', color: '#00b84a' }}><DollarSign size={20} /></div>
                   <div>
                     <div className="sa-stat-val">{fmtUSD(totalVolume)}</div>
                     <div className="sa-stat-lbl">Approved Volume</div>
@@ -1765,7 +1765,7 @@ export default function AdminDashboard() {
                   <div className="sa-stat-sub">{users.filter(u => u.kycStatus === 'rejected').length} KYC rejected</div>
                 </div>
                 <div className="sa-stat-card">
-                  <div className="sa-stat-icon" style={{ background: 'rgba(240,185,11,0.12)', color: '#f0b90b' }}><Shield size={20} /></div>
+                  <div className="sa-stat-icon" style={{ background: 'rgba(32,235,90,0.12)', color: '#20eb5a' }}><Shield size={20} /></div>
                   <div>
                     <div className="sa-stat-val">{admins.length}</div>
                     <div className="sa-stat-lbl">Admin Accounts</div>
@@ -2008,7 +2008,7 @@ export default function AdminDashboard() {
                           <Bell size={14} /> Send Notification
                         </button>
                         {canAccess('canManageAdmins') && (
-                          <button className="sa-btn" style={{ gridColumn: '1/-1', background: 'rgba(240,185,11,0.12)', color: '#f0b90b', border: '1px solid rgba(240,185,11,0.3)' }}
+                          <button className="sa-btn" style={{ gridColumn: '1/-1', background: 'rgba(32,235,90,0.12)', color: '#20eb5a', border: '1px solid rgba(32,235,90,0.3)' }}
                             onClick={() => { setUpgradeRole('kyc_admin'); setUpgradeModal(selectedUser) }}>
                             <ShieldCheck size={14} /> Upgrade to Admin
                           </button>
@@ -2066,7 +2066,7 @@ export default function AdminDashboard() {
                           title="Open submitted PDF document"
                           onClick={e => e.stopPropagation()}
                         >
-                          <FileText size={28} color="#00e5ff" />
+                          <FileText size={28} color="#20eb5a" />
                           <span>View Submitted PDF File</span>
                         </a>
                       ) : (
@@ -2321,7 +2321,7 @@ export default function AdminDashboard() {
                         <input className="sa-input" placeholder="Jane Doe" value={newAdmin.name} onChange={e => setNewAdmin(p => ({ ...p, name: e.target.value }))} />
                       </label>
                       <label className="sa-label">Email Address
-                        <input className="sa-input" type="email" placeholder="jane@exstrade.com" value={newAdmin.email} onChange={e => setNewAdmin(p => ({ ...p, email: e.target.value }))} />
+                        <input className="sa-input" type="email" placeholder="jane@binarypip.com" value={newAdmin.email} onChange={e => setNewAdmin(p => ({ ...p, email: e.target.value }))} />
                       </label>
                       <label className="sa-label" style={{ gridColumn: '1/-1' }}>Role & Permissions
                         <select className="sa-input" value={newAdmin.role} onChange={e => setNewAdmin(p => ({ ...p, role: e.target.value as AdminRole }))}>
@@ -2612,7 +2612,7 @@ export default function AdminDashboard() {
                     <strong>Session Timeout</strong>
                     <p className="sa-dim">Auto-locks after 15 minutes of inactivity.</p>
                   </div>
-                  <span className="sa-badge" style={{ background: 'rgba(90,167,255,0.12)', color: '#5aa7ff' }}>15 min</span>
+                  <span className="sa-badge" style={{ background: 'rgba(32,235,90,0.12)', color: '#20eb5a' }}>15 min</span>
                 </div>
                 <div className="sa-setting-card">
                   <div className="sa-setting-icon"><Globe size={20} /></div>
@@ -2657,7 +2657,7 @@ export default function AdminDashboard() {
                     <strong>Super Admin Protection</strong>
                     <p className="sa-dim">Super Admin credentials and role cannot be modified or revoked by any other admin.</p>
                   </div>
-                  <span className="sa-badge" style={{ background: 'rgba(240,185,11,0.12)', color: '#f0b90b' }}>Immutable</span>
+                  <span className="sa-badge" style={{ background: 'rgba(32,235,90,0.12)', color: '#20eb5a' }}>Immutable</span>
                 </div>
               </div>
             </div>
@@ -2712,7 +2712,7 @@ export default function AdminDashboard() {
               <button className="sa-icon-btn" onClick={() => setResetPwModal(null)}><X size={16} /></button>
             </div>
             <p className="sa-dim" style={{ marginBottom: '14px' }}>
-              Set a new password for <strong style={{ color: '#00e5ff' }}>{resetPwModal.email}</strong>.
+              Set a new password for <strong style={{ color: '#20eb5a' }}>{resetPwModal.email}</strong>.
               The user will need to use this password on their next login.
             </p>
             {!resetPwDone ? (
@@ -2761,7 +2761,7 @@ export default function AdminDashboard() {
               <button className="sa-icon-btn" onClick={() => setUpgradeModal(null)}><X size={16} /></button>
             </div>
             <p className="sa-dim" style={{ marginBottom: '14px' }}>
-              This will move <strong style={{ color: '#f0b90b' }}>{upgradeModal.name}</strong> from the Users list to the Admin Team and grant them admin access.
+              This will move <strong style={{ color: '#20eb5a' }}>{upgradeModal.name}</strong> from the Users list to the Admin Team and grant them admin access.
               This action is logged and reversible.
             </p>
             <label className="sa-label" style={{ marginBottom: '16px' }}>
@@ -2774,7 +2774,7 @@ export default function AdminDashboard() {
               </select>
             </label>
             <div className="sa-modal-actions">
-              <button className="sa-btn" style={{ background: 'rgba(240,185,11,0.15)', color: '#f0b90b', border: '1px solid rgba(240,185,11,0.35)' }}
+              <button className="sa-btn" style={{ background: 'rgba(32,235,90,0.15)', color: '#20eb5a', border: '1px solid rgba(32,235,90,0.35)' }}
                 onClick={upgradeUserToAdmin}>
                 <ShieldCheck size={14} /> Confirm Upgrade to Admin
               </button>
@@ -2793,7 +2793,7 @@ export default function AdminDashboard() {
               <button className="sa-icon-btn" onClick={() => setNotifyModal(null)}><X size={16} /></button>
             </div>
             <p className="sa-dim" style={{ marginBottom: '14px' }}>
-              Message will be sent to <strong style={{ color: '#00e5ff' }}>{notifyModal.email}</strong>
+              Message will be sent to <strong style={{ color: '#20eb5a' }}>{notifyModal.email}</strong>
             </p>
             {!notifySent ? (
               <>

@@ -76,7 +76,7 @@ import FundsHub from './features/FundsHub'
 import AuthPortal, { type SignupPayload } from './auth/AuthPortal'
 import AdminDashboard from './admin/AdminDashboard'
 
-type View = 'overview' | 'assets' | 'tiers' | 'synthetic' | 'institutions' | 'settings' | 'kyc_hub' | 'profile' | 'wallet' | 'funds' | 'help' | 'positions' | 'verification'
+type View = 'overview' | 'assets' | 'tiers' | 'synthetic' | 'institutions' | 'settings' | 'kyc_hub' | 'profile' | 'wallet' | 'funds' | 'help' | 'positions' | 'history' | 'verification'
 type AuthMode = 'login' | 'signup'
 type AccountType = 'none' | 'demo' | 'live'
 type Theme = 'dark' | 'light' | 'midnight' | 'cyberpunk'
@@ -163,6 +163,35 @@ type ClosedTrade = {
   closedAt: string
 }
 
+type FundingHistoryRecord = {
+  id: string
+  type: 'deposit' | 'withdrawal'
+  amount: number
+  creditedAmount: number
+  network: string
+  reference?: string
+  status: 'pending' | 'approved' | 'rejected' | 'flagged'
+  createdAt: string
+}
+
+type FundingHistoryDraft = Omit<FundingHistoryRecord, 'id' | 'createdAt'> & {
+  id?: string
+  createdAt?: string
+}
+
+type ContractTradeHistoryRecord = {
+  id: string
+  market: string
+  contract: string
+  direction: string
+  stake: number
+  pnl: number
+  status: 'won' | 'lost'
+  closedAt: string
+}
+
+type HistoryFilter = 'all' | 'trades' | 'deposits' | 'withdrawals'
+
 type LoginForm = { email: string; password: string }
 type SignupForm = { fullName: string; email: string; phone: string; country: string; password: string; confirmPassword: string }
 
@@ -171,6 +200,7 @@ const navigation: { id: View; label: string; icon: typeof LayoutDashboard }[] = 
   { id: 'synthetic', label: 'Synthetic', icon: TrendingUp },
   { id: 'tiers', label: 'Investments', icon: CandlestickChart },
   { id: 'funds', label: 'Wallet', icon: Wallet },
+  { id: 'history', label: 'History', icon: Clock },
   { id: 'profile', label: 'Profile', icon: UserRound },
 ]
 
@@ -829,6 +859,7 @@ export default function App() {
     { id: 'p-synthetic', title: 'Synthetic Trading', desc: '1s Synthetic indices & contract trading terminal', view: 'synthetic' as View, icon: TrendingUp },
     { id: 'p-tiers', title: 'Investments & Plans', desc: '21-day yield curve investment tiers', view: 'tiers' as View, icon: CandlestickChart },
     { id: 'p-wallet', title: 'Wallet & Treasury', desc: 'M-Pesa & Crypto deposits (+50% Bonus), withdrawals', view: 'wallet' as View, icon: Wallet },
+    { id: 'p-history', title: 'History', desc: 'Closed trades, profit and loss, deposits and withdrawals', view: 'history' as View, icon: Clock },
     { id: 'p-positions', title: 'Open Positions & History', desc: 'Active running trades and P&L history', view: 'positions' as View, icon: Clock },
     { id: 'p-profile', title: 'Profile & Verification', desc: 'User identity KYC verification & settings', view: 'profile' as View, icon: UserRound },
     { id: 'p-settings', title: 'Admin Dashboard', desc: 'Platform management and audit controls', view: 'settings' as View, icon: Settings },
@@ -882,6 +913,8 @@ export default function App() {
   // Open & Closed Trades State for Real Trades management
   const [openPositions, setOpenPositions] = useState<OpenPosition[]>([])
   const [closedTrades, setClosedTrades] = useState<ClosedTrade[]>([])
+  const [fundingHistory, setFundingHistory] = useState<FundingHistoryRecord[]>([])
+  const [contractHistory, setContractHistory] = useState<ContractTradeHistoryRecord[]>([])
   const positionIdRef = useRef(0)
 
   // Theme State (`dark` | `light`) with automatic device theme preference detection
@@ -963,6 +996,43 @@ export default function App() {
 
   // User & Profile State
   const [user, setUser] = useState<{ id: string; fullName: string; email: string; phone: string; country: string; avatarPath: string | null; role: 'client' | 'admin'; emailVerified: boolean; accountStatus: 'pending' | 'active' } | null>(null)
+  const [historyOwner, setHistoryOwner] = useState<string | null>(null)
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all')
+  const [historySearch, setHistorySearch] = useState('')
+
+  const historyOwnerKey = user?.id ?? 'guest'
+
+  useEffect(() => {
+    const closedKey = `binarypip_closed_trades_${historyOwnerKey}`
+    const fundingKey = `binarypip_funding_history_${historyOwnerKey}`
+    const contractsKey = `binarypip_contract_history_${historyOwnerKey}`
+    try {
+      const storedTrades: unknown = JSON.parse(localStorage.getItem(closedKey) ?? '[]')
+      setClosedTrades(Array.isArray(storedTrades) ? storedTrades as ClosedTrade[] : [])
+    } catch {
+      setClosedTrades([])
+    }
+    try {
+      const storedFunding: unknown = JSON.parse(localStorage.getItem(fundingKey) ?? '[]')
+      setFundingHistory(Array.isArray(storedFunding) ? storedFunding as FundingHistoryRecord[] : [])
+    } catch {
+      setFundingHistory([])
+    }
+    try {
+      const storedContracts: unknown = JSON.parse(localStorage.getItem(contractsKey) ?? '[]')
+      setContractHistory(Array.isArray(storedContracts) ? storedContracts as ContractTradeHistoryRecord[] : [])
+    } catch {
+      setContractHistory([])
+    }
+    setHistoryOwner(historyOwnerKey)
+  }, [historyOwnerKey])
+
+  useEffect(() => {
+    if (historyOwner !== historyOwnerKey) return
+    localStorage.setItem(`binarypip_closed_trades_${historyOwnerKey}`, JSON.stringify(closedTrades.slice(0, 500)))
+    localStorage.setItem(`binarypip_funding_history_${historyOwnerKey}`, JSON.stringify(fundingHistory.slice(0, 500)))
+    localStorage.setItem(`binarypip_contract_history_${historyOwnerKey}`, JSON.stringify(contractHistory.slice(0, 500)))
+  }, [closedTrades, contractHistory, fundingHistory, historyOwner, historyOwnerKey])
 
   const syncSyntheticTerminalAccount = useCallback(() => {
     const frameWindow = syntheticTerminalRef.current?.contentWindow
@@ -1022,6 +1092,22 @@ export default function App() {
       } else if (message?.type === 'EXSTRADE_BALANCE_UPDATE' && message.accountType === 'demo' && demoAccountName) {
         const nextBalance = Number(message.balance)
         if (Number.isFinite(nextBalance) && nextBalance >= 0) setDemoBalance(nextBalance)
+      } else if (message?.type === 'EXSTRADE_TRADE_CLOSED' && message.accountType === 'demo') {
+        const trade = message.trade
+        const pnl = Number(trade?.pnl)
+        const stake = Number(trade?.stake)
+        if (!trade || typeof trade.id !== 'string' || !Number.isFinite(pnl) || !Number.isFinite(stake)) return
+        const record: ContractTradeHistoryRecord = {
+          id: trade.id,
+          market: String(trade.market || 'Synthetic'),
+          contract: String(trade.contract || 'Contract'),
+          direction: String(trade.direction || ''),
+          stake,
+          pnl,
+          status: trade.status === 'won' ? 'won' : 'lost',
+          closedAt: String(trade.closedAt || new Date().toISOString()),
+        }
+        setContractHistory(current => [record, ...current.filter(item => item.id !== record.id)].slice(0, 500))
       }
     }
 
@@ -1329,7 +1415,47 @@ export default function App() {
             pnl: Number(t.profit_loss),
             closedAt: new Date(t.closed_at || t.created_at).toISOString().replace('T', ' ').substring(0, 19),
           }))
-        if (closed.length > 0) setClosedTrades(closed)
+        if (closed.length > 0) {
+          setClosedTrades(current => {
+            const merged = new Map<number, ClosedTrade>(closed.map(trade => [trade.id, trade]))
+            current.forEach(trade => merged.set(trade.id, trade))
+            return [...merged.values()].sort((a, b) => new Date(b.closedAt).getTime() - new Date(a.closedAt).getTime())
+          })
+        }
+      }
+
+      const { data: transactionsData } = await client
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (mounted && Array.isArray(transactionsData)) {
+        const remoteFunding = transactionsData
+          .filter(transaction => transaction.type === 'deposit' || transaction.type === 'withdrawal')
+          .map((transaction): FundingHistoryRecord => ({
+            id: String(transaction.id),
+            type: transaction.type,
+            amount: Number(transaction.amount),
+            creditedAmount: Number(transaction.total_amount ?? transaction.amount),
+            network: String(transaction.gateway_network || 'Other'),
+            reference: transaction.reference_code ? String(transaction.reference_code) : undefined,
+            status: ['approved', 'pending', 'rejected', 'flagged'].includes(transaction.status) ? transaction.status : 'pending',
+            createdAt: String(transaction.created_at || new Date().toISOString()),
+          }))
+        setFundingHistory(current => {
+          const merged = new Map(remoteFunding.map(record => [record.id, record]))
+          current.forEach(record => {
+            const duplicateRemote = [...merged.values()].some(remote =>
+              remote.type === record.type &&
+              remote.amount === record.amount &&
+              remote.network === record.network &&
+              Math.abs(new Date(remote.createdAt).getTime() - new Date(record.createdAt).getTime()) < 10000
+            )
+            if (!merged.has(record.id) && !duplicateRemote) merged.set(record.id, record)
+          })
+          return [...merged.values()].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        })
       }
     }
 
@@ -1600,6 +1726,15 @@ export default function App() {
     })
   }
 
+  const recordFundingHistory = (draft: FundingHistoryDraft) => {
+    const record: FundingHistoryRecord = {
+      ...draft,
+      id: draft.id ?? `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      createdAt: draft.createdAt ?? new Date().toISOString(),
+    }
+    setFundingHistory(current => [record, ...current.filter(item => item.id !== record.id)].slice(0, 500))
+  }
+
   // Account Selector Handler (with Auth Login Check for Real Account & Funds Redirection)
   const handleAccountSelectChange = (nextType: AccountType) => {
     if (nextType === 'demo') {
@@ -1649,7 +1784,7 @@ export default function App() {
 
     if (supabase && user) {
       // 1. Record transaction in Supabase
-      await supabase.from('transactions').insert({
+      const { data: transaction } = await supabase.from('transactions').insert({
         user_id: user.id,
         type: 'deposit',
         amount: depositAmount,
@@ -1658,6 +1793,12 @@ export default function App() {
         gateway_network: network,
         reference_code: reference || '',
         status: 'approved',
+      }).select('id, created_at').maybeSingle()
+
+      recordFundingHistory({
+        id: transaction?.id ? String(transaction.id) : undefined,
+        createdAt: transaction?.created_at ? String(transaction.created_at) : undefined,
+        type: 'deposit', amount: depositAmount, creditedAmount: totalAdded, network, reference, status: 'approved',
       })
 
       // 2. Update wallet live balance in Supabase
@@ -1666,6 +1807,8 @@ export default function App() {
         live_balance: nextLiveBalance,
         updated_at: new Date().toISOString(),
       })
+    } else {
+      recordFundingHistory({ type: 'deposit', amount: depositAmount, creditedAmount: totalAdded, network, reference, status: 'approved' })
     }
 
     showNotice(`🎉 Real Account Deposit of $${depositAmount.toFixed(2)} + $${bonus.toFixed(2)} (50% Deposit Bonus) = $${totalAdded.toFixed(2)} credited!${refNote}`)
@@ -1684,7 +1827,7 @@ export default function App() {
 
     if (supabase && user) {
       // 1. Record transaction in Supabase
-      await supabase.from('transactions').insert({
+      const { data: transaction } = await supabase.from('transactions').insert({
         user_id: user.id,
         type: 'deposit',
         amount: depAmount,
@@ -1692,6 +1835,12 @@ export default function App() {
         total_amount: totalAdded,
         gateway_network: selectedNetwork,
         status: 'approved',
+      }).select('id, created_at').maybeSingle()
+
+      recordFundingHistory({
+        id: transaction?.id ? String(transaction.id) : undefined,
+        createdAt: transaction?.created_at ? String(transaction.created_at) : undefined,
+        type: 'deposit', amount: depAmount, creditedAmount: totalAdded, network: selectedNetwork, status: 'approved',
       })
 
       // 2. Update wallet live balance in Supabase
@@ -1700,10 +1849,40 @@ export default function App() {
         live_balance: nextLiveBalance,
         updated_at: new Date().toISOString(),
       })
+    } else {
+      recordFundingHistory({ type: 'deposit', amount: depAmount, creditedAmount: totalAdded, network: selectedNetwork, status: 'approved' })
     }
 
     showNotice(`🎉 Deposit of $${depAmount.toFixed(2)} + $${bonus.toFixed(2)} (50% Deposit Bonus) = $${totalAdded.toFixed(2)} credited to your Real Account!`)
     closeModal()
+  }
+
+  const handleFundsWithdrawalRequest = async (withdrawalAmount: number, network: string, destination: string) => {
+    let transactionId: string | undefined
+    let createdAt: string | undefined
+    if (supabase && user) {
+      const { data: transaction } = await supabase.from('transactions').insert({
+        user_id: user.id,
+        type: 'withdrawal',
+        amount: withdrawalAmount,
+        bonus_amount: 0,
+        total_amount: withdrawalAmount,
+        gateway_network: network,
+        reference_code: destination,
+        status: 'pending',
+      }).select('id, created_at').maybeSingle()
+      transactionId = transaction?.id ? String(transaction.id) : undefined
+      createdAt = transaction?.created_at ? String(transaction.created_at) : undefined
+    }
+    recordFundingHistory({
+      id: transactionId,
+      createdAt,
+      type: 'withdrawal',
+      amount: withdrawalAmount,
+      creditedAmount: withdrawalAmount,
+      network,
+      status: 'pending',
+    })
   }
 
   // Withdrawal Submit
@@ -2068,7 +2247,7 @@ export default function App() {
               </button>
             </div>
             {/* AI Scanner toggle */}
-            <button type="button" className={`tv-btn-icon ${aiScannerOpen ? 'active' : ''}`} onClick={() => setAiScannerOpen(p => !p)} style={{ color: aiScannerOpen ? '#00e5ff' : undefined }}>
+            <button type="button" className={`tv-btn-icon ${aiScannerOpen ? 'active' : ''}`} onClick={() => setAiScannerOpen(p => !p)} style={{ color: aiScannerOpen ? '#20eb5a' : undefined }}>
               <Brain size={14} /> AI Scan
             </button>
             <span className="tv-desktop-only" style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -2391,6 +2570,144 @@ export default function App() {
     </div>
   )
 
+  const renderHistory = () => {
+    const currency = (value: number) => `$${Math.abs(value).toFixed(2)}`
+    const rows = [
+      ...closedTrades.map(trade => ({
+        id: `trade-${trade.id}`,
+        kind: 'trade' as const,
+        createdAt: trade.closedAt.includes('T') ? trade.closedAt : `${trade.closedAt.replace(' ', 'T')}Z`,
+        title: `${trade.type} ${trade.symbol}`,
+        details: `${trade.lots} lots · ${trade.openPrice.toFixed(2)} → ${trade.closePrice.toFixed(2)}`,
+        status: 'closed',
+        amount: trade.pnl,
+      })),
+      ...contractHistory.map(trade => ({
+        id: `contract-${trade.id}`,
+        kind: 'trade' as const,
+        createdAt: trade.closedAt,
+        title: `${trade.direction === 'higher' ? 'Higher' : 'Lower'} ${trade.market}`,
+        details: `${trade.contract} · Stake ${currency(trade.stake)} · ${trade.status.toUpperCase()}`,
+        status: trade.status,
+        amount: trade.pnl,
+      })),
+      ...fundingHistory.map(record => ({
+        id: `funding-${record.id}`,
+        kind: record.type,
+        createdAt: record.createdAt,
+        title: record.type === 'deposit' ? 'Deposit' : 'Withdrawal',
+        details: `${record.network}${record.type === 'deposit' && record.reference ? ` · Ref ${record.reference}` : ''}`,
+        status: record.status,
+        amount: record.amount,
+        creditedAmount: record.creditedAmount,
+      })),
+    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+    const visibleRows = rows.filter(row => {
+      const filterMatch = historyFilter === 'all' ||
+        (historyFilter === 'trades' && row.kind === 'trade') ||
+        (historyFilter === 'deposits' && row.kind === 'deposit') ||
+        (historyFilter === 'withdrawals' && row.kind === 'withdrawal')
+      const query = historySearch.trim().toLowerCase()
+      return filterMatch && (!query || `${row.title} ${row.details} ${row.status}`.toLowerCase().includes(query))
+    })
+    const realizedPnl = [...closedTrades.map(trade => trade.pnl), ...contractHistory.map(trade => trade.pnl)]
+      .reduce((total, pnl) => total + pnl, 0)
+    const depositsTotal = fundingHistory
+      .filter(record => record.type === 'deposit' && record.status === 'approved')
+      .reduce((total, record) => total + record.amount, 0)
+    const withdrawalsTotal = fundingHistory
+      .filter(record => record.type === 'withdrawal' && record.status !== 'rejected')
+      .reduce((total, record) => total + record.amount, 0)
+    const filters: { id: HistoryFilter; label: string }[] = [
+      { id: 'all', label: 'All' },
+      { id: 'trades', label: 'Trades' },
+      { id: 'deposits', label: 'Deposits' },
+      { id: 'withdrawals', label: 'Withdrawals' },
+    ]
+
+    return (
+      <section className="profile-monitor-card history-page">
+        <div className="history-heading">
+          <div>
+            <span className="section-kicker">ACCOUNT ACTIVITY</span>
+            <h2>History</h2>
+            <p>Closed trade results and account funding activity.</p>
+          </div>
+          <Clock size={22} color="var(--mint-teal)" />
+        </div>
+
+        <div className="history-summary-grid">
+          <div className="history-summary-item">
+            <span>Realized P&amp;L</span>
+            <strong className={realizedPnl >= 0 ? 'ticker-up' : 'ticker-down'}>{realizedPnl < 0 ? '-' : realizedPnl > 0 ? '+' : ''}{currency(realizedPnl)}</strong>
+            <small>{closedTrades.length + contractHistory.length} closed {closedTrades.length + contractHistory.length === 1 ? 'trade' : 'trades'}</small>
+          </div>
+          <div className="history-summary-item">
+            <span>Deposits</span>
+            <strong>{currency(depositsTotal)}</strong>
+            <small>Approved deposits</small>
+          </div>
+          <div className="history-summary-item">
+            <span>Withdrawals</span>
+            <strong>{currency(withdrawalsTotal)}</strong>
+            <small>Approved and pending requests</small>
+          </div>
+        </div>
+
+        <div className="history-controls">
+          <div className="history-filter-group" role="group" aria-label="Filter history">
+            {filters.map(filter => (
+              <button
+                type="button"
+                key={filter.id}
+                className={`history-filter ${historyFilter === filter.id ? 'active' : ''}`}
+                aria-pressed={historyFilter === filter.id}
+                onClick={() => setHistoryFilter(filter.id)}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+          <label className="history-search">
+            <Search size={15} aria-hidden="true" />
+            <input type="search" value={historySearch} onChange={event => setHistorySearch(event.target.value)} placeholder="Search history" aria-label="Search history" />
+          </label>
+        </div>
+
+        <div className="history-table-wrap">
+          {visibleRows.length === 0 ? (
+            <div className="history-empty">
+              <Clock size={24} />
+              <strong>{rows.length === 0 ? 'No history yet' : 'No matching activity'}</strong>
+              <span>{rows.length === 0 ? 'Closed trades, deposits and withdrawal requests will appear here.' : 'Try another filter or search term.'}</span>
+            </div>
+          ) : (
+            <table className="pro-data-table history-table">
+              <thead>
+                <tr><th>Date</th><th>Activity</th><th>Details</th><th>Status</th><th>Amount / P&amp;L</th></tr>
+              </thead>
+              <tbody>
+                {visibleRows.map(row => {
+                  const value = row.kind === 'trade' ? row.amount : row.kind === 'deposit' ? row.creditedAmount : -row.amount
+                  return (
+                    <tr key={row.id}>
+                      <td><small>{new Date(row.createdAt).toLocaleString()}</small></td>
+                      <td><strong>{row.title}</strong></td>
+                      <td>{row.details}{row.kind === 'deposit' && row.creditedAmount > row.amount && <small className="history-bonus">Includes {currency(row.creditedAmount - row.amount)} bonus</small>}</td>
+                      <td><span className={`history-status history-status-${row.status}`}>{row.status}</span></td>
+                      <td><strong className={value >= 0 ? 'ticker-up' : 'ticker-down'}>{value < 0 ? '-' : value > 0 ? '+' : ''}{currency(value)}</strong></td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </section>
+    )
+  }
+
   // VIEW: OPEN & CLOSED TRADES PAGE (/trades)
   const renderOpenAndClosedTrades = () => (
     <section className="profile-monitor-card">
@@ -2634,7 +2951,7 @@ export default function App() {
     const activeMetrics    = getInvestmentMetrics(activeInvestment, activeStake)
 
     const riskColor: Record<string, string> = {
-      Low: '#00e676', Moderate: '#00e5ff', Growth: '#f2b94b', Active: '#ff9800', Elite: '#d500f9',
+      Low: '#00e676', Moderate: '#20eb5a', Growth: '#f2b94b', Active: '#ff9800', Elite: '#00b84a',
     }
 
     return (
@@ -2660,7 +2977,7 @@ export default function App() {
           <div className="investment-penalty-banner">
             <Activity size={14} color="#ff1744" style={{ flexShrink: 0 }} />
             <span>
-              Active principal: <strong style={{ color: '#00e5ff' }}>${activePrincipal.toFixed(2)}</strong>
+              Active principal: <strong style={{ color: '#20eb5a' }}>${activePrincipal.toFixed(2)}</strong>
               &nbsp;·&nbsp; Projected 21-day payout: <strong style={{ color: '#00e676' }}>${projectedPayout.toFixed(2)}</strong>
               &nbsp;·&nbsp; Trading losses reduce both the principal and the interest payout proportionally.
             </span>
@@ -2673,7 +2990,7 @@ export default function App() {
             const coinStake   = investmentStake[coin.id] ?? coin.minInvestment
             const coinMetrics = getInvestmentMetrics(coin, coinStake)
             const isSelected  = selectedInvestmentTier === coin.id
-            const rc          = riskColor[coin.risk] ?? '#00e5ff'
+            const rc          = riskColor[coin.risk] ?? '#20eb5a'
 
             return (
               <article
@@ -2912,7 +3229,7 @@ export default function App() {
             body > div.flex-1.flex.overflow-hidden > aside:last-child { width: 100% !important; height: auto; flex: none !important; }
             body > footer { height: auto !important; min-height: 0 !important; flex: none !important; }
           }
-          .synthetic-tool-active { color: #2dd4bf !important; background: rgba(20, 184, 166, 0.15) !important; border-color: rgba(45, 212, 191, 0.45) !important; }
+          .synthetic-tool-active { color: #2dd4bf !important; background: rgba(32,235,90, 0.15) !important; border-color: rgba(45, 212, 191, 0.45) !important; }
         `
         frameDocument.head.append(responsiveStyles)
         const accountBridge = frameDocument.createElement('script')
@@ -2935,7 +3252,7 @@ export default function App() {
             headerActions.insertBefore(accountSelect, accountPanel)
             resetButton?.remove()
 
-            if (accountPanel) (accountPanel as HTMLElement).style.display = 'none'
+            if (accountPanel) accountPanel.style.display = 'none'
 
             const createButton = document.createElement('button')
             createButton.type = 'button'
@@ -2947,6 +3264,12 @@ export default function App() {
             createButton.addEventListener('click', () => parent.postMessage({ type: 'EXSTRADE_CREATE_DEMO' }, location.origin))
 
             let selectedAccountType = 'none'
+            const publishBalance = () => {
+              const balance = Number.parseFloat(accountBalanceDisplay.textContent?.replace(/[^0-9.-]/g, '') ?? '0')
+              if (Number.isFinite(balance)) {
+                parent.postMessage({ type: 'EXSTRADE_BALANCE_UPDATE', accountType: selectedAccountType, balance }, location.origin)
+              }
+            }
             accountSelect.addEventListener('change', () => parent.postMessage({ type: 'EXSTRADE_ACCOUNT_SELECT', accountType: accountSelect.value }, location.origin))
             window.addEventListener('message', (event) => {
               if (event.origin !== location.origin || event.source !== parent || event.data?.type !== 'EXSTRADE_ACCOUNT_SYNC') return
@@ -3233,7 +3556,7 @@ export default function App() {
                       </option>
                     ))}
                   </select>
-                  <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(20, 184, 166, 0.15)', color: 'var(--mint-teal)', fontWeight: 700, border: '1px solid rgba(20, 184, 166, 0.3)' }}>
+                  <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(32,235,90, 0.15)', color: 'var(--mint-teal)', fontWeight: 700, border: '1px solid rgba(32,235,90, 0.3)' }}>
                     {q.category}
                   </span>
                 </div>
@@ -3545,6 +3868,7 @@ export default function App() {
         wallets={walletBalances}
         onTransfer={handleWalletTransfer}
         onDepositRequest={handleFundsDepositRequest}
+        onWithdrawalRequest={handleFundsWithdrawalRequest}
         adminAddresses={adminAddresses.map(a => ({ ...a, enabled: true }))}
         showNotice={showNotice}
         minDepositUSD={minDepositUSD}
@@ -3631,7 +3955,7 @@ export default function App() {
   // VIEW 11: HELP CENTER
   const renderHelpCenter = () => (
     <section className="profile-monitor-card" style={{ maxWidth: '720px', margin: '0 auto' }}>
-      <h3>NEXSMARKETS Help &amp; Priority Support</h3>
+      <h3>BinaryPip Help &amp; Priority Support</h3>
       <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Search guides or speak with an institutional support engineer.</p>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '16px' }}>
@@ -3655,7 +3979,7 @@ export default function App() {
 
 
 
-  // Auth Screen — NEXSMARKETS Portal
+  // Auth Screen — BinaryPip Portal
   const handleAuthLogin = async (email: string, password: string): Promise<string | null> => {
     // Admin secret check — same login page, redirects to admin dashboard
     const ADMIN_EMAIL = 'mutuagedeon77@gmail.com'
@@ -3711,7 +4035,7 @@ export default function App() {
         setAccountType('demo')
       }
       setActiveView('synthetic')
-      showNotice(`Welcome to NEXSMARKETS, ${payload.fullName}! Your account is ready.`)
+      showNotice(`Welcome to BinaryPip, ${payload.fullName}! Your account is ready.`)
       return null
     }
     setAuthSubmitting(true)
@@ -3753,7 +4077,7 @@ export default function App() {
         setAccountType('demo')
       }
       setActiveView('synthetic')
-      showNotice(`Welcome to NEXSMARKETS, ${payload.fullName}! Your account is ready.`)
+      showNotice(`Welcome to BinaryPip, ${payload.fullName}! Your account is ready.`)
       return null
     }
     if (payload.accountMode === 'demo') {
@@ -3762,7 +4086,7 @@ export default function App() {
       setAccountType('demo')
     }
     setActiveView('synthetic')
-    showNotice(`Welcome to NEXSMARKETS, ${payload.fullName}!`)
+    showNotice(`Welcome to BinaryPip, ${payload.fullName}!`)
     return null
   }
 
@@ -3878,7 +4202,7 @@ export default function App() {
             {/* Header */}
             <div className="kyc-prompt-header">
               <div className="kyc-prompt-icon">
-                <ShieldCheck size={28} color="#00e5ff" />
+                <ShieldCheck size={28} color="#20eb5a" />
               </div>
               <div>
                 <div className="kyc-prompt-kicker">IDENTITY VERIFICATION</div>
@@ -3960,8 +4284,8 @@ export default function App() {
       {/* COMPACT/EXPANDABLE SIDEBAR */}
       <aside className={`sidebar ${mobileMenuOpen ? 'sidebar-open' : ''}`}>
         <a className="brand" href="#overview" onClick={(e) => { e.preventDefault(); changeView('overview') }}>
-          <img src="/logo.jpeg" alt="NEXSMARKETS Logo" style={{ width: 32, height: 32, borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }} />
-          <span className="brand-text">NEXSMARKETS</span>
+          <img src="/binarypip-mark.svg" alt="BinaryPip logo" style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0 }} />
+          <span className="brand-text">BinaryPip</span>
         </a>
 
         <nav className="primary-nav">
@@ -3987,11 +4311,11 @@ export default function App() {
         <div className="sidebar-bottom">
           <button type="button" className="profile-button" onClick={() => changeView('profile')}>
             <div className="profile-avatar">
-              {user?.fullName ? user.fullName.slice(0, 2).toUpperCase() : 'NX'}
+              {user?.fullName ? user.fullName.slice(0, 2).toUpperCase() : 'BP'}
             </div>
             <div className="profile-copy">
               <strong>{user?.fullName || 'Trader'}</strong>
-              <small>{user?.email || 'nexsmarkets.com'}</small>
+              <small>{user?.email || 'binarypip.com'}</small>
             </div>
             <ChevronDown size={14} className="nav-label" />
           </button>
@@ -4028,7 +4352,7 @@ export default function App() {
                   <ArrowLeft size={14} />
                 </button>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <img src="/logo.jpeg" alt="NEXSMARKETS Logo" style={{ width: 22, height: 22, borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }} />
+                  <img src="/binarypip-mark.svg" alt="BinaryPip logo" style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0 }} />
                   <div className="breadcrumb" style={{ fontSize: '12px' }}>
                     <strong>{activeView.toUpperCase()}</strong>
                   </div>
@@ -4189,6 +4513,7 @@ export default function App() {
           {activeView === 'tiers' && renderCryptoAllocationLevels()}
           {activeView === 'institutions' && renderInstitutionsView()}
           {activeView === 'positions' && renderOpenAndClosedTrades()}
+          {activeView === 'history' && renderHistory()}
           {(activeView === 'wallet' || activeView === 'funds') && renderFundsManagement()}
           {activeView === 'settings' && renderAdminSettings()}
           {activeView === 'kyc_hub' && renderKycHub()}
@@ -4196,15 +4521,15 @@ export default function App() {
           {activeView === 'help' && renderHelpCenter()}
         </div>
 
-        {/* GLOBAL NEXSMARKETS FOOTER */}
+        {/* GLOBAL BINARYPIP FOOTER */}
         <footer className="global-platform-footer">
           <div className="global-footer-inner">
             <div className="global-footer-brand">
-              <img src="/logo.jpeg" alt="NEXSMARKETS Logo" style={{ width: 26, height: 26, borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }} />
-              <span className="global-footer-brand-title">NEXSMARKETS PRO TERMINAL</span>
+              <img src="/binarypip-mark.svg" alt="BinaryPip logo" style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0 }} />
+              <span className="global-footer-brand-title">BinaryPip PRO TERMINAL</span>
             </div>
             <div className="global-footer-copy">
-              © {new Date().getFullYear()} NEXSMARKETS Terminal. All rights reserved. Ultra-low latency synthetic &amp; multi-asset trading engine.
+              © {new Date().getFullYear()} BinaryPip Terminal. All rights reserved. Ultra-low latency synthetic &amp; multi-asset trading engine.
             </div>
             <div className="global-footer-status">
               <span className="global-footer-dot"></span> System Operational • 1s Synthetic Ticks Active
@@ -4292,7 +4617,7 @@ export default function App() {
             </div>
 
             {/* 50% Deposit Bonus Highlight Box */}
-            <div style={{ background: 'linear-gradient(135deg, rgba(0, 230, 118, 0.15), rgba(0, 229, 255, 0.08))', border: '1px solid rgba(0, 230, 118, 0.35)', borderRadius: '10px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' }}>
+            <div style={{ background: 'linear-gradient(135deg, rgba(0, 230, 118, 0.15), rgba(32,235,90, 0.08))', border: '1px solid rgba(0, 230, 118, 0.35)', borderRadius: '10px', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' }}>
               <Sparkles size={22} color="#00e676" style={{ flexShrink: 0 }} />
               <div style={{ fontSize: '11px' }}>
                 <strong style={{ color: '#00e676', display: 'block', fontSize: '12px', letterSpacing: '0.3px' }}>🎁 50% INSTANT REAL ACCOUNT DEPOSIT BONUS</strong>
@@ -4376,7 +4701,7 @@ export default function App() {
       {pageLoading && (
         <div className="page-transition-loader" aria-live="polite">
           <div className="page-loader-brand">
-            <img src="/logo.jpeg" alt="NEXSMARKETS Logo" style={{ width: 44, height: 44, borderRadius: '10px', objectFit: 'cover' }} />
+            <img src="/binarypip-mark.svg" alt="BinaryPip logo" style={{ width: 44, height: 44, objectFit: 'contain' }} />
           </div>
 
           {/* Clockwise Colliding Dot Circle Spinner */}
@@ -4386,7 +4711,7 @@ export default function App() {
             ))}
           </div>
 
-          <span className="page-loader-text">Loading NEXSMARKETS Terminal...</span>
+          <span className="page-loader-text">Loading BinaryPip Terminal...</span>
           <div className="page-loader-bar"><div className="page-loader-progress"></div></div>
         </div>
       )}
@@ -4399,6 +4724,7 @@ export default function App() {
           { id: 'synthetic' as View, label: 'Trade', icon: TrendingUp },
           { id: 'tiers' as View, label: 'Invest', icon: CandlestickChart },
           { id: 'funds' as View, label: 'Wallet', icon: Wallet },
+          { id: 'history' as View, label: 'History', icon: Clock },
           { id: 'profile' as View, label: 'Profile', icon: UserRound },
         ]).map((item) => {
           const Icon = item.icon

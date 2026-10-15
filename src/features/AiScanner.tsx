@@ -110,13 +110,13 @@ export default function AiScanner({ symbol, currentPrice, onAutoTrade, pricePrec
   }, [symbol])
 
   const strengthColor = (s: AiSignal['strength']) =>
-    s === 'STRONG' ? '#00e676' : s === 'MODERATE' ? '#00e5ff' : '#f2b94b'
+    s === 'STRONG' ? '#00e676' : s === 'MODERATE' ? '#20eb5a' : '#f2b94b'
 
   return (
     <div className="ai-scanner-panel">
       <div className="ai-scanner-header">
         <div className="ai-scanner-title">
-          <Brain size={15} color="#00e5ff" />
+          <Brain size={15} color="#20eb5a" />
           <span>AI Entry Scanner</span>
           <span className={`ai-scanner-status ${autoScan ? 'ai-status-active' : ''}`}>
             <span className="ai-pulse" /> {autoScan ? 'AUTO' : 'MANUAL'}

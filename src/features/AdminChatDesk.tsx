@@ -43,7 +43,7 @@ export default function AdminChatDesk({ agentName }: Props) {
       {/* Sidebar: session list */}
       <div className="acd-sidebar">
         <div className="acd-sidebar-head">
-          <MessageSquare size={14} color="#00e5ff" />
+          <MessageSquare size={14} color="#20eb5a" />
           <strong>Live Chat Inbox</strong>
           {totalUnread > 0 && <span className="acd-unread-badge">{totalUnread}</span>}
           <button className="acd-refresh-btn" onClick={refresh} title="Refresh"><RefreshCw size={12} /></button>
@@ -106,7 +106,7 @@ export default function AdminChatDesk({ agentName }: Props) {
                   : '#f04452'
               }}>{activeSession.userKycStatus.toUpperCase()}</strong></div>
               <div className="acd-context-row"><span>Account</span><strong>{activeSession.userAccountType}</strong></div>
-              <div className="acd-context-row"><span>Session</span><code style={{ fontSize: '10px', color: '#5aa7ff' }}>{activeSession.id.slice(0, 16)}…</code></div>
+              <div className="acd-context-row"><span>Session</span><code style={{ fontSize: '10px', color: '#20eb5a' }}>{activeSession.id.slice(0, 16)}…</code></div>
             </div>
 
             {/* Messages */}
@@ -120,7 +120,7 @@ export default function AdminChatDesk({ agentName }: Props) {
                   <div className="acd-bubble">{msg.text}</div>
                   <div className="acd-bubble-time">
                     {fmtTime(msg.timestamp)}
-                    {msg.sender === 'agent' && <CheckCheck size={11} color="#00e5ff" style={{ marginLeft: 4 }} />}
+                    {msg.sender === 'agent' && <CheckCheck size={11} color="#20eb5a" style={{ marginLeft: 4 }} />}
                   </div>
                 </div>
               ))}

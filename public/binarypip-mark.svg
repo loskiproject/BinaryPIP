@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 370" role="img" aria-labelledby="title">
+  <title id="title">BinaryPip mark</title>
+  <defs>
+    <linearGradient id="green" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#00d94f"/>
+      <stop offset="1" stop-color="#83ff43"/>
+    </linearGradient>
+    <linearGradient id="silver" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff"/>
+      <stop offset="1" stop-color="#aebbc9"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#silver)" fill-rule="evenodd" d="M40 12h174c84 0 137 42 137 106 0 37-19 65-55 82 46 17 72 49 72 94 0 69-58 108-151 108H23l34-51h157c58 0 91-21 91-61s-33-62-91-62h-69l28-48h38c52 0 81-20 81-56s-29-56-81-56H74z M105 64 78 167h112c44 0 68-18 68-51 0-34-27-52-78-52z M91 239l-31 112h151c57 0 86-19 86-56 0-36-30-56-86-56z"/>
+  <g opacity=".96">
+    <path d="M133 170v-54m0 0v-20m0 20h20v34h-20" fill="#ff304d" stroke="#ff304d" stroke-width="7" stroke-linecap="round"/>
+    <path d="M194 172V79m0 0V58m0 21h21v73h-21" fill="#25ef52" stroke="#25ef52" stroke-width="7" stroke-linecap="round"/>
+    <path d="M244 160V95m0 0V73m0 22h20v50h-20" fill="#25ef52" stroke="#25ef52" stroke-width="7" stroke-linecap="round"/>
+  </g>
+  <path fill="url(#green)" d="M33 348c-22-9-24-29-3-49L321 130l-20-18 120-31-42 116-17-27L63 360c-11 6-22 1-30-12z"/>
+</svg>

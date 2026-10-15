@@ -25,6 +25,7 @@ type Props = {
   wallets: WalletBalances
   onTransfer: (from: keyof WalletBalances, to: keyof WalletBalances, amount: number) => void
   onDepositRequest: (amount: number, network: string, reference?: string) => void
+  onWithdrawalRequest: (amount: number, network: string, destination: string) => void
   adminAddresses: DepositAddress[]
   showNotice: (msg: string) => void
   minDepositUSD?: number
@@ -33,7 +34,7 @@ type Props = {
 }
 
 const WALLET_META: Record<keyof WalletBalances, { label: string; sub: string; color: string }> = {
-  main:       { label: 'Main',        sub: 'Primary',   color: '#00e5ff' },
+  main:       { label: 'Main',        sub: 'Primary',   color: '#20eb5a' },
   synthetic:  { label: 'Synthetic',   sub: 'Synthetic', color: '#00e676' },
   liveMarket: { label: 'Live Market', sub: 'Live trade', color: '#f2b94b' },
 }
@@ -47,7 +48,7 @@ const COIN_ICONS: Record<string, { color: string; symbol: string }> = {
   DOT:         { color: '#e6007a', symbol: '●' },
   'USDT-TRC20':{ color: '#26a17b', symbol: '₮' },
   'USDT-ERC20':{ color: '#26a17b', symbol: '₮' },
-  BNB:         { color: '#f0b90b', symbol: 'B' },
+  BNB:         { color: '#20eb5a', symbol: 'B' },
   LTC:         { color: '#bfbbbb', symbol: 'Ł' },
 }
 
@@ -64,7 +65,7 @@ const ACTIVITY = [
 type StkStep = 'form' | 'pushing' | 'waiting' | 'verify' | 'done' | 'error'
 
 export default function FundsHub({
-  wallets, onTransfer, onDepositRequest, adminAddresses, showNotice,
+  wallets, onTransfer, onDepositRequest, onWithdrawalRequest, adminAddresses, showNotice,
   minDepositUSD = 10, minDepositKES = 100, minWithdrawalUSD = 10,
 }: Props) {
   const [tab, setTab] = useState<'deposit' | 'withdraw' | 'transfer'>('deposit')
@@ -144,7 +145,7 @@ export default function FundsHub({
         const res = await fetch(`${supabaseUrl}/functions/v1/mpesa-stk-push`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseKey}`, 'apikey': supabaseKey },
-          body: JSON.stringify({ phone: mpPhone.trim(), amount: Math.ceil(kes), customerName: 'NEXSMARKETS CLIENT' }),
+          body: JSON.stringify({ phone: mpPhone.trim(), amount: Math.ceil(kes), customerName: 'BINARYPIP CLIENT' }),
         })
         const data = await res.json() as { success?: boolean; error?: string; checkoutRequestId?: string }
         if (!res.ok || !data.success) { setStkStep('error'); setStkError(data.error ?? 'STK Push failed.'); return }
@@ -175,6 +176,7 @@ export default function FundsHub({
     if (!amt || amt < minWithdrawalUSD) { showNotice(`Minimum withdrawal is $${minWithdrawalUSD}.`); return }
     if (wallets.main < amt) { showNotice('Insufficient main balance.'); return }
     if (!wAddr.trim()) { showNotice('Enter destination wallet address.'); return }
+    onWithdrawalRequest(amt, wGateway, wAddr.trim())
     showNotice(`✅ Withdrawal of $${fmt(amt)} via ${wGateway} submitted.`)
     setWAmt(''); setWAddr('')
   }
@@ -231,7 +233,7 @@ export default function FundsHub({
       {tab === 'deposit' && (
         <div className="th-deposit-grid">
           {/* 50% REAL ACCOUNT DEPOSIT BONUS BANNER */}
-          <div style={{ gridColumn: '1 / -1', background: 'linear-gradient(135deg, rgba(0, 230, 118, 0.15), rgba(0, 229, 255, 0.1))', border: '1px solid rgba(0, 230, 118, 0.35)', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+          <div style={{ gridColumn: '1 / -1', background: 'linear-gradient(135deg, rgba(0, 230, 118, 0.15), rgba(32,235,90, 0.1))', border: '1px solid rgba(0, 230, 118, 0.35)', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
             <Sparkles size={22} color="#00e676" style={{ flexShrink: 0 }} />
             <div>
               <div style={{ color: '#00e676', fontWeight: 800, fontSize: '13px', letterSpacing: '0.4px' }}>🎁 50% INSTANT REAL ACCOUNT DEPOSIT BONUS ACTIVE</div>
@@ -338,7 +340,7 @@ export default function FundsHub({
               <div className="th-stk-waiting">
                 <Smartphone size={32} color="#00e676" />
                 <strong>Check your phone!</strong>
-                <p>Prompt sent to <b style={{color:'#00e5ff'}}>{mpPhone}</b> for KES {parseFloat(mpKes).toLocaleString()}</p>
+                <p>Prompt sent to <b style={{color:'#20eb5a'}}>{mpPhone}</b> for KES {parseFloat(mpKes).toLocaleString()}</p>
                 <label className="th-field-label" style={{width:'100%'}}>
                   M-Pesa Code (from SMS)
                   <input className="th-input th-mono" placeholder="e.g. QJK7WXYZ12"
@@ -374,7 +376,7 @@ export default function FundsHub({
             {depositMethod !== 'mpesa' && stkStep === 'form' && (
               <div className="th-crypto-fields">
                 {activeAddr ? (
-                  <div style={{ background: 'rgba(0, 229, 255, 0.05)', border: '1px solid rgba(0, 229, 255, 0.25)', borderRadius: '12px', padding: '14px', marginBottom: '12px' }}>
+                  <div style={{ background: 'rgba(32,235,90, 0.05)', border: '1px solid rgba(32,235,90, 0.25)', borderRadius: '12px', padding: '14px', marginBottom: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                       <span style={{ fontSize: '10.5px', fontWeight: 800, color: 'var(--mint-teal)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
                         🎯 OFFICIAL DEPOSIT ADDRESS ({activeAddr.network})
@@ -448,7 +450,7 @@ export default function FundsHub({
               </>
             ) : (
               <>
-                <div className="th-panel-title" style={{color: COIN_ICONS[depositMethod]?.color ?? '#00e5ff'}}>
+                <div className="th-panel-title" style={{color: COIN_ICONS[depositMethod]?.color ?? '#20eb5a'}}>
                   {COIN_ICONS[depositMethod]?.symbol ?? '◈'} {depositMethod} DEPOSIT
                   <button className="th-help-btn" title="How to deposit">?</button>
                 </div>
@@ -489,7 +491,7 @@ export default function FundsHub({
       {tab === 'withdraw' && (
         <div className="th-simple-body">
           <div className="th-avail-row">
-            Available Balance: <strong style={{color:'#00e5ff'}}>${fmt(wallets.main)}</strong>
+            Available Balance: <strong style={{color:'#20eb5a'}}>${fmt(wallets.main)}</strong>
           </div>
           <div className="th-net-chips">
             {['USDT-TRC20','BTC','ETH','BANK_WIRE'].map(g => (

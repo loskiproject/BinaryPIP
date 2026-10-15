@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 96" role="img" aria-labelledby="title">
-  <title id="title">Exstrade Next-Gen Terminal</title>
+  <title id="title">binarypip Next-Gen Terminal</title>
   <defs>
     <linearGradient id="exGrad3d" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#00FF87"/>
@@ -21,7 +21,7 @@
   <path d="M24 36 L46 50 L46 74 L24 60 Z" fill="#00B8D9" opacity="0.8"/>
   <path d="M68 36 L46 50 L46 74 L68 60 Z" fill="#00FF87" opacity="0.9"/>
   <!-- Text Logo -->
-  <text x="104" y="62" fill="#F8FAFC" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="46" font-weight="800" letter-spacing="-1">EXSTRADE</text>
+  <text x="104" y="62" fill="#F8FAFC" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-size="46" font-weight="800" letter-spacing="-1">binarypip</text>
   <text x="352" y="38" fill="#60EFFF" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="11" font-weight="700" letter-spacing="2">PRO</text>
   <circle cx="388" cy="56" r="4" fill="#00FF87" filter="url(#glow)"/>
 </svg>

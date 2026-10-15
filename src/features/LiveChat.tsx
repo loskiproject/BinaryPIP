@@ -229,7 +229,7 @@ export default function LiveChat(props: UserChatProps) {
             <div className="chat-agent-info">
               <div className="chat-agent-avatar">S</div>
               <div>
-                <strong>Exstrade Support</strong>
+                <strong>BinaryPip Support</strong>
                 <span className={`chat-agent-status ${agentOnline ? 'chat-online' : ''}`}>
                   <Circle size={7} fill={agentOnline ? '#00e676' : '#9aa7b8'} />
                   {agentOnline ? 'Online' : 'Offline'}
@@ -252,7 +252,7 @@ export default function LiveChat(props: UserChatProps) {
               <div className="chat-messages">
                 {/* Welcome */}
                 <div className="chat-system-msg">
-                  Welcome to Exstrade Live Support. Describe your issue and an agent will respond shortly.
+                  Welcome to BinaryPip Live Support. Describe your issue and an agent will respond shortly.
                 </div>
 
                 {(session?.messages ?? []).map(msg => (
@@ -269,7 +269,7 @@ export default function LiveChat(props: UserChatProps) {
                       {fmtTime(msg.timestamp)}
                       {msg.sender === 'user' && (
                         <span className="chat-status-icon">
-                          {msg.status === 'read' ? <CheckCheck size={12} color="#00e5ff" />
+                          {msg.status === 'read' ? <CheckCheck size={12} color="#20eb5a" />
                             : msg.status === 'delivered' ? <CheckCheck size={12} />
                             : <Check size={12} />}
                         </span>

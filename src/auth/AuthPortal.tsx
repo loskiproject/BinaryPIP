@@ -78,7 +78,7 @@ function pwStrength(pw: string) {
   if (/[^A-Za-z0-9]/.test(pw)) s++
   if (s <= 1) return { score: s, label: 'Weak',   color: '#ff1744' }
   if (s <= 2) return { score: s, label: 'Fair',   color: '#f2b94b' }
-  if (s <= 3) return { score: s, label: 'Good',   color: '#00e5ff' }
+  if (s <= 3) return { score: s, label: 'Good',   color: '#20eb5a' }
   return           { score: s, label: 'Strong', color: '#00e676' }
 }
 
@@ -123,9 +123,9 @@ function LiveTicker() {
 function NexsLogo() {
   return (
     <img
-      src="/logo.jpeg"
-      alt="NEXSMARKETS Logo"
-      style={{ width: 38, height: 38, borderRadius: '10px', objectFit: 'cover', border: '1px solid rgba(0, 229, 255, 0.3)' }}
+      src="/binarypip-mark.svg"
+      alt="BinaryPip logo"
+      style={{ width: 42, height: 42, objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(32, 235, 90, 0.25))' }}
     />
   )
 }
@@ -135,17 +135,17 @@ function BgGrid() {
     <svg className="nx-bg-grid" viewBox="0 0 600 700" preserveAspectRatio="xMidYMid slice">
       <defs>
         <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(0,229,255,0.06)" strokeWidth="0.8" />
+          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(32,235,90,0.06)" strokeWidth="0.8" />
         </pattern>
       </defs>
       <rect width="600" height="700" fill="url(#grid)" />
       {/* Glowing circuit lines */}
-      <path d="M 60 150 L 180 150 L 180 300 L 420 300" stroke="rgba(0,229,255,0.12)" strokeWidth="1.2" fill="none" strokeDasharray="4 6" />
+      <path d="M 60 150 L 180 150 L 180 300 L 420 300" stroke="rgba(32,235,90,0.12)" strokeWidth="1.2" fill="none" strokeDasharray="4 6" />
       <path d="M 300 80 L 300 220 L 520 220" stroke="rgba(0,230,118,0.1)" strokeWidth="1.2" fill="none" strokeDasharray="4 6" />
-      <path d="M 80 500 L 200 500 L 200 420 L 500 420" stroke="rgba(0,229,255,0.08)" strokeWidth="1" fill="none" strokeDasharray="3 8" />
-      <circle cx="180" cy="150" r="4" fill="rgba(0,229,255,0.3)" />
+      <path d="M 80 500 L 200 500 L 200 420 L 500 420" stroke="rgba(32,235,90,0.08)" strokeWidth="1" fill="none" strokeDasharray="3 8" />
+      <circle cx="180" cy="150" r="4" fill="rgba(32,235,90,0.3)" />
       <circle cx="300" cy="220" r="4" fill="rgba(0,230,118,0.3)" />
-      <circle cx="200" cy="500" r="3" fill="rgba(0,229,255,0.25)" />
+      <circle cx="200" cy="500" r="3" fill="rgba(32,235,90,0.25)" />
     </svg>
   )
 }
@@ -305,7 +305,7 @@ export default function AuthPortal({ onLogin, onSignup, onDemo, onGoogle, onForg
             <div className="nx-brand">
               <NexsLogo />
               <div>
-                <div className="nx-brand-name">NEXSMARKETS</div>
+                <div className="nx-brand-name">BinaryPip</div>
                 <div className="nx-brand-tag">Next-Generation Trading Terminal</div>
               </div>
             </div>
@@ -330,7 +330,7 @@ export default function AuthPortal({ onLogin, onSignup, onDemo, onGoogle, onForg
             <div className="nx-mini-charts">
               <div className="nx-mini-chart-card">
                 <div className="nx-mini-chart-label"><span>BTC/USD</span><span className="nx-up">+3.40%</span></div>
-                <MiniChart seed={1.2} color="#00e5ff" />
+                <MiniChart seed={1.2} color="#20eb5a" />
               </div>
               <div className="nx-mini-chart-card">
                 <div className="nx-mini-chart-label"><span>XAU/USD</span><span className="nx-up">+0.33%</span></div>
@@ -366,8 +366,8 @@ export default function AuthPortal({ onLogin, onSignup, onDemo, onGoogle, onForg
             {tab === 'login' && (
               <div className="nx-form-wrap">
                 <div className="nx-form-head">
-                  <div className="nx-form-kicker">WELCOME BACK</div>
-                  <h2>Sign in to NEXSMARKETS</h2>
+                  <div className="nx-form-kicker"><img src="/binarypip-mark.svg" alt="" aria-hidden="true" /> WELCOME BACK</div>
+                  <h2>Sign in to BinaryPip</h2>
                   <p>Access your trading dashboard, portfolio &amp; live positions.</p>
                 </div>
 
@@ -435,8 +435,8 @@ export default function AuthPortal({ onLogin, onSignup, onDemo, onGoogle, onForg
             {tab === 'signup' && (
               <div className="nx-form-wrap">
                 <div className="nx-form-head">
-                  <div className="nx-form-kicker">NEW ACCOUNT</div>
-                  <h2>Join NEXSMARKETS</h2>
+                  <div className="nx-form-kicker"><img src="/binarypip-mark.svg" alt="" aria-hidden="true" /> NEW ACCOUNT</div>
+                  <h2>Join BinaryPip</h2>
                   <p>Create your trading account in under 2 minutes.</p>
                 </div>
 
@@ -616,7 +616,7 @@ export default function AuthPortal({ onLogin, onSignup, onDemo, onGoogle, onForg
                         <div className="nx-review-row"><span>Country</span><strong>{selectedCountry.flag} {signupForm.country}</strong></div>
                         <div className="nx-review-row">
                           <span>Account</span>
-                          <strong style={{ color: signupForm.accountMode === 'demo' ? '#00e676' : '#00e5ff' }}>
+                          <strong style={{ color: signupForm.accountMode === 'demo' ? '#00e676' : '#20eb5a' }}>
                             {signupForm.accountMode === 'demo' ? '🎮 Demo — $10,000 Virtual' : '📈 Real Account'}
                           </strong>
                         </div>
@@ -673,7 +673,7 @@ export default function AuthPortal({ onLogin, onSignup, onDemo, onGoogle, onForg
         <div className="nx-modal-overlay" onClick={() => setForgotOpen(false)}>
           <div className="nx-modal" onClick={e => e.stopPropagation()}>
             <div className="nx-modal-head">
-              <Mail size={20} color="#00e5ff" />
+              <Mail size={20} color="#20eb5a" />
               <h3>Reset Password</h3>
             </div>
             {!forgotSent ? (
