@@ -504,6 +504,27 @@ export default function AdminDashboard() {
       severity,
     }
     setAuditLog(curr => [entry, ...curr])
+
+    // Persist audit log to Supabase
+    if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+      fetch(`${SUPABASE_URL}/rest/v1/audit_logs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          admin_id: currentAdmin.id,
+          admin_name: currentAdmin.name,
+          action,
+          target_id: targetId,
+          target_type: targetType,
+          detail,
+          severity,
+        }),
+      }).catch(() => {})
+    }
   }, [currentAdmin])
 
   const notify = (msg: string, type: 'ok' | 'err' | 'warn' = 'ok') => {
@@ -534,6 +555,19 @@ export default function AdminDashboard() {
           const authData = await res.json() as { access_token?: string; user?: { id: string; email: string; user_metadata?: { full_name?: string } } }
           const u = authData.user
           if (u) {
+            // Verify admin role directly from Supabase profiles table
+            const profileRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}&select=role,full_name`, {
+              headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+            })
+            if (profileRes.ok) {
+              const profiles = await profileRes.json() as Array<{ role?: string; full_name?: string }>
+              const profile = profiles[0]
+              if (profile && profile.role !== 'admin') {
+                setLoginError('Access denied: Account does not have admin privileges.')
+                return
+              }
+            }
+
             const adminObj: AdminUser = {
               id: u.id,
               name: String(u.user_metadata?.full_name || u.email?.split('@')[0] || 'Admin User'),
