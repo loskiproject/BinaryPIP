@@ -1278,7 +1278,7 @@ export default function App() {
       // Optional columns (recovery_email, home_address, etc.) are fetched
       // in a second query so a missing column doesn't block the whole load.
       const [profileResult, documentResult, questionnaireResult] = await Promise.all([
-        client.from('profiles').select('full_name, avatar_path').eq('id', user.id).maybeSingle(),
+        client.from('profiles').select('full_name, avatar_path, role').eq('id', user.id).maybeSingle(),
         client.from('profile_documents').select('id, original_name, document_type, mime_type, status, submitted_at').eq('user_id', user.id).order('submitted_at', { ascending: false }),
         client.from('profile_suitability_responses').select('primary_goal, income_band, derivative_experience, risk_percentage, referral_source').eq('user_id', user.id).maybeSingle(),
       ])
@@ -1288,6 +1288,11 @@ export default function App() {
       if (!profileResult.error && profileResult.data) {
         const profile = profileResult.data as Record<string, unknown>
         const avatarPath = typeof profile.avatar_path === 'string' ? profile.avatar_path : null
+        const dbRole = typeof profile.role === 'string' ? profile.role : null
+
+        if (dbRole === 'admin') {
+          setUser((curr) => curr ? { ...curr, role: 'admin' } : curr)
+        }
 
         if (avatarPath) {
           const { data } = await client.storage.from('profile-avatars').createSignedUrl(avatarPath, 3600)
@@ -1525,8 +1530,8 @@ export default function App() {
           : typeof sessionUser.user_metadata.avatar_path === 'string'
             ? sessionUser.user_metadata.avatar_path
             : null
-      const isSuperAdminUid = sessionUser.id === '85b0dea3-99b6-40cd-903e-e52d708583e5' || sessionUser.id === '5339b520-3411-4cbc-9807-f33e3eb61037' || sessionUser.id === '57ef6472-7255-47d9-9ed9-7f054aa09ae6' || sessionUser.email === 'mutuagedeon77@gmail.com' || sessionUser.email === 'maishdan4940@gmail.com'
-      const role = (isSuperAdminUid || sessionUser.app_metadata?.role === 'admin' || sessionUser.user_metadata?.role === 'admin') ? 'admin' : 'client'
+      const isRoleAdmin = sessionUser.app_metadata?.role === 'admin' || sessionUser.user_metadata?.role === 'admin'
+      const role = isRoleAdmin ? 'admin' : 'client'
       const phone = String(sessionUser.user_metadata.phone ?? '')
       const country = String(sessionUser.user_metadata.country ?? '')
       const emailVerified = Boolean(sessionUser.email_confirmed_at)
@@ -3981,18 +3986,13 @@ export default function App() {
 
   // Auth Screen — BinaryPip Portal
   const handleAuthLogin = async (email: string, password: string): Promise<string | null> => {
-    // Admin secret check — same login page, redirects to admin dashboard
-    const ADMIN_EMAILS = ['mutuagedeon77@gmail.com', 'maishdan4940@gmail.com']
-    const ADMIN_PASSWORD = 'admin@exstrade2026'
-    if (ADMIN_EMAILS.includes(email.trim().toLowerCase()) && password === ADMIN_PASSWORD) {
-      window.location.href = '/admin'
-      return null
-    }
-
     if (!supabase) {
       // Local fallback — accept any credentials instantly
       const name = email.includes('@') ? email.split('@')[0] : email
       setUser({ id: 'local-live-user', fullName: name || 'Trader', email, phone: '', country: '', avatarPath: null, role: 'client', emailVerified: true, accountStatus: 'active' })
+      setActiveView('synthetic')
+      return null
+    }
       setActiveView('synthetic')
       return null
     }

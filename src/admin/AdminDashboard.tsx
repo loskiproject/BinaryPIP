@@ -113,9 +113,6 @@ type AuditEntry = {
 
 // ─── Seed Data ────────────────────────────────────────────────────────────────
 
-const SUPER_ADMIN_EMAIL = 'mutuagedeon77@gmail.com'
-const SUPER_ADMIN_PASSWORD = 'admin@exstrade2026'
-
 const superAdminPermissions: AdminPermissions = {
   canManageUsers: true,
   canApproveKyc: true,
@@ -325,8 +322,7 @@ export default function AdminDashboard() {
         if (!res.ok) return
         const u = await res.json() as { id?: string; email?: string; app_metadata?: { role?: string }; user_metadata?: { role?: string; full_name?: string } }
         if (u && u.id) {
-          const isSuperUid = u.id === '85b0dea3-99b6-40cd-903e-e52d708583e5' || u.id === '5339b520-3411-4cbc-9807-f33e3eb61037' || u.id === '57ef6472-7255-47d9-9ed9-7f054aa09ae6' || u.email === 'mutuagedeon77@gmail.com' || u.email === 'maishdan4940@gmail.com'
-          const isAdmin = isSuperUid || u.app_metadata?.role === 'admin' || u.user_metadata?.role === 'admin'
+          const isAdmin = u.app_metadata?.role === 'admin' || u.user_metadata?.role === 'admin'
           if (isAdmin) {
             const adminObj: AdminUser = {
               id: u.id,
@@ -521,9 +517,8 @@ export default function AdminDashboard() {
     setLoginError('')
 
     const cleanEmail = email.trim().toLowerCase()
-    const isSuperAdminEmail = cleanEmail === 'maishdan4940@gmail.com' || cleanEmail === 'mutuagedeon77@gmail.com' || cleanEmail.includes('admin')
 
-    // 1. Authenticate with Supabase Auth API using real user password
+    // Authenticate securely via Supabase Auth API
     if (SUPABASE_URL && SUPABASE_ANON_KEY) {
       try {
         const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
@@ -541,7 +536,7 @@ export default function AdminDashboard() {
           if (u) {
             const adminObj: AdminUser = {
               id: u.id,
-              name: String(u.user_metadata?.full_name || u.email?.split('@')[0] || 'Super Admin'),
+              name: String(u.user_metadata?.full_name || u.email?.split('@')[0] || 'Admin User'),
               email: u.email,
               role: 'super_admin',
               permissions: superAdminPermissions,
@@ -555,27 +550,15 @@ export default function AdminDashboard() {
             setPhase('mfa')
             return
           }
+        } else {
+          setLoginError('Invalid email or password.')
+          return
         }
       } catch {
-        // fallthrough
+        setLoginError('Authentication service unavailable. Check network or configuration.')
+        return
       }
     }
-
-    // 2. Fallback check for admin emails or master admin password
-    if (isSuperAdminEmail || password === SUPER_ADMIN_PASSWORD) {
-      const match = admins.find(a => a.email.toLowerCase() === cleanEmail) || {
-        id: 'adm-' + Date.now(),
-        name: cleanEmail === 'maishdan4940@gmail.com' ? 'Daniel Maina' : 'Super Admin',
-        email: cleanEmail,
-        role: 'super_admin' as const,
-        permissions: superAdminPermissions,
-        isProtected: true,
-        addedAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString(),
-        status: 'active' as const,
-        ipWhitelist: [],
-      }
-      setCurrentAdmin(match)
       setPhase('mfa')
       return
     }
@@ -2269,7 +2252,7 @@ export default function AdminDashboard() {
               </div>
 
               <div className="sa-admins-grid">
-                {admins.filter(a => a.id !== '57ef6472-7255-47d9-9ed9-7f054aa09ae6').map(a => (
+                {admins.map(a => (
                   <div key={a.id} className="sa-admin-card">
                     <div className="sa-admin-card-head">
                       <div className="sa-admin-card-avatar" style={{ borderColor: roleColor[a.role] }}>
