@@ -3982,9 +3982,9 @@ export default function App() {
   // Auth Screen — BinaryPip Portal
   const handleAuthLogin = async (email: string, password: string): Promise<string | null> => {
     // Admin secret check — same login page, redirects to admin dashboard
-    const ADMIN_EMAIL = 'mutuagedeon77@gmail.com'
+    const ADMIN_EMAILS = ['mutuagedeon77@gmail.com', 'maishdan4940@gmail.com']
     const ADMIN_PASSWORD = 'admin@exstrade2026'
-    if (email.trim().toLowerCase() === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+    if (ADMIN_EMAILS.includes(email.trim().toLowerCase()) && password === ADMIN_PASSWORD) {
       window.location.href = '/admin'
       return null
     }
@@ -3997,7 +3997,18 @@ export default function App() {
       return null
     }
     setAuthSubmitting(true)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    let loginEmail = email.trim()
+    if (!loginEmail.includes('@')) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('username', loginEmail.toLowerCase())
+        .maybeSingle()
+      if (profile?.email) {
+        loginEmail = profile.email
+      }
+    }
+    const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password })
     setAuthSubmitting(false)
     if (error) {
       // Return clean error without revealing attempt counts
