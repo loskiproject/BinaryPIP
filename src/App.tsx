@@ -1514,10 +1514,10 @@ export default function App() {
     }
 
     let mounted = true
-    const applySession = (session: Session | null) => {
+    const applySession = async (session: Session | null) => {
       const sessionUser = session?.user
       if (!sessionUser) {
-        setUser(null)
+        if (mounted) setUser(null)
         return
       }
 
@@ -1533,7 +1533,21 @@ export default function App() {
           : typeof sessionUser.user_metadata.avatar_path === 'string'
             ? sessionUser.user_metadata.avatar_path
             : null
-      const isRoleAdmin = sessionUser.app_metadata?.role === 'admin' || sessionUser.user_metadata?.role === 'admin'
+
+      let isRoleAdmin = sessionUser.app_metadata?.role === 'admin' || sessionUser.user_metadata?.role === 'admin'
+      if (!isRoleAdmin && client) {
+        try {
+          const { data: prof } = await client.from('profiles').select('role').eq('id', sessionUser.id).maybeSingle()
+          if (prof?.role === 'admin') {
+            isRoleAdmin = true
+          }
+        } catch {
+          // silent
+        }
+      }
+
+      if (!mounted) return
+
       const role = isRoleAdmin ? 'admin' : 'client'
       const phone = String(sessionUser.user_metadata.phone ?? '')
       const country = String(sessionUser.user_metadata.country ?? '')
@@ -1567,18 +1581,18 @@ export default function App() {
       if (mounted) setAuthLoading(false)
     }, 1500)
 
-    void client.auth.getSession().then(({ data }) => {
+    void client.auth.getSession().then(async ({ data }) => {
       if (!mounted) return
-      applySession(data.session)
-      setAuthLoading(false)
+      await applySession(data.session)
+      if (mounted) setAuthLoading(false)
     }).catch(() => {
       if (!mounted) return
       setAuthLoading(false)
     })
 
     const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
-      applySession(session)
-      setAuthLoading(false)
+      void applySession(session)
+      if (mounted) setAuthLoading(false)
     })
 
     return () => {

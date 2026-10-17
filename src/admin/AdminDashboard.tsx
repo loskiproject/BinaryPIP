@@ -954,7 +954,12 @@ export default function AdminDashboard({ currentUser }: Props) {
 
 
   const handleLogout = () => {
-    addAudit('ADMIN_LOGOUT', currentAdmin!.id, 'Admin', `${currentAdmin!.name} logged out`, 'info')
+    if (currentAdmin) {
+      addAudit('ADMIN_LOGOUT', currentAdmin.id, 'Admin', `${currentAdmin.name} logged out`, 'info')
+    }
+    if (supabase) {
+      void supabase.auth.signOut()
+    }
     setPhase('login')
     setCurrentAdmin(null)
     setEmail('')
