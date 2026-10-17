@@ -110,13 +110,25 @@ CREATE TABLE IF NOT EXISTS public.kyc_cases (
 -- 7. ADMIN DEPOSIT ADDRESSES TABLE (Gateways & Crypto Addresses)
 CREATE TABLE IF NOT EXISTS public.admin_deposit_addresses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  chain TEXT NOT NULL,
-  asset TEXT NOT NULL,
-  address TEXT NOT NULL,
+  chain TEXT DEFAULT '',
+  asset TEXT DEFAULT '',
+  address TEXT DEFAULT '',
+  network TEXT NOT NULL DEFAULT 'USDT-TRC20',
+  asset_name TEXT NOT NULL DEFAULT 'Tether USDT',
+  wallet_address TEXT NOT NULL DEFAULT '',
+  note TEXT DEFAULT '',
+  min_deposit_usd NUMERIC(18,2) DEFAULT 10.00,
+  max_deposit_usd NUMERIC(18,2) DEFAULT 100000.00,
   qr_code TEXT DEFAULT '',
   enabled BOOLEAN NOT NULL DEFAULT true,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Drop legacy NOT NULL constraints on chain, asset, address if table already existed
+ALTER TABLE public.admin_deposit_addresses ALTER COLUMN chain DROP NOT NULL;
+ALTER TABLE public.admin_deposit_addresses ALTER COLUMN asset DROP NOT NULL;
+ALTER TABLE public.admin_deposit_addresses ALTER COLUMN address DROP NOT NULL;
 
 -- 8. AUDIT LOGS TABLE
 CREATE TABLE IF NOT EXISTS public.audit_logs (
@@ -154,13 +166,12 @@ ALTER TABLE public.user_trade_allocations ADD COLUMN IF NOT EXISTS win_rate INTE
 -- INITIAL SEED DATA FOR ADMIN GATEWAYS & SYSTEM SETTINGS
 -- ============================================================================
 
-INSERT INTO public.admin_deposit_addresses (chain, asset, address, enabled)
+INSERT INTO public.admin_deposit_addresses (chain, asset, address, network, asset_name, wallet_address, note, enabled)
 VALUES
-  ('Tron (TRC-20)', 'USDT', 'TQn9Y2khEsLJW1ChV22mC2f4mK3v123456', true),
-  ('Ethereum (ERC-20)', 'USDT', '0x71C7656EC7ab88b098defB751B7401B5f6d8976F', true),
-  ('Bitcoin Network', 'BTC', 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh', true),
-  ('Solana Network', 'SOL', '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU', true),
-  ('M-Pesa (Till / Paybill)', 'KES', 'Paybill: 247247 / Acc: 987654', true)
+  ('Tron (TRC-20)', 'USDT', 'TB4TkYeuq66P4Uq7xPkWtGjE9h1v3L5m8R', 'USDT-TRC20', 'Tether (USDT TRON)', 'TB4TkYeuq66P4Uq7xPkWtGjE9h1v3L5m8R', 'Send TRC-20 USDT only', true),
+  ('Ethereum (ERC-20)', 'ETH', '0x1b8f03340425adffe272f672c83bc123456789ab', 'ETH', 'Ethereum (ETH)', '0x1b8f03340425adffe272f672c83bc123456789ab', 'Ethereum ERC-20 Network', true),
+  ('Bitcoin Network', 'BTC', '1CV2yhcq8bsVCpfFiQSGNuHJaYAV123456', 'BTC', 'Bitcoin (BTC)', '1CV2yhcq8bsVCpfFiQSGNuHJaYAV123456', 'Bitcoin Native Network', true),
+  ('M-Pesa (Till / Paybill)', 'KES', 'Paybill: 247247 / Acc: 987654', 'M-PESA', 'M-Pesa Kenya', 'Paybill: 247247 / Acc: 987654', 'Instant KES Deposit', true)
 ON CONFLICT DO NOTHING;
 
 INSERT INTO public.system_settings (key, value)
