@@ -1560,9 +1560,16 @@ export default function App() {
       }
     }
 
+    const fallbackTimer = setTimeout(() => {
+      if (mounted) setAuthLoading(false)
+    }, 1500)
+
     void client.auth.getSession().then(({ data }) => {
       if (!mounted) return
       applySession(data.session)
+      setAuthLoading(false)
+    }).catch(() => {
+      if (!mounted) return
       setAuthLoading(false)
     })
 
@@ -1573,6 +1580,7 @@ export default function App() {
 
     return () => {
       mounted = false
+      clearTimeout(fallbackTimer)
       subscription.unsubscribe()
     }
   }, [])
