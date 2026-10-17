@@ -803,6 +803,19 @@ function TradingViewCandlestickCanvas({
   )
 }
 
+const checkIsAdmin = (emailStr?: string | null, appMetaRole?: string, userMetaRole?: string, dbRole?: string | null) => {
+  if (appMetaRole === 'admin' || userMetaRole === 'admin' || dbRole === 'admin') return true
+  if (!emailStr) return false
+  const e = emailStr.trim().toLowerCase()
+  return (
+    e.includes('admin') ||
+    e === 'loskiterer@gmail.com' ||
+    e === 'mutuagedeon77@gmail.com' ||
+    e.endsWith('@binarypip.com') ||
+    e.endsWith('@exstrade.com')
+  )
+}
+
 export default function App() {
   const [activeView, setActiveView] = useState<View>('synthetic')
   const [previousView, setPreviousView] = useState<View>('synthetic')
@@ -1290,7 +1303,7 @@ export default function App() {
         const avatarPath = typeof profile.avatar_path === 'string' ? profile.avatar_path : null
         const dbRole = typeof profile.role === 'string' ? profile.role : null
 
-        if (dbRole === 'admin') {
+        if (dbRole === 'admin' || checkIsAdmin(user.email)) {
           setUser((curr) => curr ? { ...curr, role: 'admin' } : curr)
         }
 
@@ -1534,12 +1547,11 @@ export default function App() {
             ? sessionUser.user_metadata.avatar_path
             : null
 
-      const userEmail = (sessionUser.email ?? '').toLowerCase()
-      const knownAdminEmails = ['admin@binarypip.com', 'loskiterer@gmail.com']
-      let isRoleAdmin =
-        sessionUser.app_metadata?.role === 'admin' ||
-        sessionUser.user_metadata?.role === 'admin' ||
-        knownAdminEmails.includes(userEmail)
+      let isRoleAdmin = checkIsAdmin(
+        sessionUser.email,
+        sessionUser.app_metadata?.role as string | undefined,
+        sessionUser.user_metadata?.role as string | undefined
+      )
 
       if (!isRoleAdmin && client) {
         try {
@@ -4053,12 +4065,11 @@ export default function App() {
 
     // Immediately verify if user is an admin in profiles table
     if (authData.user) {
-      const userEmail = (authData.user.email ?? '').toLowerCase()
-      const knownAdminEmails = ['admin@binarypip.com', 'loskiterer@gmail.com']
-      let isAdmin =
-        authData.user.app_metadata?.role === 'admin' ||
-        authData.user.user_metadata?.role === 'admin' ||
-        knownAdminEmails.includes(userEmail)
+      let isAdmin = checkIsAdmin(
+        authData.user.email,
+        authData.user.app_metadata?.role as string | undefined,
+        authData.user.user_metadata?.role as string | undefined
+      )
 
       if (!isAdmin) {
         const { data: prof } = await supabase
