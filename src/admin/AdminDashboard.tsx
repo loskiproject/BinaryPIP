@@ -11,6 +11,7 @@ import {
 import './AdminDashboard.css'
 import '../features/features.css'
 import AdminChatDesk from '../features/AdminChatDesk'
+import { supabase } from '../lib/supabase'
 
 // ─── Supabase config ──────────────────────────────────────────────────────────
 const SUPABASE_URL      = import.meta.env.VITE_SUPABASE_URL      as string
@@ -299,34 +300,61 @@ function MfaGate({ onPass }: { onPass: () => void }) {
   )
 }
 
-export default function AdminDashboard() {
-  // Auth state (Enforced Security: Login screen & MFA gate active)
-  const [phase, setPhase] = useState<'login' | 'mfa' | 'dashboard'>('login')
+type Props = {
+  currentUser?: {
+    id: string
+    fullName?: string
+    email?: string
+    role?: string
+  }
+}
+
+export default function AdminDashboard({ currentUser }: Props) {
+  // If currentUser is passed from App.tsx and role is admin, open Dashboard immediately (Unified Single Login)
+  const isInitialAdmin = currentUser?.role === 'admin'
+  const [phase, setPhase] = useState<'login' | 'mfa' | 'dashboard'>(isInitialAdmin ? 'dashboard' : 'login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [loginError, setLoginError] = useState('')
-  const [currentAdmin, setCurrentAdmin] = useState<AdminUser | null>(null)
+  const [currentAdmin, setCurrentAdmin] = useState<AdminUser | null>(
+    isInitialAdmin
+      ? {
+          id: currentUser.id,
+          name: currentUser.fullName || currentUser.email?.split('@')[0] || 'Super Admin',
+          email: currentUser.email || 'admin@binarypip.com',
+          role: 'super_admin',
+          permissions: superAdminPermissions,
+          isProtected: true,
+          addedAt: new Date().toISOString(),
+          lastLogin: new Date().toISOString(),
+          status: 'active',
+          ipWhitelist: [],
+        }
+      : null
+  )
 
   // Auto-authenticate signed-in admin user directly to Full Admin Dashboard
   useEffect(() => {
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return
+    if (isInitialAdmin) return
     const checkAdminSession = async () => {
       try {
-        const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-          headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          },
-        })
-        if (!res.ok) return
-        const u = await res.json() as { id?: string; email?: string; app_metadata?: { role?: string }; user_metadata?: { role?: string; full_name?: string } }
-        if (u && u.id) {
-          const isAdmin = u.app_metadata?.role === 'admin' || u.user_metadata?.role === 'admin'
+        if (!supabase) return
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user) {
+          const u = session.user
+          // Fetch role from profiles table
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role, full_name')
+            .eq('id', u.id)
+            .maybeSingle()
+
+          const isAdmin = profile?.role === 'admin' || u.app_metadata?.role === 'admin' || u.user_metadata?.role === 'admin'
           if (isAdmin) {
             const adminObj: AdminUser = {
               id: u.id,
-              name: String(u.user_metadata?.full_name || u.email?.split('@')[0] || 'Super Admin'),
+              name: String(profile?.full_name || u.user_metadata?.full_name || u.email?.split('@')[0] || 'Super Admin'),
               email: u.email || 'admin@binarypip.com',
               role: 'super_admin',
               permissions: superAdminPermissions,
@@ -345,7 +373,7 @@ export default function AdminDashboard() {
       }
     }
     void checkAdminSession()
-  }, [])
+  }, [isInitialAdmin])
 
   // Session timeout (15 min inactivity)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
