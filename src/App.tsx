@@ -3993,9 +3993,6 @@ export default function App() {
       setActiveView('synthetic')
       return null
     }
-      setActiveView('synthetic')
-      return null
-    }
     setAuthSubmitting(true)
     let loginEmail = email.trim()
     if (!loginEmail.includes('@')) {
@@ -4008,7 +4005,7 @@ export default function App() {
         loginEmail = profile.email
       }
     }
-    const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password })
+    const { data: authData, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password })
     setAuthSubmitting(false)
     if (error) {
       // Return clean error without revealing attempt counts
@@ -4022,6 +4019,29 @@ export default function App() {
       }
       return error.message
     }
+
+    // Immediately verify if user is an admin in profiles table
+    if (authData.user) {
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', authData.user.id)
+        .maybeSingle()
+      if (prof?.role === 'admin') {
+        setUser((curr) => curr ? { ...curr, role: 'admin' } : {
+          id: authData.user.id,
+          fullName: authData.user.user_metadata?.full_name || 'Admin',
+          email: authData.user.email || '',
+          phone: '',
+          country: '',
+          avatarPath: null,
+          role: 'admin',
+          emailVerified: true,
+          accountStatus: 'active',
+        })
+      }
+    }
+
     setActiveView('synthetic')
     return null
   }

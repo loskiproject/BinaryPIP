@@ -593,9 +593,6 @@ export default function AdminDashboard() {
         return
       }
     }
-      setPhase('mfa')
-      return
-    }
 
     setLoginError('Invalid credentials. Please check your email and password.')
     addAudit('FAILED_LOGIN', cleanEmail, 'Auth', `Failed login attempt for ${cleanEmail}`, 'warning')
