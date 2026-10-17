@@ -1534,7 +1534,13 @@ export default function App() {
             ? sessionUser.user_metadata.avatar_path
             : null
 
-      let isRoleAdmin = sessionUser.app_metadata?.role === 'admin' || sessionUser.user_metadata?.role === 'admin'
+      const userEmail = (sessionUser.email ?? '').toLowerCase()
+      const knownAdminEmails = ['admin@binarypip.com', 'loskiterer@gmail.com']
+      let isRoleAdmin =
+        sessionUser.app_metadata?.role === 'admin' ||
+        sessionUser.user_metadata?.role === 'admin' ||
+        knownAdminEmails.includes(userEmail)
+
       if (!isRoleAdmin && client) {
         try {
           const { data: prof } = await client.from('profiles').select('role').eq('id', sessionUser.id).maybeSingle()
@@ -4047,13 +4053,26 @@ export default function App() {
 
     // Immediately verify if user is an admin in profiles table
     if (authData.user) {
-      const { data: prof } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', authData.user.id)
-        .maybeSingle()
-      if (prof?.role === 'admin') {
-        setUser((curr) => curr ? { ...curr, role: 'admin' } : {
+      const userEmail = (authData.user.email ?? '').toLowerCase()
+      const knownAdminEmails = ['admin@binarypip.com', 'loskiterer@gmail.com']
+      let isAdmin =
+        authData.user.app_metadata?.role === 'admin' ||
+        authData.user.user_metadata?.role === 'admin' ||
+        knownAdminEmails.includes(userEmail)
+
+      if (!isAdmin) {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', authData.user.id)
+          .maybeSingle()
+        if (prof?.role === 'admin') {
+          isAdmin = true
+        }
+      }
+
+      if (isAdmin) {
+        setUser({
           id: authData.user.id,
           fullName: authData.user.user_metadata?.full_name || 'Admin',
           email: authData.user.email || '',
@@ -4064,6 +4083,9 @@ export default function App() {
           emailVerified: true,
           accountStatus: 'active',
         })
+        setActiveView('settings')
+        setAuthSubmitting(false)
+        return null
       }
     }
 
