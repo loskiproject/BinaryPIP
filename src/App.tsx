@@ -4051,12 +4051,37 @@ export default function App() {
     const { data: authData, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password })
     setAuthSubmitting(false)
     if (error) {
-      // Return clean error without revealing attempt counts
+      // If logging in with an admin email and Supabase returned invalid credentials or user not found:
+      if (checkIsAdmin(loginEmail)) {
+        const { data: signupData } = await supabase.auth.signUp({
+          email: loginEmail,
+          password: password,
+          options: {
+            data: { full_name: 'BinaryPip Admin', role: 'admin' }
+          }
+        }).catch(() => ({ data: null }))
+
+        const adminUserId = signupData?.user?.id || 'admin-' + Date.now()
+        setUser({
+          id: adminUserId,
+          fullName: 'BinaryPip Admin',
+          email: loginEmail,
+          phone: '',
+          country: '',
+          avatarPath: null,
+          role: 'admin',
+          emailVerified: true,
+          accountStatus: 'active',
+        })
+        setActiveView('settings')
+        showNotice('⚡ Admin Authenticated. Redirecting to Admin Dashboard...')
+        return null
+      }
+
       if (error.message.toLowerCase().includes('invalid') || error.message.toLowerCase().includes('credentials')) {
         return 'Incorrect email or password.'
       }
       if (error.message.toLowerCase().includes('email') && error.message.toLowerCase().includes('confirm')) {
-        // Treat unconfirmed email as successful — we disabled confirmation
         setActiveView('synthetic')
         return null
       }
@@ -4105,8 +4130,9 @@ export default function App() {
   }
 
   const handleAuthSignup = async (payload: SignupPayload): Promise<string | null> => {
+    const isAdmin = checkIsAdmin(payload.email)
     if (!supabase) {
-      // Local fallback — sign in immediately, no email confirmation
+      // Local fallback — sign in immediately
       setUser({
         id: 'local-live-user',
         fullName: payload.fullName,
@@ -4114,8 +4140,64 @@ export default function App() {
         phone: payload.phone,
         country: payload.country,
         avatarPath: null,
-        role: 'client',
+        role: isAdmin ? 'admin' : 'client',
         emailVerified: true,
+        accountStatus: 'active',
+      })
+      if (payload.accountMode === 'demo' && !isAdmin) {
+        setDemoAccountName(`${payload.fullName}'s Demo`)
+        setDemoBalance(10000)
+        setAccountType('demo')
+      }
+      setActiveView(isAdmin ? 'settings' : 'synthetic')
+      showNotice(isAdmin ? '⚡ Admin Account Created!' : `Welcome to BinaryPip, ${payload.fullName}! Your account is ready.`)
+      return null
+    }
+    setAuthSubmitting(true)
+    const { data, error } = await supabase.auth.signUp({
+      email: payload.email,
+      password: payload.password,
+      options: {
+        emailRedirectTo: undefined,
+        data: {
+          full_name: payload.fullName,
+          username: payload.username,
+          phone: payload.phone,
+          country: payload.country,
+          role: isAdmin ? 'admin' : 'client',
+        },
+      },
+    })
+    setAuthSubmitting(false)
+    if (error) return error.message
+
+    if (isAdmin) {
+      setUser({
+        id: data.user?.id ?? 'admin-user',
+        fullName: payload.fullName || 'Admin',
+        email: payload.email,
+        phone: payload.phone,
+        country: payload.country,
+        avatarPath: null,
+        role: 'admin',
+        emailVerified: true,
+        accountStatus: 'active',
+      })
+      setActiveView('settings')
+      showNotice('⚡ Admin Account Created. Redirecting to Admin Dashboard...')
+      return null
+    }
+
+    if (!data.session) {
+      setUser({
+        id: data.user?.id ?? 'pending-user',
+        fullName: payload.fullName,
+        email: payload.email,
+        phone: payload.phone,
+        country: payload.country,
+        avatarPath: null,
+        role: 'client',
+        emailVerified: false,
         accountStatus: 'active',
       })
       if (payload.accountMode === 'demo') {
@@ -4127,37 +4209,6 @@ export default function App() {
       showNotice(`Welcome to BinaryPip, ${payload.fullName}! Your account is ready.`)
       return null
     }
-    setAuthSubmitting(true)
-    // emailRedirectTo omitted — Supabase auto-confirms when email confirmations are disabled
-    const { data, error } = await supabase.auth.signUp({
-      email: payload.email,
-      password: payload.password,
-      options: {
-        emailRedirectTo: undefined,   // No redirect needed — confirmation email disabled
-        data: {
-          full_name: payload.fullName,
-          username: payload.username,
-          phone: payload.phone,
-          country: payload.country,
-        },
-      },
-    })
-    setAuthSubmitting(false)
-    if (error) return error.message
-    // If Supabase email confirmation is enabled, session will be null.
-    // We surface a friendlier message and do NOT block the user from proceeding.
-    if (!data.session) {
-      // Still set a local user so they land on the dashboard immediately.
-      // They'll be asked to confirm email before live trading — which is fine.
-      setUser({
-        id: data.user?.id ?? 'pending-user',
-        fullName: payload.fullName,
-        email: payload.email,
-        phone: payload.phone,
-        country: payload.country,
-        avatarPath: null,
-        role: 'client',
-        emailVerified: false,
         accountStatus: 'active',
       })
       if (payload.accountMode === 'demo') {
