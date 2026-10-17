@@ -243,9 +243,9 @@ const initialLoginForm: LoginForm = { email: '', password: '' }
 const initialSignupForm: SignupForm = { fullName: '', email: '', phone: '', country: 'Kenya', password: '', confirmPassword: '' }
 
 const defaultAdminAddresses: DepositAddress[] = [
-  { id: 'addr-usdt-trc20', network: 'USDT-TRC20', assetName: 'Tether (USDT TRON)', address: 'TQAQAWyR1LH83A6V5ZanfokC6wjApdfc5q', note: 'Send USDT on TRON (TRC-20) network only.', enabled: true },
-  { id: 'addr-eth', network: 'ETH', assetName: 'Ethereum (ETH)', address: '0x9bAfa7af80d50b4Ac3D8489AC7EE17547Cadec0d', note: 'Send ETH on Ethereum (ERC-20) mainnet.', enabled: true },
-  { id: 'addr-btc', network: 'BTC', assetName: 'Bitcoin (BTC)', address: 'bc1pmw96zsq7qn4y5spfferdszyzj503z4rjylzlyncvykzyy9exqvds8r7pm9', note: 'Send BTC over Native Bitcoin mainnet.', enabled: true },
+  { id: 'addr-usdt-trc20', network: 'USDT-TRC20', assetName: 'Tether (USDT TRON)', address: 'TB4TkYeuqjGsP7bkfeMbUJdZEjCuKHnzqp', note: 'Send USDT on TRON (TRC-20) network only.', enabled: true },
+  { id: 'addr-eth', network: 'ETH', assetName: 'Ethereum (ETH)', address: '0x1b8f03340425adffe272f672c0a905a066a4d75d', note: 'Send ETH on Ethereum (ERC-20) mainnet.', enabled: true },
+  { id: 'addr-btc', network: 'BTC', assetName: 'Bitcoin (BTC)', address: '1CV2yhcq8bsVCpfFiQSGNuHJaYAVUQtahS', note: 'Send BTC over Native Bitcoin mainnet.', enabled: true },
 ]
 
 function createInitialCandles(
@@ -1477,7 +1477,7 @@ export default function App() {
   // Deposit Queue
   const [_pendingDeposits, setPendingDeposits] = useState<DepositRequest[]>([])
 
-  const [authLoading, setAuthLoading] = useState(supabaseConfigured)
+  const [authLoading, setAuthLoading] = useState(false)
   const [authSubmitting, setAuthSubmitting] = useState(false)
 
   const [pageLoading, setPageLoading] = useState(false)
@@ -1508,7 +1508,10 @@ export default function App() {
   // Auth Session Sync
   useEffect(() => {
     const client = supabase
-    if (!client) return
+    if (!client) {
+      setAuthLoading(false)
+      return
+    }
 
     let mounted = true
     const applySession = (session: Session | null) => {

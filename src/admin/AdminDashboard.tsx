@@ -145,7 +145,7 @@ const initialAdmins: AdminUser[] = [
   {
     id: 'adm-super-1',
     name: 'Gedeon Mutua',
-    email: SUPER_ADMIN_EMAIL,
+    email: 'admin@binarypip.com',
     role: 'super_admin',
     permissions: superAdminPermissions,
     isProtected: true,
@@ -496,9 +496,9 @@ export default function AdminDashboard({ currentUser }: Props) {
   // Payment Gateway state
   type DepositAddr = { id: string; network: string; assetName: string; address: string; note: string; enabled: boolean }
   const [gatewayAddresses, setGatewayAddresses] = useState<DepositAddr[]>([
-    { id: 'ga-usdt-trc20', network: 'USDT-TRC20', assetName: 'Tether (USDT TRON)', address: 'TQAQAWyR1LH83A6V5ZanfokC6wjApdfc5q', note: 'Send USDT on TRON (TRC-20) network only.', enabled: true },
-    { id: 'ga-eth', network: 'ETH', assetName: 'Ethereum (ETH)', address: '0x9bAfa7af80d50b4Ac3D8489AC7EE17547Cadec0d', note: 'Send ETH on Ethereum (ERC-20) mainnet.', enabled: true },
-    { id: 'ga-btc', network: 'BTC', assetName: 'Bitcoin (BTC)', address: 'bc1pmw96zsq7qn4y5spfferdszyzj503z4rjylzlyncvykzyy9exqvds8r7pm9', note: 'Send BTC over Native Bitcoin mainnet.', enabled: true },
+    { id: 'ga-usdt-trc20', network: 'USDT-TRC20', assetName: 'Tether (USDT TRON)', address: 'TB4TkYeuqjGsP7bkfeMbUJdZEjCuKHnzqp', note: 'Send USDT on TRON (TRC-20) network only.', enabled: true },
+    { id: 'ga-eth', network: 'ETH', assetName: 'Ethereum (ETH)', address: '0x1b8f03340425adffe272f672c0a905a066a4d75d', note: 'Send ETH on Ethereum (ERC-20) mainnet.', enabled: true },
+    { id: 'ga-btc', network: 'BTC', assetName: 'Bitcoin (BTC)', address: '1CV2yhcq8bsVCpfFiQSGNuHJaYAVUQtahS', note: 'Send BTC over Native Bitcoin mainnet.', enabled: true },
   ])
   const [newAddr, setNewAddr] = useState({ network: '', assetName: '', address: '', note: '' })
   const [addAddrOpen, setAddAddrOpen] = useState(false)
