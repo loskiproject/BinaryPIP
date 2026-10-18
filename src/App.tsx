@@ -1291,7 +1291,7 @@ export default function App() {
       // Optional columns (recovery_email, home_address, etc.) are fetched
       // in a second query so a missing column doesn't block the whole load.
       const [profileResult, documentResult, questionnaireResult] = await Promise.all([
-        client.from('profiles').select('full_name, avatar_path, role').eq('id', user.id).maybeSingle(),
+        client.from('profiles').select('full_name, avatar_path, role, kyc_status, account_status').eq('id', user.id).maybeSingle(),
         client.from('profile_documents').select('id, original_name, document_type, mime_type, status, submitted_at').eq('user_id', user.id).order('submitted_at', { ascending: false }),
         client.from('profile_suitability_responses').select('primary_goal, income_band, derivative_experience, risk_percentage, referral_source').eq('user_id', user.id).maybeSingle(),
       ])
@@ -1302,10 +1302,14 @@ export default function App() {
         const profile = profileResult.data as Record<string, unknown>
         const avatarPath = typeof profile.avatar_path === 'string' ? profile.avatar_path : null
         const dbRole = typeof profile.role === 'string' ? profile.role : null
+        const kycStat = String(profile.kyc_status ?? 'unverified').toLowerCase()
+        const isApproved = kycStat === 'verified' || kycStat === 'approved'
 
-        if (dbRole === 'admin' || checkIsAdmin(user.email)) {
-          setUser((curr) => curr ? { ...curr, role: 'admin' } : curr)
-        }
+        setUser((curr) => curr ? {
+          ...curr,
+          role: (dbRole === 'admin' || checkIsAdmin(user.email)) ? 'admin' : curr.role,
+          kycStatus: isApproved ? 'APPROVED' : kycStat.toUpperCase(),
+        } : curr)
 
         if (avatarPath) {
           const { data } = await client.storage.from('profile-avatars').createSignedUrl(avatarPath, 3600)

@@ -1268,6 +1268,11 @@ export default function AdminDashboard({ currentUser }: Props) {
     setUsers(curr => curr.map(u => u.id === kyc.userId ? { ...u, kycStatus: 'verified', accountStatus: 'approved', status: 'active' } : u))
 
     try {
+      await fetch(`${SUPABASE_URL}/rest/v1/profile_documents?user_id=eq.${kyc.userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ status: 'verified', reviewed_at: new Date().toISOString() }),
+      })
       if (kyc.id && !kyc.id.startsWith('kyc-prof-')) {
         await fetch(`${SUPABASE_URL}/rest/v1/profile_documents?id=eq.${kyc.id}`, {
           method: 'PATCH',
@@ -1279,6 +1284,23 @@ export default function AdminDashboard({ currentUser }: Props) {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
         body: JSON.stringify({ kyc_status: 'verified', account_status: 'active', updated_at: new Date().toISOString() }),
+      })
+      await fetch(`${SUPABASE_URL}/rest/v1/kyc_cases`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          user_id: kyc.userId,
+          provider: 'manual',
+          provider_case_id: kyc.id || 'kyc-' + kyc.userId,
+          status: 'approved',
+          reviewer_note: 'Approved by Admin',
+          updated_at: new Date().toISOString(),
+        }),
       })
     } catch {
       // silent
