@@ -54,8 +54,8 @@ try {
 }
 
 // Set identity
-run('config user.email "mutuagedeon77@gmail.com"')
-run('config user.name "Gedeon Mutua"')
+run('config user.email "loskiterer@gmail.com"')
+run('config user.name "Loski Terer"')
 
 // Stage all files (respecting .gitignore)
 run('add .')

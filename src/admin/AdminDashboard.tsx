@@ -144,7 +144,7 @@ const financeAdminPermissions: AdminPermissions = {
 const initialAdmins: AdminUser[] = [
   {
     id: 'adm-super-1',
-    name: 'Gedeon Mutua',
+    name: 'Loski Terer',
     email: 'admin@binarypip.com',
     role: 'super_admin',
     permissions: superAdminPermissions,
@@ -321,7 +321,9 @@ export default function AdminDashboard({ currentUser }: Props) {
     isInitialAdmin
       ? {
           id: currentUser.id,
-          name: currentUser.fullName || currentUser.email?.split('@')[0] || 'Super Admin',
+          name: currentUser.fullName && currentUser.fullName !== 'Admin' && currentUser.fullName !== 'Trader'
+            ? currentUser.fullName
+            : 'Loski Terer',
           email: currentUser.email || 'admin@binarypip.com',
           role: 'super_admin',
           permissions: superAdminPermissions,
@@ -354,7 +356,7 @@ export default function AdminDashboard({ currentUser }: Props) {
           if (isAdmin) {
             const adminObj: AdminUser = {
               id: u.id,
-              name: String(profile?.full_name || u.user_metadata?.full_name || u.email?.split('@')[0] || 'Super Admin'),
+              name: String(profile?.full_name || u.user_metadata?.full_name || 'Loski Terer'),
               email: u.email || 'admin@binarypip.com',
               role: 'super_admin',
               permissions: superAdminPermissions,
