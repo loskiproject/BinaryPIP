@@ -1569,7 +1569,23 @@ export default function App() {
       const role = isRoleAdmin ? 'admin' : 'client'
       const phone = String(sessionUser.user_metadata.phone ?? '')
       const country = String(sessionUser.user_metadata.country ?? '')
-      const emailVerified = Boolean(sessionUser.email_confirmed_at)
+      const emailVerified = Boolean(
+        sessionUser.email_confirmed_at ||
+        sessionUser.app_metadata?.provider === 'google' ||
+        sessionUser.app_metadata?.providers?.includes('google') ||
+        sessionUser.user_metadata?.iss
+      )
+
+      // Ensure profile record exists in public.profiles table
+      if (client && sessionUser.id) {
+        void client.from('profiles').upsert({
+          id: sessionUser.id,
+          full_name: fullName,
+          email: sessionUser.email ?? '',
+          role: role,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id', ignoreDuplicates: true })
+      }
 
       // accountStatus: always active — admin approval wall removed
       const accountStatus = 'active' as const
@@ -1578,6 +1594,8 @@ export default function App() {
       // Auto-redirect admin users directly to FULL Admin Dashboard on login
       if (role === 'admin') {
         setActiveView('settings')
+        showNotice(`⚡ Admin Authenticated (${fullName || sessionUser.email}). Redirecting to Admin Dashboard.`)
+      }
         showNotice(`⚡ Admin Authenticated (${fullName || sessionUser.email}). Redirecting to Admin Dashboard.`)
       }
 
