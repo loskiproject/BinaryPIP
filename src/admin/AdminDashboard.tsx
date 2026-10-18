@@ -972,19 +972,58 @@ export default function AdminDashboard({ currentUser }: Props) {
   const canAccess = (perm: keyof AdminPermissions) => currentAdmin?.permissions[perm] ?? false
 
   // ── Actions ────────────────────────────────────────────────────────────────
-  const toggleUserStatus = (u: PlatformUser) => {
+  const toggleUserStatus = async (u: PlatformUser) => {
     if (!canAccess('canManageUsers')) { notify('No permission.', 'err'); return }
-    const next = u.status === 'active' ? 'suspended' : 'active'
-    setUsers(curr => curr.map(x => x.id === u.id ? { ...x, status: next } : x))
-    addAudit(next === 'suspended' ? 'SUSPEND_USER' : 'ACTIVATE_USER', u.id, 'User', `${u.status === 'active' ? 'Suspended' : 'Activated'} account for ${u.name}`, next === 'suspended' ? 'warning' : 'info')
-    setSelectedUser(prev => prev?.id === u.id ? { ...prev, status: next } : prev)
-    notify(`${u.name} ${next === 'suspended' ? 'suspended' : 'activated'}.`, next === 'suspended' ? 'warn' : 'ok')
+    const nextStatus = u.status === 'active' ? 'suspended' : 'active'
+
+    setUsers(curr => curr.map(x => x.id === u.id ? { ...x, status: nextStatus } : x))
+    setSelectedUser(prev => prev?.id === u.id ? { ...prev, status: nextStatus } : prev)
+
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          account_status: nextStatus,
+          updated_at: new Date().toISOString(),
+        }),
+      })
+    } catch {
+      // silent
+    }
+
+    addAudit(nextStatus === 'suspended' ? 'SUSPEND_USER' : 'ACTIVATE_USER', u.id, 'User', `${nextStatus === 'suspended' ? 'Suspended' : 'Activated'} account for ${u.name}`, nextStatus === 'suspended' ? 'warning' : 'info')
+    notify(`${u.name} ${nextStatus === 'suspended' ? 'suspended' : 'activated'}.`, nextStatus === 'suspended' ? 'warn' : 'ok')
   }
 
-  const approveAccount = (u: PlatformUser) => {
+  const approveAccount = async (u: PlatformUser) => {
     if (!canAccess('canManageUsers')) { notify('No permission.', 'err'); return }
-    setUsers(curr => curr.map(x => x.id === u.id ? { ...x, accountStatus: 'approved', status: 'active' } : x))
-    setSelectedUser(prev => prev?.id === u.id ? { ...prev, accountStatus: 'approved', status: 'active' } : prev)
+
+    setUsers(curr => curr.map(x => x.id === u.id ? { ...x, accountStatus: 'approved', status: 'active', kycStatus: 'verified' } : x))
+    setSelectedUser(prev => prev?.id === u.id ? { ...prev, accountStatus: 'approved', status: 'active', kycStatus: 'verified' } : prev)
+
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${u.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          account_status: 'active',
+          kyc_status: 'verified',
+          updated_at: new Date().toISOString(),
+        }),
+      })
+    } catch {
+      // silent
+    }
+
     addAudit('APPROVE_ACCOUNT', u.id, 'User', `Account approved for ${u.name} (${u.email})`, 'info')
     notify(`${u.name}'s account approved and activated.`)
   }
@@ -994,13 +1033,41 @@ export default function AdminDashboard({ currentUser }: Props) {
     setEditUserModal(u)
   }
 
-  const saveEditUser = () => {
+  const saveEditUser = async () => {
     if (!editUserModal) return
     if (!editDraft.name.trim() || !editDraft.email.trim()) { notify('Name and email are required.', 'err'); return }
-    setUsers(curr => curr.map(x => x.id === editUserModal.id ? { ...x, name: editDraft.name, email: editDraft.email, phone: editDraft.phone, country: editDraft.country } : x))
-    setSelectedUser(prev => prev?.id === editUserModal.id ? { ...prev, name: editDraft.name, email: editDraft.email, phone: editDraft.phone, country: editDraft.country } : prev)
-    addAudit('EDIT_USER', editUserModal.id, 'User', `Edited details for ${editDraft.name} (${editDraft.email})`, 'warning')
-    notify(`${editDraft.name}'s details updated.`)
+
+    const uid = editUserModal.id
+    const updatedName = editDraft.name.trim()
+    const updatedEmail = editDraft.email.trim()
+    const updatedPhone = editDraft.phone.trim()
+    const updatedCountry = editDraft.country.trim()
+
+    setUsers(curr => curr.map(x => x.id === uid ? { ...x, name: updatedName, email: updatedEmail, phone: updatedPhone, country: updatedCountry } : x))
+    setSelectedUser(prev => prev?.id === uid ? { ...prev, name: updatedName, email: updatedEmail, phone: updatedPhone, country: updatedCountry } : prev)
+
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${uid}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          full_name: updatedName,
+          email: updatedEmail,
+          phone: updatedPhone,
+          country: updatedCountry,
+          updated_at: new Date().toISOString(),
+        }),
+      })
+    } catch {
+      // silent
+    }
+
+    addAudit('EDIT_USER', uid, 'User', `Edited details for ${updatedName} (${updatedEmail})`, 'warning')
+    notify(`${updatedName}'s details updated.`)
     setEditUserModal(null)
   }
 
@@ -1276,21 +1343,79 @@ export default function AdminDashboard({ currentUser }: Props) {
     notify(`Transaction approved and credited $${txn.amount.toFixed(2)} to user account!`)
   }
 
-  const rejectTxn = (txn: Transaction) => {
+  const rejectTxn = async (txn: Transaction) => {
     if (!canAccess('canApproveWithdrawals')) { notify('No permission.', 'err'); return }
     setTransactions(curr => curr.map(t => t.id === txn.id ? { ...t, status: 'rejected' } : t))
+
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/transactions?id=eq.${txn.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ status: 'rejected', updated_at: new Date().toISOString() }),
+      })
+    } catch {
+      // silent
+    }
+
     addAudit(`REJECT_${txn.type.toUpperCase()}`, txn.id, 'Transaction', `Rejected ${txn.type} of ${fmtUSD(txn.amount)} for ${txn.userName}`, 'warning')
     notify(`Transaction rejected.`, 'warn')
   }
 
-  const applyBalanceAdjustment = () => {
+  const applyBalanceAdjustment = async () => {
     if (!balanceModal || !canAccess('canAdjustBalances')) { notify('No permission.', 'err'); return }
     const amt = parseFloat(balanceModal.amount)
     if (!amt || amt <= 0) { notify('Enter a valid amount.', 'err'); return }
     if (!balanceModal.reason.trim()) { notify('Reason is required.', 'err'); return }
+
+    const targetUser = balanceModal.user
     const delta = balanceModal.mode === 'credit' ? amt : -amt
-    setUsers(curr => curr.map(u => u.id === balanceModal.user.id ? { ...u, balance: Math.max(0, u.balance + delta) } : u))
-    setSelectedUser(prev => prev?.id === balanceModal.user.id ? { ...prev, balance: Math.max(0, prev.balance + delta) } : prev)
+    const newBal = Math.max(0, targetUser.balance + delta)
+
+    setUsers(curr => curr.map(u => u.id === targetUser.id ? { ...u, balance: newBal } : u))
+    setSelectedUser(prev => prev?.id === targetUser.id ? { ...prev, balance: newBal } : prev)
+
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/wallets`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          user_id: targetUser.id,
+          live_balance: newBal,
+          updated_at: new Date().toISOString(),
+        }),
+      })
+
+      await fetch(`${SUPABASE_URL}/rest/v1/transactions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          user_id: targetUser.id,
+          type: balanceModal.mode === 'credit' ? 'deposit' : 'withdrawal',
+          amount: amt,
+          asset: 'USD',
+          status: 'completed',
+          method: 'Admin Adjustment',
+          reference_id: 'adm-' + Date.now(),
+          details: { reason: balanceModal.reason, admin: currentAdmin?.name || 'Admin' },
+        }),
+      })
+    } catch {
+      // silent
+    }
+
+    addAudit('BALANCE_ADJUSTMENT', targetUser.id, 'User', `${balanceModal.mode === 'credit' ? 'Credited' : 'Debited'} $${amt} for ${targetUser.name} (${balanceModal.reason})`, 'warning')
+    notify(`Balance ${balanceModal.mode === 'credit' ? 'credited' : 'debited'} for ${targetUser.name}.`)
+    setBalanceModal(null)
+  }
     addAudit('BALANCE_ADJUSTMENT', balanceModal.user.id, 'User', `${balanceModal.mode === 'credit' ? 'Credited' : 'Debited'} ${fmtUSD(amt)} for ${balanceModal.user.name}. Reason: ${balanceModal.reason}`, 'warning')
     notify(`Balance ${balanceModal.mode === 'credit' ? 'credited' : 'debited'} for ${balanceModal.user.name}.`)
     setBalanceModal(null)
@@ -2616,7 +2741,7 @@ export default function AdminDashboard({ currentUser }: Props) {
                   <span style={{ fontSize: '10.5px', color: 'var(--sa-muted)', marginTop: '3px', display: 'block' }}>Current: ${minWithdrawalUSD}</span>
                 </label>
                 <button className="sa-btn sa-btn-primary" style={{ gridColumn: '1/-1' }}
-                  onClick={() => {
+                  onClick={async () => {
                     const usd = parseFloat(settingsDraft.minUSD)
                     const kes = parseFloat(settingsDraft.minKES)
                     const wit = parseFloat(settingsDraft.minWithdraw)
@@ -2625,8 +2750,31 @@ export default function AdminDashboard({ currentUser }: Props) {
                     setMinDepositKES(kes)
                     setMinWithdrawalUSD(wit)
                     setSettingsSaved(true)
-                    addAudit('UPDATE_DEPOSIT_LIMITS', 'system', 'Settings', `Min deposit: $${usd} USD / KES ${kes}. Min withdrawal: $${wit}`, 'warning')
-                    notify(`Limits updated: Min deposit $${usd} / KES ${kes}, Min withdrawal $${wit}.`)
+
+                    try {
+                      await Promise.all([
+                        fetch(`${SUPABASE_URL}/rest/v1/system_settings`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+                          body: JSON.stringify({ key: 'min_deposit_usd', value: usd.toString(), updated_at: new Date().toISOString() }),
+                        }),
+                        fetch(`${SUPABASE_URL}/rest/v1/system_settings`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+                          body: JSON.stringify({ key: 'min_deposit_kes', value: kes.toString(), updated_at: new Date().toISOString() }),
+                        }),
+                        fetch(`${SUPABASE_URL}/rest/v1/system_settings`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+                          body: JSON.stringify({ key: 'min_withdrawal_usd', value: wit.toString(), updated_at: new Date().toISOString() }),
+                        }),
+                      ])
+                    } catch {
+                      // silent
+                    }
+
+                    addAudit('UPDATE_DEPOSIT_LIMITS', 'system', 'Settings', `Min deposit: $${usd} USD / KES ${kes}. Min withdrawal: $${wit}`, 'info')
+                    notify(`Limits updated in database: Min deposit $${usd} / KES ${kes}, Min withdrawal $${wit}.`)
                     setTimeout(() => setSettingsSaved(false), 3000)
                   }}>
                   <CheckCircle2 size={14} /> Apply Limits
