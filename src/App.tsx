@@ -1096,16 +1096,32 @@ export default function App() {
         }
       } else if (message?.type === 'EXSTRADE_ACCOUNT_SELECT') {
         if (message.accountType === 'demo' && demoAccountName) setAccountType('demo')
-        if (message.accountType === 'live' && liveAccountCreated) setAccountType('live')
+        if (message.accountType === 'live') {
+          setLiveAccountCreated(true)
+          setAccountType('live')
+        }
       } else if (message?.type === 'EXSTRADE_CREATE_DEMO') {
         setModal('create_demo')
       } else if (message?.type === 'EXSTRADE_OPEN_FUNDS') {
         setPreviousView(activeView)
         setActiveView('funds')
-      } else if (message?.type === 'EXSTRADE_BALANCE_UPDATE' && message.accountType === 'demo' && demoAccountName) {
+      } else if (message?.type === 'EXSTRADE_BALANCE_UPDATE') {
         const nextBalance = Number(message.balance)
-        if (Number.isFinite(nextBalance) && nextBalance >= 0) setDemoBalance(nextBalance)
-      } else if (message?.type === 'EXSTRADE_TRADE_CLOSED' && message.accountType === 'demo') {
+        if (Number.isFinite(nextBalance) && nextBalance >= 0) {
+          if (message.accountType === 'demo') {
+            setDemoBalance(nextBalance)
+          } else if (message.accountType === 'live') {
+            setLiveBalance(nextBalance)
+            if (supabase && user) {
+              void supabase.from('wallets').upsert({
+                user_id: user.id,
+                live_balance: nextBalance,
+                updated_at: new Date().toISOString(),
+              })
+            }
+          }
+        }
+      } else if (message?.type === 'EXSTRADE_TRADE_CLOSED') {
         const trade = message.trade
         const pnl = Number(trade?.pnl)
         const stake = Number(trade?.stake)
@@ -1121,6 +1137,21 @@ export default function App() {
           closedAt: String(trade.closedAt || new Date().toISOString()),
         }
         setContractHistory(current => [record, ...current.filter(item => item.id !== record.id)].slice(0, 500))
+
+        if (message.accountType === 'live' && supabase && user) {
+          void supabase.from('trades').insert({
+            user_id: user.id,
+            symbol: String(trade.market || 'Synthetic Index'),
+            direction: String(trade.direction || 'buy').toLowerCase(),
+            amount: stake,
+            entry_price: Number(trade.entryPrice || 1000),
+            exit_price: Number(trade.exitPrice || 1000),
+            profit_loss: pnl,
+            status: 'closed',
+            account_type: 'real',
+            closed_at: new Date().toISOString(),
+          })
+        }
       }
     }
 
@@ -1594,6 +1625,7 @@ export default function App() {
       // accountStatus: always active — admin approval wall removed
       const accountStatus = 'active' as const
       setUser({ id: sessionUser.id, fullName, email: sessionUser.email ?? '', phone, country, avatarPath, role, emailVerified, accountStatus })
+      setLiveAccountCreated(true)
 
       // Auto-redirect admin users directly to FULL Admin Dashboard on login
       if (role === 'admin') {
