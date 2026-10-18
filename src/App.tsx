@@ -1596,8 +1596,6 @@ export default function App() {
         setActiveView('settings')
         showNotice(`⚡ Admin Authenticated (${fullName || sessionUser.email}). Redirecting to Admin Dashboard.`)
       }
-        showNotice(`⚡ Admin Authenticated (${fullName || sessionUser.email}). Redirecting to Admin Dashboard.`)
-      }
 
       // Auto-switch to Real Account after login if requested
       if (sessionStorage.getItem('pending_real_account') === 'true') {
@@ -4179,7 +4177,7 @@ export default function App() {
         emailRedirectTo: undefined,
         data: {
           full_name: payload.fullName,
-          username: payload.username,
+          username: payload.username || ('user_' + Math.random().toString(36).substring(2, 10)),
           phone: payload.phone,
           country: payload.country,
           role: isAdmin ? 'admin' : 'client',

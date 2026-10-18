@@ -169,40 +169,69 @@ CREATE TABLE IF NOT EXISTS public.user_trade_allocations (
 -- AUTOMATIC NEW USER SETUP TRIGGER & FUNCTIONS
 -- ============================================================================
 
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_username_key;
+
 CREATE OR REPLACE FUNCTION public.handle_new_user_signup()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
 AS $$
+DECLARE
+  v_role TEXT := 'client';
+  v_full_name TEXT := '';
+  v_username TEXT := '';
 BEGIN
-  -- Insert profile
-  INSERT INTO public.profiles (
-    id, full_name, username, email, phone, country
-  )
-  VALUES (
-    NEW.id,
-    COALESCE(NEW.raw_user_meta_data ->> 'full_name', ''),
-    COALESCE(NEW.raw_user_meta_data ->> 'username', ''),
-    COALESCE(NEW.email, ''),
-    COALESCE(NEW.raw_user_meta_data ->> 'phone', ''),
-    COALESCE(NEW.raw_user_meta_data ->> 'country', '')
-  )
-  ON CONFLICT (id) DO UPDATE SET
-    full_name = EXCLUDED.full_name,
-    username = EXCLUDED.username,
-    email = EXCLUDED.email,
-    phone = EXCLUDED.phone,
-    country = EXCLUDED.country;
+  v_full_name := COALESCE(
+    NEW.raw_user_meta_data ->> 'full_name',
+    NEW.raw_user_meta_data ->> 'name',
+    SPLIT_PART(NEW.email, '@', 1)
+  );
 
-  -- Insert wallet with initial balance
-  INSERT INTO public.wallets (user_id, live_balance, demo_balance)
-  VALUES (NEW.id, 0.00, 10000.00)
-  ON CONFLICT (user_id) DO NOTHING;
+  v_username := COALESCE(
+    NULLIF(NEW.raw_user_meta_data ->> 'username', ''),
+    'user_' || SUBSTR(REPLACE(NEW.id::text, '-', ''), 1, 8)
+  );
 
-  -- Insert activity log
-  INSERT INTO public.account_activities (user_id, event_type, summary)
-  VALUES (NEW.id, 'account_created', 'Your account was successfully created.');
+  IF NEW.email ILIKE '%admin%'
+     OR NEW.email = 'loskiterer@gmail.com'
+     OR NEW.email = 'mutuagedeon77@gmail.com'
+     OR NEW.email LIKE '%@binarypip.com'
+     OR NEW.email LIKE '%@exstrade.com'
+  THEN
+    v_role := 'admin';
+  END IF;
+
+  BEGIN
+    INSERT INTO public.profiles (
+      id, full_name, username, email, phone, country, role, updated_at
+    )
+    VALUES (
+      NEW.id,
+      v_full_name,
+      v_username,
+      COALESCE(NEW.email, ''),
+      COALESCE(NEW.raw_user_meta_data ->> 'phone', ''),
+      COALESCE(NEW.raw_user_meta_data ->> 'country', 'Global'),
+      v_role,
+      NOW()
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      full_name = EXCLUDED.full_name,
+      email = EXCLUDED.email,
+      role = CASE WHEN EXCLUDED.role = 'admin' THEN 'admin' ELSE public.profiles.role END,
+      updated_at = NOW();
+  EXCEPTION WHEN OTHERS THEN
+    NULL;
+  END;
+
+  BEGIN
+    INSERT INTO public.wallets (user_id, live_balance, demo_balance)
+    VALUES (NEW.id, 0.00, 10000.00)
+    ON CONFLICT (user_id) DO NOTHING;
+  EXCEPTION WHEN OTHERS THEN
+    NULL;
+  END;
 
   RETURN NEW;
 END;
