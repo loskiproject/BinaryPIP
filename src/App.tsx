@@ -4188,45 +4188,26 @@ export default function App() {
       return null
     }
 
-    if (!data.session) {
-      setUser({
-        id: data.user?.id ?? 'pending-user',
-        fullName: payload.fullName,
-        email: payload.email,
-        phone: payload.phone,
-        country: payload.country,
-        avatarPath: null,
-        role: 'client',
-        emailVerified: false,
-        accountStatus: 'active',
-      })
-      if (payload.accountMode === 'demo') {
-        setDemoAccountName(`${payload.fullName}'s Demo`)
-        setDemoBalance(10000)
-        setAccountType('demo')
-      }
-      setActiveView('synthetic')
-      showNotice(`Welcome to BinaryPip, ${payload.fullName}! Your account is ready.`)
-      return null
-    }
-        accountStatus: 'active',
-      })
-      if (payload.accountMode === 'demo') {
-        setDemoAccountName(`${payload.fullName}'s Demo`)
-        setDemoBalance(10000)
-        setAccountType('demo')
-      }
-      setActiveView('synthetic')
-      showNotice(`Welcome to BinaryPip, ${payload.fullName}! Your account is ready.`)
-      return null
-    }
+    setUser({
+      id: data.user?.id ?? 'pending-user',
+      fullName: payload.fullName,
+      email: payload.email,
+      phone: payload.phone,
+      country: payload.country,
+      avatarPath: null,
+      role: 'client',
+      emailVerified: Boolean(data.session),
+      accountStatus: 'active',
+    })
+
     if (payload.accountMode === 'demo') {
       setDemoAccountName(`${payload.fullName}'s Demo`)
       setDemoBalance(10000)
       setAccountType('demo')
     }
+
     setActiveView('synthetic')
-    showNotice(`Welcome to BinaryPip, ${payload.fullName}!`)
+    showNotice(`Welcome to BinaryPip, ${payload.fullName}! Your account is ready.`)
     return null
   }
 
