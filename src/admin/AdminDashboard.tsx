@@ -1416,10 +1416,6 @@ export default function AdminDashboard({ currentUser }: Props) {
     notify(`Balance ${balanceModal.mode === 'credit' ? 'credited' : 'debited'} for ${targetUser.name}.`)
     setBalanceModal(null)
   }
-    addAudit('BALANCE_ADJUSTMENT', balanceModal.user.id, 'User', `${balanceModal.mode === 'credit' ? 'Credited' : 'Debited'} ${fmtUSD(amt)} for ${balanceModal.user.name}. Reason: ${balanceModal.reason}`, 'warning')
-    notify(`Balance ${balanceModal.mode === 'credit' ? 'credited' : 'debited'} for ${balanceModal.user.name}.`)
-    setBalanceModal(null)
-  }
 
   const addAdmin = () => {
     if (!canAccess('canManageAdmins')) { notify('No permission.', 'err'); return }
