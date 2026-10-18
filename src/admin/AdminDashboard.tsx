@@ -1320,7 +1320,9 @@ export default function AdminDashboard({ currentUser }: Props) {
 
     const targetUser = users.find(u => u.id === txn.userId)
     const currentBal = targetUser ? targetUser.balance : 0
-    const nextBal = txn.type === 'deposit' ? currentBal + txn.amount : Math.max(0, currentBal - txn.amount)
+    const bonusAmount = txn.type === 'deposit' ? txn.amount * 0.5 : 0
+    const totalCredit = txn.type === 'deposit' ? (txn.amount + bonusAmount) : txn.amount
+    const nextBal = txn.type === 'deposit' ? (currentBal + totalCredit) : Math.max(0, currentBal - txn.amount)
 
     setUsers(curr => curr.map(u => u.id === txn.userId ? { ...u, balance: nextBal } : u))
 
@@ -1330,17 +1332,23 @@ export default function AdminDashboard({ currentUser }: Props) {
         headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
         body: JSON.stringify({ status: 'approved', updated_at: new Date().toISOString() }),
       })
-      await fetch(`${SUPABASE_URL}/rest/v1/wallets?user_id=eq.${txn.userId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-        body: JSON.stringify({ live_balance: nextBal, updated_at: new Date().toISOString() }),
+
+      await fetch(`${SUPABASE_URL}/rest/v1/wallets`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ user_id: txn.userId, live_balance: nextBal, updated_at: new Date().toISOString() }),
       })
     } catch {
       // silent
     }
 
-    addAudit(`APPROVE_${txn.type.toUpperCase()}`, txn.id, 'Transaction', `Approved ${txn.type} of ${fmtUSD(txn.amount)} for ${txn.userName}`, 'info')
-    notify(`Transaction approved and credited $${txn.amount.toFixed(2)} to user account!`)
+    addAudit(`APPROVE_${txn.type.toUpperCase()}`, txn.id, 'Transaction', `Approved ${txn.type} of ${fmtUSD(txn.amount)} (Total credited: ${fmtUSD(totalCredit)}) for ${txn.userName}`, 'info')
+    notify(`Deposit approved! $${totalCredit.toFixed(2)} credited to ${txn.userName}'s wallet.`)
   }
 
   const rejectTxn = async (txn: Transaction) => {

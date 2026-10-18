@@ -1835,90 +1835,101 @@ export default function App() {
     setAccountType('none')
   }
 
-  // Funds Hub deposit request handler with real Supabase sync
+  // Funds Hub deposit request handler — submits deposit for Admin approval
   const handleFundsDepositRequest = async (depositAmount: number, network: string, reference?: string) => {
     const bonus = depositAmount * 0.5
     const totalAdded = depositAmount + bonus
-    const refNote = reference ? ' Ref: ' + reference : ''
-    const nextLiveBalance = liveBalance + totalAdded
+    const refNote = reference ? ' (Ref: ' + reference + ')' : ''
 
-    setLiveBalance(nextLiveBalance)
     setLiveAccountCreated(true)
-    setAccountType('live')
 
     if (supabase && user) {
-      // 1. Record transaction in Supabase
+      // Record PENDING deposit transaction in Supabase for Admin approval
       const { data: transaction } = await supabase.from('transactions').insert({
         user_id: user.id,
         type: 'deposit',
         amount: depositAmount,
-        bonus_amount: bonus,
-        total_amount: totalAdded,
-        gateway_network: network,
-        reference_code: reference || '',
-        status: 'approved',
+        asset: 'USD',
+        status: 'pending',
+        method: network,
+        reference_id: reference || '',
+        details: {
+          bonus_amount: bonus,
+          total_amount: totalAdded,
+          gateway_network: network,
+          reference_code: reference || '',
+        },
       }).select('id, created_at').maybeSingle()
 
       recordFundingHistory({
         id: transaction?.id ? String(transaction.id) : undefined,
         createdAt: transaction?.created_at ? String(transaction.created_at) : undefined,
-        type: 'deposit', amount: depositAmount, creditedAmount: totalAdded, network, reference, status: 'approved',
-      })
-
-      // 2. Update wallet live balance in Supabase
-      await supabase.from('wallets').upsert({
-        user_id: user.id,
-        live_balance: nextLiveBalance,
-        updated_at: new Date().toISOString(),
+        type: 'deposit',
+        amount: depositAmount,
+        creditedAmount: totalAdded,
+        network,
+        reference,
+        status: 'pending',
       })
     } else {
-      recordFundingHistory({ type: 'deposit', amount: depositAmount, creditedAmount: totalAdded, network, reference, status: 'approved' })
+      recordFundingHistory({
+        type: 'deposit',
+        amount: depositAmount,
+        creditedAmount: totalAdded,
+        network,
+        reference,
+        status: 'pending',
+      })
     }
 
-    showNotice(`🎉 Real Account Deposit of $${depositAmount.toFixed(2)} + $${bonus.toFixed(2)} (50% Deposit Bonus) = $${totalAdded.toFixed(2)} credited!${refNote}`)
+    setModal(null)
+    showNotice(`⏳ Deposit Request Submitted! $${depositAmount.toFixed(2)} on ${network}${refNote}. Status: PENDING Admin Verification.`)
   }
 
   const handleDepositSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const depAmount = parseFloat(amount) || 500
+    const depAmount = parseFloat(amount) || 50
     const bonus = depAmount * 0.5
     const totalAdded = depAmount + bonus
-    const nextLiveBalance = liveBalance + totalAdded
 
-    setLiveBalance(nextLiveBalance)
     setLiveAccountCreated(true)
-    setAccountType('live')
 
     if (supabase && user) {
-      // 1. Record transaction in Supabase
       const { data: transaction } = await supabase.from('transactions').insert({
         user_id: user.id,
         type: 'deposit',
         amount: depAmount,
-        bonus_amount: bonus,
-        total_amount: totalAdded,
-        gateway_network: selectedNetwork,
-        status: 'approved',
+        asset: 'USD',
+        status: 'pending',
+        method: selectedNetwork,
+        details: {
+          bonus_amount: bonus,
+          total_amount: totalAdded,
+          gateway_network: selectedNetwork,
+        },
       }).select('id, created_at').maybeSingle()
 
       recordFundingHistory({
         id: transaction?.id ? String(transaction.id) : undefined,
         createdAt: transaction?.created_at ? String(transaction.created_at) : undefined,
-        type: 'deposit', amount: depAmount, creditedAmount: totalAdded, network: selectedNetwork, status: 'approved',
-      })
-
-      // 2. Update wallet live balance in Supabase
-      await supabase.from('wallets').upsert({
-        user_id: user.id,
-        live_balance: nextLiveBalance,
-        updated_at: new Date().toISOString(),
+        type: 'deposit',
+        amount: depAmount,
+        creditedAmount: totalAdded,
+        network: selectedNetwork,
+        status: 'pending',
       })
     } else {
-      recordFundingHistory({ type: 'deposit', amount: depAmount, creditedAmount: totalAdded, network: selectedNetwork, status: 'approved' })
+      recordFundingHistory({
+        type: 'deposit',
+        amount: depAmount,
+        creditedAmount: totalAdded,
+        network: selectedNetwork,
+        status: 'pending',
+      })
     }
 
-    showNotice(`🎉 Deposit of $${depAmount.toFixed(2)} + $${bonus.toFixed(2)} (50% Deposit Bonus) = $${totalAdded.toFixed(2)} credited to your Real Account!`)
-    closeModal()
+    setModal(null)
+    showNotice(`⏳ Deposit Request Submitted! $${depAmount.toFixed(2)} on ${selectedNetwork}. Status: PENDING Admin Verification.`)
   }
 
   const handleFundsWithdrawalRequest = async (withdrawalAmount: number, network: string, destination: string) => {
