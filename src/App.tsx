@@ -4234,15 +4234,17 @@ export default function App() {
     sessionStorage.setItem('pending_real_account', 'true')
 
     if (!supabase) {
-      showNotice('Connecting to Google OAuth... Please configure Supabase keys in .env for live OAuth redirect.')
+      showNotice('Connecting to Google OAuth... Please configure Supabase keys.')
       return
     }
 
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const redirectUrl = window.location.origin.replace(/\/$/, '')
+      showNotice('Redirecting to Google Sign-In...')
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: redirectUrl,
           queryParams: {
             access_type: 'offline',
             prompt: 'select_account',
@@ -4250,10 +4252,16 @@ export default function App() {
         },
       })
       if (error) {
+        console.error('Google OAuth Error:', error)
         showNotice(`Google Sign-In Error: ${error.message}`)
+        alert(`Google Sign-In Error: ${error.message}\n\nPlease ensure Google Provider is enabled in Supabase Dashboard under Authentication -> Providers -> Google.`)
+      } else if (data?.url) {
+        window.location.href = data.url
       }
     } catch (err: any) {
+      console.error('Google OAuth Exception:', err)
       showNotice(`Google Sign-In failed: ${err?.message || 'Unknown error'}`)
+      alert(`Google Sign-In Exception: ${err?.message || 'Unknown error'}`)
     }
   }
 
