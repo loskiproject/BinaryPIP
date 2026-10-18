@@ -11,11 +11,11 @@ import {
 import './AdminDashboard.css'
 import '../features/features.css'
 import AdminChatDesk from '../features/AdminChatDesk'
-import { supabase } from '../lib/supabase'
+import { supabase, supabaseUrl as DEFAULT_SUPABASE_URL, supabaseKey as DEFAULT_SUPABASE_KEY } from '../lib/supabase'
 
 // ─── Supabase config ──────────────────────────────────────────────────────────
-const SUPABASE_URL      = import.meta.env.VITE_SUPABASE_URL      as string
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+const SUPABASE_URL      = (import.meta.env.VITE_SUPABASE_URL as string) || DEFAULT_SUPABASE_URL
+const SUPABASE_ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || DEFAULT_SUPABASE_KEY
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
