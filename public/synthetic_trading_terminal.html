@@ -486,7 +486,7 @@
     <div class="bg-[#121722] border border-green-500/40 rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4">
       <div class="flex justify-between items-center">
         <div class="flex items-center gap-2 text-green-400 font-bold text-sm">
-          <i class="fa-solid fa-brain animate-pulse"></i> <span>AI Synthetic Market Scanner (40s)</span>
+          <i class="fa-solid fa-brain animate-pulse"></i> <span>AI Synthetic Market Scanner (15s)</span>
         </div>
         <button type="button" onclick="closeAiScanner()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
       </div>
@@ -494,9 +494,9 @@
       <div id="aiScanContent" class="space-y-3 text-xs text-gray-300">
         <div class="flex flex-col items-center justify-center py-6 space-y-3">
           <div class="w-12 h-12 rounded-full bg-green-500/20 border border-green-500/50 flex items-center justify-center text-green-400 text-lg font-mono animate-bounce" id="aiTimerDisplay">
-            40s
+            15s
           </div>
-          <p id="aiScanStatusText" class="text-center font-medium text-green-300">Scanning synthetic tick volatility and digit entropy for 40 seconds...</p>
+          <p id="aiScanStatusText" class="text-center font-medium text-green-300">Scanning synthetic tick volatility and digit entropy for 15 seconds...</p>
           <div class="w-full bg-gray-900 rounded-full h-2 overflow-hidden border border-gray-800">
             <div id="aiProgressBar" class="bg-gradient-to-r from-green-500 to-green-400 h-full w-0 transition-all duration-300"></div>
           </div>
@@ -620,7 +620,7 @@
       setTimeout(() => tickChart.resize(), 100);
     };
 
-    // AI 40s Market Scanner Logic
+    // AI 15s Market Scanner Logic
     let aiScanTimer = null;
     window.startAiMarketScan = function() {
       const modal = document.getElementById('aiScannerModal');
@@ -631,15 +631,15 @@
       if (!modal) return;
 
       modal.classList.remove('hidden');
-      let timeLeft = 40;
+      let timeLeft = 15;
       timerDisplay.textContent = timeLeft + 's';
       progressBar.style.width = '0%';
-      statusText.textContent = 'Scanning 40s synthetic tick volatility and digit entropy...';
+      statusText.textContent = 'Scanning 15s synthetic tick volatility and digit entropy...';
 
       const statuses = [
-        'Analyzing 10s tick momentum and moving averages...',
+        'Analyzing 5s tick momentum and moving averages...',
         'Scanning resistance and support liquidity barriers...',
-        'Running 40s Monte Carlo tick simulations...',
+        'Running 15s Monte Carlo tick simulations...',
         'Finalizing optimal trade direction and entry point...'
       ];
 
@@ -647,11 +647,11 @@
       aiScanTimer = setInterval(() => {
         timeLeft--;
         timerDisplay.textContent = timeLeft + 's';
-        const progress = ((40 - timeLeft) / 40) * 100;
+        const progress = ((15 - timeLeft) / 15) * 100;
         progressBar.style.width = progress + '%';
 
-        if (timeLeft % 10 === 0) {
-          const idx = Math.floor((40 - timeLeft) / 10);
+        if (timeLeft % 4 === 0) {
+          const idx = Math.floor((15 - timeLeft) / 4);
           if (statuses[idx]) statusText.textContent = statuses[idx];
         }
 
@@ -663,10 +663,10 @@
 
           content.innerHTML = `
             <div class="bg-gray-900/85 border border-green-500/40 rounded-xl p-4 text-center space-y-3">
-              <span class="text-[10px] bg-green-500/20 text-green-300 px-2 py-0.5 rounded font-mono font-bold uppercase">AI 40s Scan Complete</span>
+              <span class="text-[10px] bg-green-500/20 text-green-300 px-2 py-0.5 rounded font-mono font-bold uppercase">AI 15s Scan Complete</span>
               <div class="text-base font-extrabold text-white tracking-wide">${recName}</div>
               <div class="text-xs text-gray-400 font-mono">Win Probability: <strong class="text-green-400">${winProb}%</strong></div>
-              <p class="text-[11px] text-gray-400">AI has mastered the optimal entry point based on 40 seconds of deep tick learning.</p>
+              <p class="text-[11px] text-gray-400">AI has mastered the optimal entry point based on 15 seconds of deep tick learning.</p>
               <button type="button" onclick="executeAiTrade('${recDirection}')" class="w-full bg-gradient-to-r from-green-600 to-green-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow-lg">
                 🚀 Auto-Execute AI Trade
               </button>

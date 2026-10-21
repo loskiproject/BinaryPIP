@@ -19,7 +19,7 @@ type Props = {
   pricePrecision?: number
 }
 
-const SCAN_INTERVAL_MS = 7000
+const SCAN_INTERVAL_MS = 15000
 
 function generateSignal(symbol: string, price: number): AiSignal {
   const seed = Date.now() % 1000

@@ -177,7 +177,7 @@ export default function FundsHub({
     if (wallets.main < amt) { showNotice('Insufficient main balance.'); return }
     if (!wAddr.trim()) { showNotice('Enter destination wallet address.'); return }
     onWithdrawalRequest(amt, wGateway, wAddr.trim())
-    showNotice(`✅ Withdrawal of $${fmt(amt)} via ${wGateway} submitted.`)
+    showNotice(`🎉 You have successfully withdrawn $${fmt(amt)}. You should receive the funds in less than one minute.`)
     setWAmt(''); setWAddr('')
   }
 

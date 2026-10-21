@@ -1969,22 +1969,40 @@ export default function App() {
   }
 
   const handleFundsWithdrawalRequest = async (withdrawalAmount: number, network: string, destination: string) => {
+    // Immediately deduct the withdrawn amount from live balance
+    const nextLiveBalance = Math.max(0, liveBalance - withdrawalAmount)
+    setLiveBalance(nextLiveBalance)
+
     let transactionId: string | undefined
     let createdAt: string | undefined
+
     if (supabase && user) {
+      // 1. Record transaction in Supabase
       const { data: transaction } = await supabase.from('transactions').insert({
         user_id: user.id,
         type: 'withdrawal',
         amount: withdrawalAmount,
-        bonus_amount: 0,
-        total_amount: withdrawalAmount,
-        gateway_network: network,
-        reference_code: destination,
+        asset: 'USD',
         status: 'pending',
+        method: network,
+        reference_id: destination,
+        details: {
+          destination_address: destination,
+          gateway_network: network,
+        },
       }).select('id, created_at').maybeSingle()
+
       transactionId = transaction?.id ? String(transaction.id) : undefined
       createdAt = transaction?.created_at ? String(transaction.created_at) : undefined
+
+      // 2. Update wallet live balance in Supabase
+      await supabase.from('wallets').upsert({
+        user_id: user.id,
+        live_balance: nextLiveBalance,
+        updated_at: new Date().toISOString(),
+      })
     }
+
     recordFundingHistory({
       id: transactionId,
       createdAt,
@@ -1994,6 +2012,8 @@ export default function App() {
       network,
       status: 'pending',
     })
+
+    showNotice(`🎉 You have successfully withdrawn $${withdrawalAmount.toFixed(2)}. You should receive the funds in less than one minute.`)
   }
 
   // Withdrawal Submit
@@ -2005,9 +2025,21 @@ export default function App() {
       return
     }
 
-    if (accountType === 'demo') setDemoBalance((b) => Math.max(0, b - wAmount))
-    else setLiveBalance((b) => Math.max(0, b - wAmount))
-    showNotice(`Withdrawal request for $${wAmount.toFixed(2)} submitted for processing!`)
+    const nextBal = Math.max(0, activeBalance - wAmount)
+    if (accountType === 'demo') {
+      setDemoBalance(nextBal)
+    } else {
+      setLiveBalance(nextBal)
+      if (supabase && user) {
+        void supabase.from('wallets').upsert({
+          user_id: user.id,
+          live_balance: nextBal,
+          updated_at: new Date().toISOString(),
+        })
+      }
+    }
+    showNotice(`🎉 You have successfully withdrawn $${wAmount.toFixed(2)}. You should receive the funds in less than one minute.`)
+    closeModal()
   }
 
   // Login Submit
