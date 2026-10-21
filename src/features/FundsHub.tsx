@@ -3,7 +3,7 @@ import {
   ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight,
   Copy, CheckCircle2, AlertCircle, Smartphone,
   DollarSign, RefreshCw, ChevronDown, EyeOff, Eye,
-  Zap, Sparkles,
+  Zap, Sparkles, Wallet,
 } from 'lucide-react'
 
 export type WalletBalances = {
@@ -80,6 +80,7 @@ export default function FundsHub({
   const [wAmt, setWAmt] = useState('')
   const [wAddr, setWAddr] = useState('')
   const [wGateway, setWGateway] = useState('USDT-TRC20')
+  const [withdrawSuccessModal, setWithdrawSuccessModal] = useState<{ amount: number } | null>(null)
 
   // Transfer
   const [tFrom, setTFrom] = useState<keyof WalletBalances>('main')
@@ -177,7 +178,7 @@ export default function FundsHub({
     if (wallets.main < amt) { showNotice('Insufficient main balance.'); return }
     if (!wAddr.trim()) { showNotice('Enter destination wallet address.'); return }
     onWithdrawalRequest(amt, wGateway, wAddr.trim())
-    showNotice(`🎉 You have successfully withdrawn $${fmt(amt)}. You should receive the funds in less than one minute.`)
+    setWithdrawSuccessModal({ amount: amt })
     setWAmt(''); setWAddr('')
   }
 
@@ -572,6 +573,132 @@ export default function FundsHub({
         ))}
         {logLines.length === 0 && <div className="fhub-log-line" style={{opacity:0.4}}>Awaiting activity…</div>}
       </div>
+
+      {/* ── WITHDRAWAL SUCCESS POPUP MODAL ─────────────────────────────────── */}
+      {withdrawSuccessModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 99999,
+          background: 'rgba(3, 9, 22, 0.88)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px',
+        }} onClick={() => setWithdrawSuccessModal(null)}>
+          <div style={{
+            background: '#071326',
+            border: '1px solid rgba(0, 229, 255, 0.35)',
+            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 35px rgba(0, 229, 255, 0.2)',
+            borderRadius: '24px',
+            padding: '36px 28px 28px',
+            maxWidth: '430px',
+            width: '100%',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '20px',
+            animation: 'fhubPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+          }} onClick={e => e.stopPropagation()}>
+
+            {/* Top Icon Badge */}
+            <div style={{
+              width: '68px',
+              height: '68px',
+              borderRadius: '50%',
+              background: 'radial-gradient(circle, rgba(0,229,255,0.2) 0%, rgba(7,19,38,0.95) 100%)',
+              border: '1.5px solid #00e5ff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#00e5ff',
+              boxShadow: '0 0 24px rgba(0,229,255,0.35)',
+            }}>
+              <Wallet size={32} />
+            </div>
+
+            {/* Banner Kicker */}
+            <div style={{
+              fontSize: '12px',
+              fontWeight: 800,
+              color: '#1ccf84',
+              letterSpacing: '0.8px',
+              textTransform: 'uppercase',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}>
+              ✨ WITHDRAWAL SUCCESSFUL &amp; ALLOCATED ✨
+            </div>
+
+            {/* Amount Display */}
+            <div style={{
+              fontSize: '34px',
+              fontWeight: 900,
+              color: '#ffffff',
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              letterSpacing: '-0.5px',
+              marginTop: '-6px',
+            }}>
+              ${withdrawSuccessModal.amount.toFixed(2)} USD
+            </div>
+
+            {/* Inner Info Box */}
+            <div style={{
+              background: 'rgba(3, 20, 42, 0.75)',
+              border: '1px solid rgba(0, 229, 255, 0.25)',
+              borderRadius: '14px',
+              padding: '16px 18px',
+              textAlign: 'left',
+              width: '100%',
+            }}>
+              <div style={{
+                fontSize: '13px',
+                fontWeight: 700,
+                color: '#00e5ff',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginBottom: '6px',
+              }}>
+                ⏳ Allocation Stage (Pending Transfer)
+              </div>
+              <p style={{
+                fontSize: '12px',
+                color: '#a0aec0',
+                lineHeight: 1.5,
+                margin: 0,
+              }}>
+                Kindly wait for funds to be sent to your account. Your withdrawal has been successfully logged in your History ledger.
+              </p>
+            </div>
+
+            {/* OK Button */}
+            <button
+              type="button"
+              onClick={() => setWithdrawSuccessModal(null)}
+              style={{
+                width: '100%',
+                background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '14px',
+                fontSize: '15px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                boxShadow: '0 8px 22px rgba(0, 180, 216, 0.4)',
+                transition: 'transform 0.15s ease, boxShadow 0.15s ease',
+              }}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
