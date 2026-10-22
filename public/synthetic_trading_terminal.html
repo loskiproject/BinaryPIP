@@ -960,9 +960,19 @@
       }
       stake = Number(stake.toFixed(2));
 
+      if (accountBalance <= 0) {
+        if (selectedAccountType === 'live') {
+          openFundsModal();
+          return;
+        } else {
+          accountBalance = 10000;
+        }
+      }
+
       if (accountBalance < stake) {
-        alert('Insufficient account balance ($' + accountBalance.toFixed(2) + ' USD). Please deposit or switch account.');
-        return;
+        stake = Math.max(1, Number(accountBalance.toFixed(2)));
+        const stakeInp = document.getElementById('stakeInput');
+        if (stakeInp) stakeInp.value = stake.toString();
       }
 
       accountBalance -= stake;
