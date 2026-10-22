@@ -966,18 +966,13 @@
         if (stakeInput) stakeInput.value = '10';
       }
 
-      if (accountBalance <= 0) {
-        accountBalance = selectedAccountType === 'live' ? 1000 : 10000;
-        const display = document.getElementById('accountBalance');
-        if (display) {
-          display.textContent = '$' + accountBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USD';
+      if (accountBalance <= 0 || accountBalance < stake) {
+        if (selectedAccountType === 'live') {
+          openFundsModal();
+          return;
+        } else {
+          accountBalance = 10000;
         }
-        syncBalanceToParent();
-      }
-
-      if (accountBalance < stake) {
-        stake = Math.max(1, Number(accountBalance.toFixed(2)));
-        if (stakeInput) stakeInput.value = stake.toString();
       }
 
       accountBalance -= stake;
