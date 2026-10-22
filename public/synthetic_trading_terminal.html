@@ -657,18 +657,62 @@
 
         if (timeLeft <= 0) {
           clearInterval(aiScanTimer);
-          const recDirection = Math.random() > 0.5 ? 'higher' : 'lower';
-          const recName = recDirection === 'higher' ? 'HIGHER / OVER' : 'LOWER / UNDER';
-          const winProb = (85 + Math.random() * 13).toFixed(1);
+
+          // 1. Pick a market
+          const m = markets[Math.floor(Math.random() * markets.length)];
+
+          // 2. Pick a contract category: Over/Under (0), Rise/Fall (1), Matches/Differs (2), Even/Odd (3)
+          const typeIdx = Math.floor(Math.random() * 4);
+          const t = tradeTypes[typeIdx];
+
+          // 3. Direction & digit prediction
+          const isUp = Math.random() > 0.5;
+          const direction = isUp ? 'higher' : 'lower';
+          const digit = Math.floor(Math.random() * 10);
+          const winProb = (88.5 + Math.random() * 10.5).toFixed(1);
+
+          let contractLabel = '';
+          if (typeIdx === 0) {
+            contractLabel = isUp ? `OVER ${Math.min(digit, 7)}` : `UNDER ${Math.max(digit, 2)}`;
+          } else if (typeIdx === 1) {
+            contractLabel = isUp ? 'RISE (HIGHER)' : 'FALL (LOWER)';
+          } else if (typeIdx === 2) {
+            contractLabel = isUp ? `MATCHES DIGIT ${digit}` : `DIFFERS DIGIT ${digit}`;
+          } else {
+            contractLabel = isUp ? 'EVEN DIGIT' : 'ODD DIGIT';
+          }
 
           content.innerHTML = `
-            <div class="bg-gray-900/85 border border-green-500/40 rounded-xl p-4 text-center space-y-3">
-              <span class="text-[10px] bg-green-500/20 text-green-300 px-2 py-0.5 rounded font-mono font-bold uppercase">AI 15s Scan Complete</span>
-              <div class="text-base font-extrabold text-white tracking-wide">${recName}</div>
-              <div class="text-xs text-gray-400 font-mono">Win Probability: <strong class="text-green-400">${winProb}%</strong></div>
-              <p class="text-[11px] text-gray-400">AI has mastered the optimal entry point based on 15 seconds of deep tick learning.</p>
-              <button type="button" onclick="executeAiTrade('${recDirection}')" class="w-full bg-gradient-to-r from-green-600 to-green-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow-lg">
-                🚀 Auto-Execute AI Trade
+            <div class="bg-gray-900/90 border border-green-500/40 rounded-xl p-4 text-center space-y-3 shadow-2xl">
+              <span class="text-[10px] bg-green-500/20 text-green-300 border border-green-500/40 px-2.5 py-0.5 rounded font-mono font-bold uppercase">
+                ⚡ AI 15s Scan Complete
+              </span>
+
+              <div class="space-y-0.5">
+                <div class="text-[10.5px] text-gray-400 font-medium">Recommended Market</div>
+                <div class="text-sm font-extrabold text-teal-300 font-mono">${m.name}</div>
+              </div>
+
+              <div class="bg-[#18202d] border border-gray-700/80 rounded-lg p-2.5">
+                <div class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">${t.name} Contract</div>
+                <div class="text-base font-black text-green-400 tracking-wide mt-0.5">${contractLabel}</div>
+              </div>
+
+              <div class="text-xs text-gray-400 font-mono">
+                Win Probability: <strong class="text-green-400 text-sm">${winProb}%</strong>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 pt-1">
+                <button type="button" onclick="loadAiStrategyToTerminal('${m.id}', ${typeIdx}, '${direction}', ${digit})" class="bg-teal-600/80 hover:bg-teal-500 text-white font-bold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow">
+                  📥 Load Strategy
+                </button>
+                <button type="button" onclick="startAiMarketScan()" class="bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center gap-1.5 border border-gray-700">
+                  🔄 Rescan
+                </button>
+              </div>
+
+              <button type="button" onclick="executeAiStrategy('${m.id}', ${typeIdx}, '${direction}', ${digit})" class="w-full bg-gradient-to-r from-green-600 to-teal-500 hover:from-green-500 hover:to-teal-400 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition shadow-lg flex items-center justify-center gap-2">
+                🚀 Auto-Execute Trade
               </button>
             </div>
           `;
@@ -682,7 +726,25 @@
       if (modal) modal.classList.add('hidden');
     };
 
-    window.executeAiTrade = function(direction) {
+    window.loadAiStrategyToTerminal = function(marketId, typeIndex, direction, digit) {
+      selectMarket(marketId);
+      currentTradeTypeIndex = typeIndex;
+      updateTradeTypeDisplay();
+      if (typeof digit === 'number') {
+        selectedPredictionDigit = digit;
+        const digitDisplay = document.getElementById('selectedDigitDisplay');
+        if (digitDisplay) digitDisplay.textContent = digit.toString();
+      }
+      closeAiScanner();
+    };
+
+    window.executeAiStrategy = function(marketId, typeIndex, direction, digit) {
+      selectMarket(marketId);
+      currentTradeTypeIndex = typeIndex;
+      updateTradeTypeDisplay();
+      if (typeof digit === 'number') {
+        selectedPredictionDigit = digit;
+      }
       closeAiScanner();
       executeTrade(direction);
     };
