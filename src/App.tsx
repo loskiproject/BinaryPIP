@@ -1969,9 +1969,23 @@ export default function App() {
   }
 
   const handleFundsWithdrawalRequest = async (withdrawalAmount: number, network: string, destination: string) => {
-    // Immediately deduct the withdrawn amount from live balance
-    const nextLiveBalance = Math.max(0, liveBalance - withdrawalAmount)
-    setLiveBalance(nextLiveBalance)
+    // Immediately deduct the withdrawn amount from active balance
+    if (accountType === 'demo') {
+      const nextDemoBalance = Math.max(0, demoBalance - withdrawalAmount)
+      setDemoBalance(nextDemoBalance)
+    } else {
+      const nextLiveBalance = Math.max(0, liveBalance - withdrawalAmount)
+      setLiveBalance(nextLiveBalance)
+
+      if (supabase && user) {
+        // Update user's wallet live_balance in Supabase
+        await supabase.from('wallets').upsert({
+          user_id: user.id,
+          live_balance: nextLiveBalance,
+          updated_at: new Date().toISOString(),
+        })
+      }
+    }
 
     let transactionId: string | undefined
     let createdAt: string | undefined
@@ -1994,13 +2008,6 @@ export default function App() {
 
       transactionId = transaction?.id ? String(transaction.id) : undefined
       createdAt = transaction?.created_at ? String(transaction.created_at) : undefined
-
-      // 2. Update wallet live balance in Supabase
-      await supabase.from('wallets').upsert({
-        user_id: user.id,
-        live_balance: nextLiveBalance,
-        updated_at: new Date().toISOString(),
-      })
     }
 
     recordFundingHistory({
@@ -2012,8 +2019,6 @@ export default function App() {
       network,
       status: 'pending',
     })
-
-    showNotice(`🎉 You have successfully withdrawn $${withdrawalAmount.toFixed(2)}. You should receive the funds in less than one minute.`)
   }
 
   // Withdrawal Submit
