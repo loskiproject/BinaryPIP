@@ -816,6 +816,26 @@ const checkIsAdmin = (emailStr?: string | null, appMetaRole?: string, userMetaRo
   )
 }
 
+const updateWalletBalanceInSupabase = async (userId: string, newLiveBalance: number) => {
+  if (!supabase) return
+  try {
+    const { error } = await supabase.from('wallets').upsert({
+      user_id: userId,
+      live_balance: newLiveBalance,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' })
+
+    if (error) {
+      await supabase.from('wallets').update({
+        live_balance: newLiveBalance,
+        updated_at: new Date().toISOString(),
+      }).eq('user_id', userId)
+    }
+  } catch {
+    // silent
+  }
+}
+
 export default function App() {
   const [activeView, setActiveView] = useState<View>('synthetic')
   const [previousView, setPreviousView] = useState<View>('synthetic')
@@ -1112,12 +1132,8 @@ export default function App() {
             setDemoBalance(nextBalance)
           } else if (message.accountType === 'live') {
             setLiveBalance(nextBalance)
-            if (supabase && user) {
-              void supabase.from('wallets').upsert({
-                user_id: user.id,
-                live_balance: nextBalance,
-                updated_at: new Date().toISOString(),
-              })
+            if (user) {
+              void updateWalletBalanceInSupabase(user.id, nextBalance)
             }
           }
         }
@@ -1977,13 +1993,9 @@ export default function App() {
       const nextLiveBalance = Math.max(0, liveBalance - withdrawalAmount)
       setLiveBalance(nextLiveBalance)
 
-      if (supabase && user) {
+      if (user) {
         // Update user's wallet live_balance in Supabase
-        await supabase.from('wallets').upsert({
-          user_id: user.id,
-          live_balance: nextLiveBalance,
-          updated_at: new Date().toISOString(),
-        })
+        await updateWalletBalanceInSupabase(user.id, nextLiveBalance)
       }
     }
 
@@ -2035,12 +2047,8 @@ export default function App() {
       setDemoBalance(nextBal)
     } else {
       setLiveBalance(nextBal)
-      if (supabase && user) {
-        void supabase.from('wallets').upsert({
-          user_id: user.id,
-          live_balance: nextBal,
-          updated_at: new Date().toISOString(),
-        })
+      if (user) {
+        void updateWalletBalanceInSupabase(user.id, nextBal)
       }
     }
     showNotice(`🎉 You have successfully withdrawn $${wAmount.toFixed(2)}. You should receive the funds in less than one minute.`)
