@@ -360,9 +360,9 @@
     <!-- Aside 2: Right Side Contract Ticket Panel (Last child) -->
     <aside class="w-80 bg-[#121722] border-l border-gray-800/80 p-4 flex flex-col justify-between shrink-0 overflow-y-auto">
       <div class="space-y-4">
-        <!-- AI 40s Market Scanner Trigger -->
+        <!-- AI Market Scanner Trigger -->
         <button type="button" onclick="startAiMarketScan()" class="w-full bg-gradient-to-r from-green-600 to-green-600 hover:from-green-500 hover:to-green-500 text-white font-bold py-2.5 px-3 rounded-xl text-xs flex items-center justify-center gap-2 shadow-md shadow-green-950/40 transition">
-          <i class="fa-solid fa-brain"></i> <span>AI 40s Market Scanner</span>
+          <i class="fa-solid fa-brain"></i> <span>AI Market Scanner</span>
         </button>
 
         <!-- Trade Type Selector Dropdown Box -->
@@ -950,15 +950,21 @@
 
     // Execute Trade Logic (Demo = 75% win, Live = loss unless admin override)
     window.executeTrade = function(direction) {
-      const val = parseFloat(document.getElementById('stakeInput')?.value || 10);
+      const stakeInput = document.getElementById('stakeInput');
+      const val = parseFloat(stakeInput?.value || 10);
       const ticks = parseInt(document.getElementById('ticksSlider')?.value || 5, 10);
-      const t = tradeTypes[currentTradeTypeIndex];
+      const t = tradeTypes[currentTradeTypeIndex] || { name: 'Rise / Fall', upMult: 0.95, downMult: 0.95 };
 
       let stake = val;
       if (inputMode === 'payout') {
-        stake = val / (1 + (direction === 'higher' ? t.upMult : t.downMult));
+        stake = val / (1 + (direction === 'higher' ? (t.upMult || 0.95) : (t.downMult || 0.95)));
       }
       stake = Number(stake.toFixed(2));
+
+      if (!Number.isFinite(stake) || stake <= 0) {
+        stake = 10;
+        if (stakeInput) stakeInput.value = '10';
+      }
 
       if (accountBalance <= 0) {
         if (selectedAccountType === 'live') {
@@ -971,8 +977,7 @@
 
       if (accountBalance < stake) {
         stake = Math.max(1, Number(accountBalance.toFixed(2)));
-        const stakeInp = document.getElementById('stakeInput');
-        if (stakeInp) stakeInp.value = stake.toString();
+        if (stakeInput) stakeInput.value = stake.toString();
       }
 
       accountBalance -= stake;
@@ -983,19 +988,23 @@
       }
       syncBalanceToParent();
 
-      const currentPrice = priceHistory[priceHistory.length - 1];
+      const rawPrice = (priceHistory && priceHistory.length > 0) ? priceHistory[priceHistory.length - 1] : (activeMarket?.basePrice || 1000.00);
+      const currentPrice = Number.isFinite(Number(rawPrice)) ? Number(rawPrice) : 1000.00;
+      const priceStr = currentPrice.toFixed(2);
+      const entryDigit = parseInt(priceStr.slice(-1), 10) || 0;
+
       const trade = {
         id: 'SYN-' + (tradeCounter++),
-        marketName: activeMarket.name,
-        tradeType: t.name,
+        marketName: activeMarket ? activeMarket.name : 'Volatility Index',
+        tradeType: t.name || 'Contract',
         direction,
         entryPrice: currentPrice,
-        entryDigit: parseInt(currentPrice.toFixed(2).slice(-1), 10),
-        predictionDigit: selectedPredictionDigit,
+        entryDigit: entryDigit,
+        predictionDigit: selectedPredictionDigit || 0,
         stake,
         ticksLeft: ticks,
         totalTicks: ticks,
-        mult: direction === 'higher' ? t.upMult : t.downMult,
+        mult: direction === 'higher' ? (t.upMult || 0.95) : (t.downMult || 0.95),
         status: 'OPEN'
       };
 
@@ -1017,7 +1026,8 @@
       }
 
       body.innerHTML = openTrades.slice().reverse().map(trade => {
-        const currentPrice = priceHistory[priceHistory.length - 1];
+        const rawPrice = (priceHistory && priceHistory.length > 0) ? priceHistory[priceHistory.length - 1] : (trade.entryPrice || 1000.00);
+        const currentPrice = Number.isFinite(Number(rawPrice)) ? Number(rawPrice) : 1000.00;
         let plText = '-';
         let plClass = 'text-gray-400';
         let statusBadge = '<span class="bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded text-[10px]">OPEN (' + trade.ticksLeft + 't)</span>';
