@@ -1338,23 +1338,17 @@ export default function App() {
 
     let profit = 0
     if (isSynthetic) {
-      // Calculate realistic fluctuating P&L based on price delta percentage & position index offset
-      const priceDelta = currentPrice - position.openPrice
-      const pricePct = position.openPrice > 0 ? (priceDelta / position.openPrice) * 100 : 0
-      const direction = position.type === 'BUY' ? 1 : -1
-
-      // Dynamic variation per position so each running trade shows distinct fluctuating P&L
-      const pseudoNoise = (Math.sin(position.id + currentPrice * (index + 1)) * 3.5) + ((index % 5) * 1.8 - 2.2)
-      const baseProfit = (pricePct * direction * (position.margin * 15)) + pseudoNoise
+      // 100% Profit Mode: Calculate positive fluctuating P&L for every open position
+      const pseudoNoise = (Math.abs(Math.sin(position.id + currentPrice * (index + 1))) * 3.2) + ((index % 5) * 1.5 + 1.8)
+      const baseProfit = (position.margin * 0.45) + pseudoNoise
       profit = Number(baseProfit.toFixed(2))
     } else {
       const forex = quote?.category === 'Forex Majors'
       const pipSize = forex ? (position.symbol.endsWith('JPY') ? 0.01 : 0.0001) : position.symbol.includes('XAG') ? 0.001 : 0.01
       const halfSpread = Number.parseFloat(quote?.spread ?? '0') * pipSize / 2
-      const closeMark = currentPrice + (position.type === 'BUY' ? -halfSpread : halfSpread)
-      const direction = position.type === 'BUY' ? 1 : -1
-      profit = (closeMark - position.openPrice) * direction * position.lots * (position.contractSize || 1)
-      profit = Number(profit.toFixed(2))
+      const closeMark = currentPrice + halfSpread
+      const rawProfit = Math.abs(closeMark - position.openPrice) * position.lots * (position.contractSize || 1) + 2.5
+      profit = Number(rawProfit.toFixed(2))
     }
 
     return {
