@@ -82,6 +82,39 @@ export default function FundsHub({
   const [wGateway, setWGateway] = useState('USDT-TRC20')
   const [withdrawSuccessModal, setWithdrawSuccessModal] = useState<{ amount: number } | null>(null)
 
+  // Kenyan Bank Wire Form State
+  const [bBankName, setBBankName] = useState('KCB Bank Kenya')
+  const [bAccountName, setBAccountName] = useState('')
+  const [bAccountNumber, setBAccountNumber] = useState('')
+  const [bBranchName, setBBranchName] = useState('')
+  const [bSwiftCode, setBSwiftCode] = useState('')
+  const [bKraPin, setBKraPin] = useState('')
+
+  const KENYAN_BANKS = [
+    'KCB Bank Kenya',
+    'Equity Bank Kenya',
+    'Co-operative Bank of Kenya',
+    'NCBA Bank Kenya',
+    'Absa Bank Kenya',
+    'Stanbic Bank Kenya',
+    'Standard Chartered Bank Kenya',
+    'I&M Bank Kenya',
+    'Family Bank Kenya',
+    'Diamond Trust Bank (DTB) Kenya',
+    'Prime Bank Kenya',
+    'Credit Bank Kenya',
+    'Kingdom Bank Kenya',
+    'Gulf African Bank',
+    'SBM Bank Kenya',
+    'Sidian Bank',
+    'Faulu Microfinance Bank',
+    'Caritas Microfinance Bank',
+    'National Bank of Kenya (NBK)',
+    'Postbank Kenya',
+    'M-Pesa Paybill / Till Bank Bridge',
+    'Other Kenyan Commercial Bank',
+  ]
+
   // Transfer
   const [tFrom, setTFrom] = useState<keyof WalletBalances>('main')
   const [tTo, setTTo] = useState<keyof WalletBalances>('synthetic')
@@ -176,10 +209,33 @@ export default function FundsHub({
     const amt = parseFloat(wAmt)
     if (!amt || amt < minWithdrawalUSD) { showNotice(`Minimum withdrawal is $${minWithdrawalUSD}.`); return }
     if (wallets.main < amt) { showNotice('Insufficient main balance.'); return }
-    if (!wAddr.trim()) { showNotice('Enter destination wallet address.'); return }
-    onWithdrawalRequest(amt, wGateway, wAddr.trim())
+
+    let destinationSummary = wAddr.trim()
+    if (wGateway === 'BANK_WIRE') {
+      if (!bAccountName.trim() || !bAccountNumber.trim()) {
+        showNotice('Please enter Account Holder Name and Bank Account Number.')
+        return
+      }
+      destinationSummary = `Bank: ${bBankName} | Name: ${bAccountName.trim()} | Acc: ${bAccountNumber.trim()}`
+      if (bBranchName.trim()) destinationSummary += ` | Branch: ${bBranchName.trim()}`
+      if (bSwiftCode.trim()) destinationSummary += ` | SWIFT: ${bSwiftCode.trim()}`
+      if (bKraPin.trim()) destinationSummary += ` | KRA: ${bKraPin.trim()}`
+    } else {
+      if (!destinationSummary) {
+        showNotice('Enter destination wallet address.')
+        return
+      }
+    }
+
+    onWithdrawalRequest(amt, wGateway, destinationSummary)
     setWithdrawSuccessModal({ amount: amt })
-    setWAmt(''); setWAddr('')
+    setWAmt('')
+    setWAddr('')
+    setBAccountName('')
+    setBAccountNumber('')
+    setBBranchName('')
+    setBSwiftCode('')
+    setBKraPin('')
   }
 
   const confirmTransfer = () => {
@@ -497,14 +553,49 @@ export default function FundsHub({
           <div className="th-net-chips">
             {['USDT-TRC20','BTC','ETH','BANK_WIRE'].map(g => (
               <button key={g} className={`th-net-chip ${wGateway===g?'th-net-chip-on':''}`} onClick={() => setWGateway(g)}>
-                {g === 'BANK_WIRE' ? 'Bank Wire' : g}
+                {g === 'BANK_WIRE' ? 'Kenyan Bank Wire' : g}
               </button>
             ))}
           </div>
-          <label className="th-field-label">Destination Address
-            <input className="th-input th-mono" placeholder="Paste wallet address…" value={wAddr} onChange={e => setWAddr(e.target.value)}/>
-          </label>
-          <div className="th-quick-row">
+
+          {wGateway === 'BANK_WIRE' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
+              <label className="th-field-label">Select Kenyan Bank
+                <select className="th-input" value={bBankName} onChange={e => setBBankName(e.target.value)}>
+                  {KENYAN_BANKS.map(bank => (
+                    <option key={bank} value={bank}>{bank}</option>
+                  ))}
+                </select>
+              </label>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <label className="th-field-label">Account Holder Full Name *
+                  <input className="th-input" placeholder="e.g. John Kamau Doe" value={bAccountName} onChange={e => setBAccountName(e.target.value)}/>
+                </label>
+                <label className="th-field-label">Bank Account Number / IBAN *
+                  <input className="th-input th-mono" placeholder="e.g. 1122334455" value={bAccountNumber} onChange={e => setBAccountNumber(e.target.value)}/>
+                </label>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                <label className="th-field-label">Branch Name / Code
+                  <input className="th-input" placeholder="e.g. Westlands / 01" value={bBranchName} onChange={e => setBBranchName(e.target.value)}/>
+                </label>
+                <label className="th-field-label">SWIFT / BIC Code
+                  <input className="th-input th-mono" placeholder="e.g. KCBLKENX" value={bSwiftCode} onChange={e => setBSwiftCode(e.target.value)}/>
+                </label>
+                <label className="th-field-label">KRA PIN (Optional)
+                  <input className="th-input th-mono" placeholder="e.g. A012345678X" value={bKraPin} onChange={e => setBKraPin(e.target.value)}/>
+                </label>
+              </div>
+            </div>
+          ) : (
+            <label className="th-field-label">Destination Crypto Address
+              <input className="th-input th-mono" placeholder="Paste crypto wallet address…" value={wAddr} onChange={e => setWAddr(e.target.value)}/>
+            </label>
+          )}
+
+          <div className="th-quick-row" style={{ marginTop: '12px' }}>
             {[minWithdrawalUSD,50,100,500].filter((v,i,a)=>a.indexOf(v)===i).sort((a,b)=>a-b).map(q => (
               <button key={q} className={`th-quick ${wAmt===String(q)?'th-quick-on':''}`} onClick={() => setWAmt(String(q))}>
                 ${q}
