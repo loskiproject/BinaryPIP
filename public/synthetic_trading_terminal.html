@@ -1043,12 +1043,12 @@
       }
 
       if (accountBalance <= 0) {
-        accountBalance = selectedAccountType === 'live' ? 1000.00 : 10000.00;
-        const display = document.getElementById('accountBalance');
-        if (display) {
-          display.textContent = '$' + accountBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USD';
+        if (selectedAccountType === 'live') {
+          openFundsModal();
+          return;
+        } else {
+          accountBalance = 10000;
         }
-        syncBalanceToParent();
       }
 
       if (accountBalance < stake) {

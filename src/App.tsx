@@ -1456,16 +1456,18 @@ export default function App() {
         .maybeSingle()
 
       if (mounted && walletData) {
-        const liveBal = Number(walletData.live_balance)
-        const demoBal = Number(walletData.demo_balance)
-
-        const finalLiveBal = Number.isFinite(liveBal) && liveBal > 0 ? liveBal : 1000
-        const finalDemoBal = Number.isFinite(demoBal) && demoBal > 0 ? demoBal : 10000
-
-        setLiveBalance(finalLiveBal)
-        setDemoBalance(finalDemoBal)
+        if (Number.isFinite(Number(walletData.live_balance))) {
+          setLiveBalance(Number(walletData.live_balance))
+        } else {
+          setLiveBalance(0)
+        }
+        if (Number.isFinite(Number(walletData.demo_balance))) {
+          setDemoBalance(Number(walletData.demo_balance))
+        } else {
+          setDemoBalance(10000)
+        }
       } else if (mounted) {
-        setLiveBalance(1000)
+        setLiveBalance(0)
         setDemoBalance(10000)
       }
 
