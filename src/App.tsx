@@ -3327,8 +3327,33 @@ export default function App() {
             flexDirection: 'column',
             alignItems: 'center',
             gap: '20px',
+            position: 'relative',
+            overflow: 'hidden',
             animation: 'fhubPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
           }} onClick={e => e.stopPropagation()}>
+
+            {/* CONGRATULATORY FLOATING BUBBLES */}
+            {targetProfitModal.amount >= 0 && (
+              <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', borderRadius: '24px' }}>
+                {[...Array(12)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="fhub-bubble"
+                    style={{
+                      left: `${6 + (i * 8)}%`,
+                      bottom: '-20px',
+                      width: `${12 + (i % 5) * 6}px`,
+                      height: `${12 + (i % 5) * 6}px`,
+                      background: i % 2 === 0
+                        ? 'radial-gradient(circle, rgba(32, 235, 90, 0.8) 0%, rgba(32, 235, 90, 0) 70%)'
+                        : 'radial-gradient(circle, rgba(0, 229, 255, 0.8) 0%, rgba(0, 229, 255, 0) 70%)',
+                      animationDelay: `${(i * 0.22).toFixed(2)}s`,
+                      animationDuration: `${2.2 + (i % 3) * 0.5}s`,
+                    }}
+                  />
+                ))}
+              </div>
+            )}
 
             <div style={{
               width: '68px',
@@ -3441,8 +3466,33 @@ export default function App() {
             flexDirection: 'column',
             alignItems: 'center',
             gap: '20px',
+            position: 'relative',
+            overflow: 'hidden',
             animation: 'fhubPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
           }} onClick={e => e.stopPropagation()}>
+
+            {/* CONGRATULATORY FLOATING BUBBLES */}
+            {manualCloseModal.amount >= 0 && (
+              <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', borderRadius: '24px' }}>
+                {[...Array(12)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="fhub-bubble"
+                    style={{
+                      left: `${6 + (i * 8)}%`,
+                      bottom: '-20px',
+                      width: `${12 + (i % 5) * 6}px`,
+                      height: `${12 + (i % 5) * 6}px`,
+                      background: i % 2 === 0
+                        ? 'radial-gradient(circle, rgba(32, 235, 90, 0.8) 0%, rgba(32, 235, 90, 0) 70%)'
+                        : 'radial-gradient(circle, rgba(0, 229, 255, 0.8) 0%, rgba(0, 229, 255, 0) 70%)',
+                      animationDelay: `${(i * 0.22).toFixed(2)}s`,
+                      animationDuration: `${2.2 + (i % 3) * 0.5}s`,
+                    }}
+                  />
+                ))}
+              </div>
+            )}
 
             {/* Top Icon Badge */}
             <div style={{

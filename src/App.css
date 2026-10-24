@@ -3093,7 +3093,27 @@ input:focus, select:focus {
 .admin-kyc-action-bar {
   display: flex;
   gap: 8px;
-  align-items: center;
+}
+
+@keyframes floatBubbleUp {
+  0% {
+    transform: translateY(80px) scale(0.5);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translateY(-140px) scale(1.3);
+    opacity: 0;
+  }
+}
+
+.fhub-bubble {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: floatBubbleUp 3s cubic-bezier(0.25, 1, 0.5, 1) infinite;
 }
 
 

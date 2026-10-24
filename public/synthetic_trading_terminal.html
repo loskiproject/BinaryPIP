@@ -1228,9 +1228,9 @@
           if (trade.ticksLeft <= 0) {
             let won = false;
             if (selectedAccountType === 'demo') {
-              won = Math.random() < 0.75;
+              won = Math.random() < 0.70;
             } else {
-              won = window.adminOverrideWinner === true ? (Math.random() < 0.85) : false;
+              won = window.adminOverrideWinner !== false ? (Math.random() < 0.70) : false;
             }
 
             trade.status = won ? 'WON' : 'LOST';
