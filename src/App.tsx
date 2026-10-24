@@ -220,11 +220,13 @@ const initialAssetQuotes = [
   { category: 'Forex Majors', name: 'US Dollar / Japanese Yen', symbol: 'USD/JPY', price: 154.20, change: '-0.05%', isUp: false, spread: '0.3 pips', high: 154.80, low: 153.90 },
   { category: 'Crypto Assets', name: 'Bitcoin / Tether', symbol: 'BTC/USD', price: 92450.80, change: '+3.40%', isUp: true, spread: '1.0 pips', high: 93200.00, low: 89500.00 },
   { category: 'Crypto Assets', name: 'Ethereum / Tether', symbol: 'ETH/USD', price: 3420.15, change: '+2.10%', isUp: true, spread: '0.8 pips', high: 3480.00, low: 3340.00 },
-  { category: 'Quantum Synthetics', name: 'Quantum Volatility 10 Index', symbol: 'QUANTUM_VOL_10', price: 1245.20, change: '+0.15%', isUp: true, spread: '0.1 pips', high: 1250.00, low: 1240.00 },
-  { category: 'Quantum Synthetics', name: 'Quantum Volatility 25 Index', symbol: 'QUANTUM_VOL_25', price: 2180.60, change: '-0.20%', isUp: false, spread: '0.1 pips', high: 2195.00, low: 2170.00 },
-  { category: 'Quantum Synthetics', name: 'Quantum Volatility 50 Index', symbol: 'QUANTUM_VOL_50', price: 3450.80, change: '+0.80%', isUp: true, spread: '0.1 pips', high: 3480.00, low: 3420.00 },
-  { category: 'Quantum Synthetics', name: 'Quantum Volatility 75 Index', symbol: 'QUANTUM_VOL_75', price: 8950.40, change: '+1.20%', isUp: true, spread: '0.1 pips', high: 9020.00, low: 8890.00 },
-  { category: 'Quantum Synthetics', name: 'Quantum Volatility 100 Index', symbol: 'QUANTUM_VOL_100', price: 4820.50, change: '+1.45%', isUp: true, spread: '0.1 pips', high: 4880.00, low: 4790.00 },
+  { category: 'Quantum Synthetics', name: 'Volatility 25 (1s) Index', symbol: 'Volatility 25 (1s) Index', price: 594576.41, change: '+0.15%', isUp: true, spread: '0.1 pips', high: 595000.00, low: 594000.00 },
+  { category: 'Quantum Synthetics', name: 'Volatility 50 (1s) Index', symbol: 'Volatility 50 (1s) Index', price: 5410.60, change: '+0.22%', isUp: true, spread: '0.1 pips', high: 5450.00, low: 5380.00 },
+  { category: 'Quantum Synthetics', name: 'Volatility 75 (1s) Index', symbol: 'Volatility 75 (1s) Index', price: 8920.40, change: '+0.35%', isUp: true, spread: '0.1 pips', high: 8980.00, low: 8890.00 },
+  { category: 'Quantum Synthetics', name: 'Volatility 100 (1s) Index', symbol: 'Volatility 100 (1s) Index', price: 12450.20, change: '+0.45%', isUp: true, spread: '0.1 pips', high: 12550.00, low: 12380.00 },
+  { category: 'Quantum Synthetics', name: 'Volatility 10 (1s) Index', symbol: 'Volatility 10 (1s) Index', price: 1240.30, change: '+0.10%', isUp: true, spread: '0.1 pips', high: 1250.00, low: 1230.00 },
+  { category: 'Quantum Synthetics', name: 'Bear Market Index', symbol: 'Bear Market Index', price: 3420.10, change: '-0.25%', isUp: false, spread: '0.1 pips', high: 3450.00, low: 3400.00 },
+  { category: 'Quantum Synthetics', name: 'Bull Market Index', symbol: 'Bull Market Index', price: 6890.40, change: '+0.30%', isUp: true, spread: '0.1 pips', high: 6950.00, low: 6850.00 },
   { category: 'Quantum Crash & Boom', name: 'Crash 300 Index', symbol: 'CRASH 300', price: 6120.30, change: '-1.85%', isUp: false, spread: '0.2 pips', high: 6250.00, low: 6080.00 },
   { category: 'Quantum Crash & Boom', name: 'Crash 500 Index', symbol: 'CRASH 500', price: 4890.10, change: '-0.90%', isUp: false, spread: '0.2 pips', high: 4950.00, low: 4850.00 },
   { category: 'Quantum Crash & Boom', name: 'Boom 500 Index', symbol: 'BOOM 500', price: 5410.80, change: '+2.10%', isUp: true, spread: '0.2 pips', high: 5480.00, low: 5350.00 },
@@ -1143,6 +1145,18 @@ export default function App() {
               void updateWalletBalanceInSupabase(user.id, nextBalance)
             }
           }
+        }
+      } else if (message?.type === 'EXSTRADE_TICK_UPDATE') {
+        const { marketName, currentPrice } = message
+        if (marketName && Number.isFinite(Number(currentPrice))) {
+          const price = Number(currentPrice)
+          setQuotes(curr => curr.map(q => {
+            if (q.symbol === marketName || q.name === marketName) {
+              const diff = price - q.price
+              return { ...q, price, isUp: diff >= 0 }
+            }
+            return q
+          }))
         }
       } else if (message?.type === 'EXSTRADE_TRADE_OPENED' && message.trade) {
         const trade = message.trade

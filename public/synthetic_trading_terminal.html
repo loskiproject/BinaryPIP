@@ -1166,6 +1166,14 @@
       priceHistory.push(newPrice);
       if (priceHistory.length > 50) priceHistory.shift();
 
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({
+          type: 'EXSTRADE_TICK_UPDATE',
+          marketName: activeMarket.name,
+          currentPrice: newPrice
+        }, location.origin);
+      }
+
       const priceStr = newPrice.toFixed(2);
       const lastDigit = parseInt(priceStr.slice(-1), 10);
       digitHistory.push(lastDigit);
