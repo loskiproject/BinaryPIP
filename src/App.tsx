@@ -23,6 +23,7 @@ import {
   Plus,
   Trash2,
   Target,
+  AlertCircle,
   Camera,
   Activity,
   Wallet,
@@ -958,6 +959,7 @@ export default function App() {
   const [targetProfitInput, setTargetProfitInput] = useState('50')
   const [targetProfitEnabled, setTargetProfitEnabled] = useState(true)
   const [targetProfitModal, setTargetProfitModal] = useState<{ amount: number } | null>(null)
+  const [manualCloseModal, setManualCloseModal] = useState<{ count: number; amount: number; symbol?: string; posId?: number } | null>(null)
 
   // Theme State (`dark` | `light`) with automatic device theme preference detection
   const [theme, setTheme] = useState<Theme>(() => {
@@ -1786,10 +1788,10 @@ export default function App() {
   }
 
   // Close Running Trade Handler
-  const handleClosePosition = (posId: number) => {
+  const handleClosePosition = (posId: number, isManualTrigger = false) => {
     const pos = markedPositions.find((position) => position.id === posId)
     if (!pos) return
-    const quote = quotes.find((item) => item.symbol === pos.symbol)
+    const quote = quotes.find((item) => item.symbol === pos.symbol || item.name === pos.symbol)
     const forex = quote?.category === 'Forex Majors'
     const pipSize = forex ? (pos.symbol.endsWith('JPY') ? 0.01 : 0.0001) : pos.symbol.includes('XAG') ? 0.001 : 0.01
     const halfSpread = Number.parseFloat(quote?.spread ?? '0') * pipSize / 2
@@ -1816,17 +1818,22 @@ export default function App() {
       setLiveBalance((balance) => Math.max(0, balance + pos.profit))
     }
 
-    showNotice(`Closed position #${posId} (${pos.symbol}) with P&L: $${pos.profit >= 0 ? '+' : ''}${pos.profit.toFixed(2)}`)
+    if (isManualTrigger) {
+      setManualCloseModal({ count: 1, amount: pos.profit, symbol: pos.symbol, posId: pos.id })
+    } else {
+      showNotice(`Closed position #${posId} (${pos.symbol}) with P&L: $${pos.profit >= 0 ? '+' : ''}${pos.profit.toFixed(2)}`)
+    }
   }
 
   // Close All Positions Handler
   const handleCloseAllPositions = () => {
     if (openPositions.length === 0) return
     const count = openPositions.length
+    const totalPnl = totalFloatingPnl
     openPositions.forEach((pos) => {
-      handleClosePosition(pos.id)
+      handleClosePosition(pos.id, false)
     })
-    showNotice(`✅ Closed all ${count} running positions!`)
+    setManualCloseModal({ count, amount: totalPnl, symbol: `${count} Positions` })
   }
 
   // Target Profit Auto-Close Guard Monitor
@@ -3231,7 +3238,7 @@ export default function App() {
                             fontWeight: 800,
                             cursor: 'pointer',
                           }}
-                          onClick={() => handleClosePosition(pos.id)}
+                          onClick={() => handleClosePosition(pos.id, true)}
                         >
                           Close Trade
                         </button>
@@ -3388,6 +3395,127 @@ export default function App() {
             <button
               type="button"
               onClick={() => setTargetProfitModal(null)}
+              style={{
+                width: '100%',
+                background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '14px',
+                fontSize: '15px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                boxShadow: '0 8px 22px rgba(0, 180, 216, 0.4)',
+              }}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MANUAL CLOSE TRADE RESULT POPUP BANNER MODAL */}
+      {manualCloseModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 99999,
+          background: 'rgba(3, 9, 22, 0.88)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px',
+        }} onClick={() => setManualCloseModal(null)}>
+          <div style={{
+            background: '#071326',
+            border: manualCloseModal.amount >= 0 ? '1px solid rgba(32, 235, 90, 0.5)' : '1px solid rgba(255, 77, 77, 0.5)',
+            boxShadow: manualCloseModal.amount >= 0 ? '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 35px rgba(32, 235, 90, 0.25)' : '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 35px rgba(255, 77, 77, 0.25)',
+            borderRadius: '24px',
+            padding: '36px 28px 28px',
+            maxWidth: '430px',
+            width: '100%',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '20px',
+            animation: 'fhubPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+          }} onClick={e => e.stopPropagation()}>
+
+            {/* Top Icon Badge */}
+            <div style={{
+              width: '68px',
+              height: '68px',
+              borderRadius: '50%',
+              background: manualCloseModal.amount >= 0 ? 'radial-gradient(circle, rgba(32,235,90,0.25) 0%, rgba(7,19,38,0.95) 100%)' : 'radial-gradient(circle, rgba(255,77,77,0.25) 0%, rgba(7,19,38,0.95) 100%)',
+              border: manualCloseModal.amount >= 0 ? '1.5px solid #20eb5a' : '1.5px solid #ff4d4d',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: manualCloseModal.amount >= 0 ? '#20eb5a' : '#ff4d4d',
+              boxShadow: manualCloseModal.amount >= 0 ? '0 0 24px rgba(32,235,90,0.35)' : '0 0 24px rgba(255,77,77,0.35)',
+            }}>
+              {manualCloseModal.amount >= 0 ? <CheckCircle2 size={34} /> : <AlertCircle size={34} />}
+            </div>
+
+            {/* Banner Kicker */}
+            <div style={{
+              fontSize: '13px',
+              fontWeight: 800,
+              color: manualCloseModal.amount >= 0 ? '#20eb5a' : '#ff4d4d',
+              letterSpacing: '0.8px',
+              textTransform: 'uppercase',
+            }}>
+              {manualCloseModal.amount >= 0 ? '🎉 TRADE CLOSED WITH PROFIT!' : '⚠️ TRADE CLOSED WITH LOSS'}
+            </div>
+
+            {/* Amount */}
+            <div style={{
+              fontSize: '34px',
+              fontWeight: 900,
+              color: '#ffffff',
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              letterSpacing: '-0.5px',
+              marginTop: '-6px',
+            }}>
+              {manualCloseModal.amount >= 0 ? `+$${manualCloseModal.amount.toFixed(2)}` : `-$${Math.abs(manualCloseModal.amount).toFixed(2)}`} USD
+            </div>
+
+            {/* Details Box */}
+            <div style={{
+              background: 'rgba(3, 20, 42, 0.75)',
+              border: '1px solid rgba(0, 229, 255, 0.25)',
+              borderRadius: '14px',
+              padding: '16px 18px',
+              textAlign: 'left',
+              width: '100%',
+            }}>
+              <div style={{
+                fontSize: '13px',
+                fontWeight: 700,
+                color: '#00e5ff',
+                marginBottom: '6px',
+              }}>
+                Manual Trade Settlement Confirmed
+              </div>
+              <p style={{
+                fontSize: '12px',
+                color: '#a0aec0',
+                lineHeight: 1.5,
+                margin: 0,
+              }}>
+                {manualCloseModal.count > 1
+                  ? `Successfully closed all ${manualCloseModal.count} running positions with net realized P&L of ${manualCloseModal.amount >= 0 ? '+' : ''}$${manualCloseModal.amount.toFixed(2)} USD.`
+                  : `Position ${manualCloseModal.posId ? '#' + manualCloseModal.posId : ''} (${manualCloseModal.symbol || 'Trade'}) successfully closed with ${manualCloseModal.amount >= 0 ? 'realized profit' : 'net loss'} of ${manualCloseModal.amount >= 0 ? '+' : ''}$${manualCloseModal.amount.toFixed(2)} USD.`}
+              </p>
+            </div>
+
+            {/* OK Button */}
+            <button
+              type="button"
+              onClick={() => setManualCloseModal(null)}
               style={{
                 width: '100%',
                 background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)',
