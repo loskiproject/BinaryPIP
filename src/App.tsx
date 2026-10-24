@@ -22,6 +22,7 @@ import {
   ArrowLeft,
   Plus,
   Trash2,
+  Target,
   Camera,
   Activity,
   Wallet,
@@ -198,6 +199,7 @@ type SignupForm = { fullName: string; email: string; phone: string; country: str
 const navigation: { id: View; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'synthetic', label: 'Synthetic', icon: TrendingUp },
+  { id: 'positions', label: 'Open Trades', icon: Activity },
   { id: 'tiers', label: 'Investments', icon: CandlestickChart },
   { id: 'funds', label: 'Wallet', icon: Wallet },
   { id: 'history', label: 'History', icon: Clock },
@@ -950,6 +952,11 @@ export default function App() {
   const [contractHistory, setContractHistory] = useState<ContractTradeHistoryRecord[]>([])
   const positionIdRef = useRef(0)
 
+  // Target Profit Auto-Close Guard State
+  const [targetProfitInput, setTargetProfitInput] = useState('50')
+  const [targetProfitEnabled, setTargetProfitEnabled] = useState(true)
+  const [targetProfitModal, setTargetProfitModal] = useState<{ amount: number } | null>(null)
+
   // Theme State (`dark` | `light`) with automatic device theme preference detection
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('app_theme') as Theme | null
@@ -1304,6 +1311,7 @@ export default function App() {
   })
   const totalMarginUsed = markedPositions.reduce((total, position) => total + position.margin, 0)
   const totalOpenProfit = markedPositions.reduce((total, position) => total + position.profit, 0)
+  const totalFloatingPnl = totalOpenProfit
   const currentEquity = activeBalance + totalOpenProfit
   const marginLevelPercent = totalMarginUsed > 0 ? Math.round((currentEquity / totalMarginUsed) * 100) : 0
 
@@ -1758,6 +1766,30 @@ export default function App() {
 
     showNotice(`Closed position #${posId} (${pos.symbol}) with P&L: $${pos.profit >= 0 ? '+' : ''}${pos.profit.toFixed(2)}`)
   }
+
+  // Close All Positions Handler
+  const handleCloseAllPositions = () => {
+    if (openPositions.length === 0) return
+    const count = openPositions.length
+    openPositions.forEach((pos) => {
+      handleClosePosition(pos.id)
+    })
+    showNotice(`✅ Closed all ${count} running positions!`)
+  }
+
+  // Target Profit Auto-Close Guard Monitor
+  useEffect(() => {
+    if (targetProfitEnabled && openPositions.length > 0) {
+      const targetVal = parseFloat(targetProfitInput)
+      if (Number.isFinite(targetVal) && targetVal > 0 && totalFloatingPnl >= targetVal) {
+        const totalProfit = totalFloatingPnl
+        openPositions.forEach((pos) => {
+          handleClosePosition(pos.id)
+        })
+        setTargetProfitModal({ amount: totalProfit })
+      }
+    }
+  }, [totalFloatingPnl, targetProfitEnabled, targetProfitInput, openPositions])
 
   const handleExecuteTrade = (isBuy = true, symbol = selectedAsset, quotedPrice?: number) => {
     if (accountType === 'none') {
@@ -2873,71 +2905,288 @@ export default function App() {
 
   // VIEW: OPEN & CLOSED TRADES PAGE (/trades)
   const renderOpenAndClosedTrades = () => (
-    <section className="profile-monitor-card">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <section className="profile-monitor-card" style={{ width: '100%', maxWidth: '1150px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px', boxSizing: 'border-box' }}>
+
+      {/* HEADER SECTION */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <span className="section-kicker" style={{ color: 'var(--mint-teal)' }}>TRADE EXECUTION & HISTORY CENTER</span>
-          <h2>Open Positions & Closed Trade History</h2>
-          <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Manage your active running trades, monitor real-time margins & equity, and review past closed trade history.</p>
+          <span className="section-kicker" style={{ color: '#00e5ff', fontSize: '11px', fontWeight: 800, letterSpacing: '0.8px' }}>
+            TRADE EXECUTION &amp; POSITIONS CENTER
+          </span>
+          <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#ffffff', margin: '4px 0 6px' }}>
+            Open Trades &amp; Closed History
+          </h2>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, maxWidth: '600px' }}>
+            Manage active running orders, monitor real-time margin &amp; floating P&amp;L, and close trades individually or all at once.
+          </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <div style={{ background: '#0a0f1d', padding: '10px 16px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          {openPositions.length > 0 && (
+            <button
+              type="button"
+              onClick={handleCloseAllPositions}
+              style={{
+                background: 'rgba(230, 57, 70, 0.15)',
+                border: '1px solid rgba(230, 57, 70, 0.4)',
+                color: '#ff4d4d',
+                borderRadius: '10px',
+                padding: '10px 18px',
+                fontSize: '13px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <Trash2 size={15} /> Close All Trades ({openPositions.length})
+            </button>
+          )}
+
+          <div style={{ background: '#071326', padding: '8px 16px', borderRadius: '12px', border: '1px solid rgba(0, 229, 255, 0.25)' }}>
             <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block' }}>Account Equity</span>
-            <strong style={{ fontSize: '16px', color: 'var(--mint-teal)', fontFamily: 'var(--font-code)' }}>${currentEquity.toFixed(2)}</strong>
+            <strong style={{ fontSize: '16px', color: '#00e5ff', fontFamily: 'var(--font-code)' }}>${currentEquity.toFixed(2)}</strong>
           </div>
-          <div style={{ background: '#0a0f1d', padding: '10px 16px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+
+          <div style={{ background: '#071326', padding: '8px 16px', borderRadius: '12px', border: '1px solid rgba(0, 229, 255, 0.25)' }}>
             <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block' }}>Margin Level</span>
-            <strong style={{ fontSize: '16px', color: 'var(--neon-cyan)', fontFamily: 'var(--font-code)' }}>{marginLevelPercent}%</strong>
+            <strong style={{ fontSize: '16px', color: '#20eb5a', fontFamily: 'var(--font-code)' }}>{marginLevelPercent}%</strong>
+          </div>
+        </div>
+      </div>
+
+      {/* 4 METRIC STAT CARDS */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gap: '14px',
+      }}>
+        {/* CARD 1: TOTAL FLOATING P&L */}
+        <div style={{
+          background: 'rgba(7, 19, 38, 0.8)',
+          border: totalFloatingPnl >= 0 ? '1px solid rgba(32, 235, 90, 0.35)' : '1px solid rgba(255, 77, 77, 0.35)',
+          borderRadius: '14px',
+          padding: '18px 20px',
+        }}>
+          <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '0.5px' }}>
+            TOTAL FLOATING P&amp;L
+          </div>
+          <div style={{
+            fontSize: '26px',
+            fontWeight: 900,
+            color: totalFloatingPnl >= 0 ? '#20eb5a' : '#ff4d4d',
+            fontFamily: 'var(--font-code)',
+            margin: '4px 0',
+          }}>
+            {totalFloatingPnl >= 0 ? `+$${totalFloatingPnl.toFixed(2)}` : `-$${Math.abs(totalFloatingPnl).toFixed(2)}`} USD
+          </div>
+          <div style={{ fontSize: '11px', color: totalFloatingPnl >= 0 ? '#20eb5a' : '#ff4d4d', fontWeight: 600 }}>
+            {totalFloatingPnl >= 0 ? '▲ Active Net Profit across open trades' : '▼ Active Net Loss across open trades'}
+          </div>
+        </div>
+
+        {/* CARD 2: LIVE EQUITY */}
+        <div style={{
+          background: 'rgba(7, 19, 38, 0.8)',
+          border: '1px solid rgba(0, 229, 255, 0.25)',
+          borderRadius: '14px',
+          padding: '18px 20px',
+        }}>
+          <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '0.5px' }}>
+            LIVE EQUITY
+          </div>
+          <div style={{
+            fontSize: '26px',
+            fontWeight: 900,
+            color: '#00e5ff',
+            fontFamily: 'var(--font-code)',
+            margin: '4px 0',
+          }}>
+            ${currentEquity.toFixed(2)} USD
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+            Balance (${activeBalance.toFixed(2)}) + P&amp;L
+          </div>
+        </div>
+
+        {/* CARD 3: TOTAL MARGIN USED */}
+        <div style={{
+          background: 'rgba(7, 19, 38, 0.8)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRadius: '14px',
+          padding: '18px 20px',
+        }}>
+          <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '0.5px' }}>
+            TOTAL MARGIN USED
+          </div>
+          <div style={{
+            fontSize: '26px',
+            fontWeight: 900,
+            color: '#ffffff',
+            fontFamily: 'var(--font-code)',
+            margin: '4px 0',
+          }}>
+            ${totalMarginUsed.toFixed(2)} USD
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+            Margin Level: {marginLevelPercent}%
+          </div>
+        </div>
+
+        {/* CARD 4: RUNNING TRADES */}
+        <div style={{
+          background: 'rgba(7, 19, 38, 0.8)',
+          border: '1px solid rgba(0, 229, 255, 0.25)',
+          borderRadius: '14px',
+          padding: '18px 20px',
+        }}>
+          <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '0.5px' }}>
+            RUNNING TRADES
+          </div>
+          <div style={{
+            fontSize: '26px',
+            fontWeight: 900,
+            color: '#00e5ff',
+            fontFamily: 'var(--font-code)',
+            margin: '4px 0',
+          }}>
+            {openPositions.length} Positions
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+            Live streaming market ticks
+          </div>
+        </div>
+      </div>
+
+      {/* TARGET PROFIT SETTING CONTROL BAR */}
+      <div style={{
+        background: 'rgba(7, 19, 38, 0.9)',
+        border: '1px solid rgba(0, 229, 255, 0.3)',
+        borderRadius: '14px',
+        padding: '16px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '14px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Target size={18} color="#00e5ff" />
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 800, color: '#ffffff' }}>
+              Target Profit Auto-Close Guard
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+              Automatically closes all open trades when total floating P&amp;L reaches your target.
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12px', color: '#ffffff', fontWeight: 700 }}>
+            <input
+              type="checkbox"
+              checked={targetProfitEnabled}
+              onChange={(e) => setTargetProfitEnabled(e.target.checked)}
+              style={{ width: '16px', height: '16px', accentColor: '#00e5ff', cursor: 'pointer' }}
+            />
+            Enable Target Profit
+          </label>
+
+          <div style={{ display: 'flex', alignItems: 'center', background: '#040b17', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: '8px', padding: '4px 10px' }}>
+            <span style={{ fontSize: '12px', color: '#00e5ff', fontWeight: 800, marginRight: '4px' }}>$</span>
+            <input
+              type="number"
+              value={targetProfitInput}
+              onChange={(e) => setTargetProfitInput(e.target.value)}
+              disabled={!targetProfitEnabled}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#ffffff',
+                fontSize: '13px',
+                fontWeight: 800,
+                width: '70px',
+                outline: 'none',
+              }}
+              placeholder="50"
+            />
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>USD</span>
           </div>
         </div>
       </div>
 
       {/* ACTIVE OPEN POSITIONS TABLE */}
-      <div style={{ marginTop: '16px' }}>
-        <h4 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Activity size={16} color="var(--mint-teal)" /> Running Open Positions ({openPositions.length})
+      <div style={{ marginTop: '8px' }}>
+        <h4 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: '#ffffff' }}>
+          <Activity size={16} color="#00e5ff" /> Running Open Trades ({openPositions.length})
         </h4>
 
         {openPositions.length === 0 ? (
-          <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No running open positions. Execute a trade from the chart or crypto allocation levels.</p>
+          <div style={{ background: 'rgba(7, 19, 38, 0.5)', border: '1px dashed rgba(255,255,255,0.15)', borderRadius: '12px', padding: '30px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+            No running open trades. Execute a position from the Synthetic terminal or Investment levels.
+          </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table className="pro-data-table">
+            <table className="pro-data-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th>Position ID</th>
+                  <th>Trade ID</th>
                   <th>Asset Symbol</th>
                   <th>Type</th>
-                  <th>Lots</th>
-                  <th>Open Price</th>
+                  <th>Lots / Stake</th>
+                  <th>Entry Price</th>
+                  <th>Current Price</th>
                   <th>Margin Used</th>
-                  <th>P&L ($)</th>
+                  <th>Floating P&amp;L</th>
                   <th>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {markedPositions.map((pos) => (
-                  <tr key={pos.id}>
-                    <td><code>#{pos.id}</code></td>
-                    <td><strong>{pos.symbol}</strong></td>
-                    <td><span className={pos.type === 'BUY' ? 'ticker-up' : 'ticker-down'} style={{ fontWeight: 800 }}>{pos.type}</span></td>
-                    <td>{pos.lots}</td>
-                    <td>${pos.openPrice.toFixed(pos.symbol.endsWith('JPY') ? 3 : pos.symbol.includes('/') && pos.symbol.length === 7 ? 5 : 2)}</td>
-                    <td>${pos.margin.toFixed(2)}</td>
-                    <td><strong className={pos.profit >= 0 ? 'ticker-up' : 'ticker-down'}>${pos.profit >= 0 ? `+${pos.profit.toFixed(2)}` : pos.profit.toFixed(2)}</strong></td>
-                    <td>
-                      <button
-                        type="button"
-                        className="button button-dark"
-                        style={{ padding: '4px 12px', fontSize: '11px', color: 'var(--bear-red)' }}
-                        onClick={() => handleClosePosition(pos.id)}
-                      >
-                        Close Trade
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {markedPositions.map((pos) => {
+                  const quote = quotes.find((q) => q.symbol === pos.symbol)
+                  const rawPrice = quote ? quote.price : pos.openPrice
+                  return (
+                    <tr key={pos.id}>
+                      <td><code style={{ color: '#00e5ff', fontWeight: 700 }}>#{pos.id}</code></td>
+                      <td><strong>{pos.symbol}</strong></td>
+                      <td>
+                        <span className={pos.type === 'BUY' ? 'ticker-up' : 'ticker-down'} style={{ fontWeight: 800, padding: '2px 8px', borderRadius: '4px', background: pos.type === 'BUY' ? 'rgba(32, 235, 90, 0.15)' : 'rgba(255, 77, 77, 0.15)' }}>
+                          {pos.type}
+                        </span>
+                      </td>
+                      <td>{pos.lots}</td>
+                      <td>${pos.openPrice.toFixed(2)}</td>
+                      <td>${rawPrice.toFixed(2)}</td>
+                      <td>${pos.margin.toFixed(2)}</td>
+                      <td>
+                        <strong className={pos.profit >= 0 ? 'ticker-up' : 'ticker-down'} style={{ color: pos.profit >= 0 ? '#20eb5a' : '#ff4d4d', fontFamily: 'var(--font-code)' }}>
+                          {pos.profit >= 0 ? `+$${pos.profit.toFixed(2)}` : `-$${Math.abs(pos.profit).toFixed(2)}`}
+                        </strong>
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          style={{
+                            background: 'rgba(230, 57, 70, 0.15)',
+                            border: '1px solid rgba(230, 57, 70, 0.4)',
+                            color: '#ff4d4d',
+                            borderRadius: '6px',
+                            padding: '4px 12px',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => handleClosePosition(pos.id)}
+                        >
+                          Close Trade
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -2945,39 +3194,45 @@ export default function App() {
       </div>
 
       {/* CLOSED TRADE HISTORY TABLE */}
-      <div style={{ marginTop: '24px' }}>
-        <h4 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Clock size={16} color="var(--accent-blue)" /> Closed Trade History ({closedTrades.length})
+      <div style={{ marginTop: '16px' }}>
+        <h4 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: '#ffffff' }}>
+          <Clock size={16} color="#00e5ff" /> Closed Trade History ({closedTrades.length})
         </h4>
 
         {closedTrades.length === 0 ? (
-          <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No closed trade history recorded yet.</p>
+          <div style={{ background: 'rgba(7, 19, 38, 0.5)', border: '1px dashed rgba(255,255,255,0.15)', borderRadius: '12px', padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
+            No closed trade history recorded yet.
+          </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table className="pro-data-table">
+            <table className="pro-data-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
                   <th>Trade ID</th>
                   <th>Asset Symbol</th>
                   <th>Type</th>
                   <th>Lots</th>
-                  <th>Open Price</th>
+                  <th>Entry Price</th>
                   <th>Close Price</th>
-                  <th>Realized P&L</th>
+                  <th>Realized P&amp;L</th>
                   <th>Closed Timestamp</th>
                 </tr>
               </thead>
               <tbody>
-                {closedTrades.map((t) => (
-                  <tr key={t.id}>
-                    <td><code>#{t.id}</code></td>
-                    <td><strong>{t.symbol}</strong></td>
-                    <td><span className={t.type === 'BUY' ? 'ticker-up' : 'ticker-down'} style={{ fontWeight: 800 }}>{t.type}</span></td>
-                    <td>{t.lots}</td>
-                    <td>${t.openPrice.toFixed(2)}</td>
-                    <td>${t.closePrice.toFixed(2)}</td>
-                    <td><strong className={t.pnl >= 0 ? 'ticker-up' : 'ticker-down'}>${t.pnl >= 0 ? `+${t.pnl.toFixed(2)}` : t.pnl.toFixed(2)}</strong></td>
-                    <td><small style={{ fontFamily: 'var(--font-code)', color: 'var(--text-muted)' }}>{t.closedAt}</small></td>
+                {closedTrades.slice(0, 50).map((trade) => (
+                  <tr key={trade.id}>
+                    <td><code>#{trade.id}</code></td>
+                    <td><strong>{trade.symbol}</strong></td>
+                    <td><span className={trade.type === 'BUY' ? 'ticker-up' : 'ticker-down'} style={{ fontWeight: 800 }}>{trade.type}</span></td>
+                    <td>{trade.lots}</td>
+                    <td>${trade.openPrice.toFixed(2)}</td>
+                    <td>${trade.closePrice.toFixed(2)}</td>
+                    <td>
+                      <strong style={{ color: trade.pnl >= 0 ? '#20eb5a' : '#ff4d4d', fontFamily: 'var(--font-code)' }}>
+                        {trade.pnl >= 0 ? `+$${trade.pnl.toFixed(2)}` : `-$${Math.abs(trade.pnl).toFixed(2)}`}
+                      </strong>
+                    </td>
+                    <td style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{trade.closedAt}</td>
                   </tr>
                 ))}
               </tbody>
@@ -2985,6 +3240,120 @@ export default function App() {
           </div>
         )}
       </div>
+
+      {/* TARGET PROFIT REACHED POPUP MODAL */}
+      {targetProfitModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 99999,
+          background: 'rgba(3, 9, 22, 0.88)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px',
+        }} onClick={() => setTargetProfitModal(null)}>
+          <div style={{
+            background: '#071326',
+            border: targetProfitModal.amount >= 0 ? '1px solid rgba(32, 235, 90, 0.5)' : '1px solid rgba(255, 77, 77, 0.5)',
+            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 35px rgba(0, 229, 255, 0.2)',
+            borderRadius: '24px',
+            padding: '36px 28px 28px',
+            maxWidth: '430px',
+            width: '100%',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '20px',
+            animation: 'fhubPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+          }} onClick={e => e.stopPropagation()}>
+
+            <div style={{
+              width: '68px',
+              height: '68px',
+              borderRadius: '50%',
+              background: targetProfitModal.amount >= 0 ? 'radial-gradient(circle, rgba(32,235,90,0.25) 0%, rgba(7,19,38,0.95) 100%)' : 'radial-gradient(circle, rgba(255,77,77,0.25) 0%, rgba(7,19,38,0.95) 100%)',
+              border: targetProfitModal.amount >= 0 ? '1.5px solid #20eb5a' : '1.5px solid #ff4d4d',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: targetProfitModal.amount >= 0 ? '#20eb5a' : '#ff4d4d',
+              boxShadow: targetProfitModal.amount >= 0 ? '0 0 24px rgba(32,235,90,0.35)' : '0 0 24px rgba(255,77,77,0.35)',
+            }}>
+              <Target size={32} />
+            </div>
+
+            <div style={{
+              fontSize: '12px',
+              fontWeight: 800,
+              color: targetProfitModal.amount >= 0 ? '#20eb5a' : '#ff4d4d',
+              letterSpacing: '0.8px',
+              textTransform: 'uppercase',
+            }}>
+              {targetProfitModal.amount >= 0 ? '🎉 TARGET PROFIT REACHED & CLOSED' : '⚠️ TARGET PROFIT / STOP SETTLED'}
+            </div>
+
+            <div style={{
+              fontSize: '34px',
+              fontWeight: 900,
+              color: '#ffffff',
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              letterSpacing: '-0.5px',
+              marginTop: '-6px',
+            }}>
+              {targetProfitModal.amount >= 0 ? `+$${targetProfitModal.amount.toFixed(2)}` : `-$${Math.abs(targetProfitModal.amount).toFixed(2)}`} USD
+            </div>
+
+            <div style={{
+              background: 'rgba(3, 20, 42, 0.75)',
+              border: '1px solid rgba(0, 229, 255, 0.25)',
+              borderRadius: '14px',
+              padding: '16px 18px',
+              textAlign: 'left',
+              width: '100%',
+            }}>
+              <div style={{
+                fontSize: '13px',
+                fontWeight: 700,
+                color: '#00e5ff',
+                marginBottom: '6px',
+              }}>
+                Target Auto-Close Guard Executed
+              </div>
+              <p style={{
+                fontSize: '12px',
+                color: '#a0aec0',
+                lineHeight: 1.5,
+                margin: 0,
+              }}>
+                Your target profit threshold of <strong>${targetProfitInput} USD</strong> was reached. All running trades were automatically closed and net P&amp;L settled into your wallet.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setTargetProfitModal(null)}
+              style={{
+                width: '100%',
+                background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '14px',
+                fontSize: '15px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                boxShadow: '0 8px 22px rgba(0, 180, 216, 0.4)',
+              }}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   )
 
