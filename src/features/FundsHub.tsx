@@ -82,38 +82,207 @@ export default function FundsHub({
   const [wGateway, setWGateway] = useState('USDT-TRC20')
   const [withdrawSuccessModal, setWithdrawSuccessModal] = useState<{ amount: number } | null>(null)
 
-  // Kenyan Bank Wire Form State
+  // Bank Wire Form State
+  const [bCountry, setBCountry] = useState('Kenya')
   const [bBankName, setBBankName] = useState('KCB Bank Kenya')
   const [bAccountName, setBAccountName] = useState('')
   const [bAccountNumber, setBAccountNumber] = useState('')
-  const [bBranchName, setBBranchName] = useState('')
   const [bSwiftCode, setBSwiftCode] = useState('')
-  const [bKraPin, setBKraPin] = useState('')
 
-  const KENYAN_BANKS = [
-    'KCB Bank Kenya',
-    'Equity Bank Kenya',
-    'Co-operative Bank of Kenya',
-    'NCBA Bank Kenya',
-    'Absa Bank Kenya',
-    'Stanbic Bank Kenya',
-    'Standard Chartered Bank Kenya',
-    'I&M Bank Kenya',
-    'Family Bank Kenya',
-    'Diamond Trust Bank (DTB) Kenya',
-    'Prime Bank Kenya',
-    'Credit Bank Kenya',
-    'Kingdom Bank Kenya',
-    'Gulf African Bank',
-    'SBM Bank Kenya',
-    'Sidian Bank',
-    'Faulu Microfinance Bank',
-    'Caritas Microfinance Bank',
-    'National Bank of Kenya (NBK)',
-    'Postbank Kenya',
-    'M-Pesa Paybill / Till Bank Bridge',
-    'Other Kenyan Commercial Bank',
-  ]
+  const COUNTRY_BANKS_MAP: Record<string, string[]> = {
+    'Kenya': [
+      'KCB Bank Kenya',
+      'Equity Bank Kenya',
+      'Co-operative Bank of Kenya',
+      'NCBA Bank Kenya',
+      'Absa Bank Kenya',
+      'Stanbic Bank Kenya',
+      'Standard Chartered Bank Kenya',
+      'I&M Bank Kenya',
+      'Family Bank Kenya',
+      'Diamond Trust Bank (DTB) Kenya',
+      'Prime Bank Kenya',
+      'Credit Bank Kenya',
+      'Kingdom Bank Kenya',
+      'Gulf African Bank',
+      'SBM Bank Kenya',
+      'Sidian Bank',
+      'Faulu Microfinance Bank',
+      'Caritas Microfinance Bank',
+      'National Bank of Kenya (NBK)',
+      'Postbank Kenya',
+      'M-Pesa Paybill / Till Bank Bridge',
+      'Other Kenyan Commercial Bank',
+    ],
+    'Tanzania': [
+      'CRDB Bank Tanzania',
+      'NMB Bank Tanzania',
+      'National Bank of Commerce (NBC)',
+      'Stanbic Bank Tanzania',
+      'Exim Bank Tanzania',
+      'Diamond Trust Bank Tanzania',
+      'KCB Bank Tanzania',
+      'Absa Bank Tanzania',
+      'Azania Bank',
+      'TCB (Tanzania Commercial Bank)',
+      'Other Tanzanian Bank',
+    ],
+    'Uganda': [
+      'Stanbic Bank Uganda',
+      'Centenary Bank Uganda',
+      'Absa Bank Uganda',
+      'dfcu Bank Uganda',
+      'Equity Bank Uganda',
+      'KCB Bank Uganda',
+      'Standard Chartered Uganda',
+      'Bank of Baroda Uganda',
+      'Diamond Trust Bank Uganda',
+      'NCBA Uganda',
+      'Other Ugandan Bank',
+    ],
+    'Rwanda': [
+      'Bank of Kigali (BK)',
+      'I&M Bank Rwanda',
+      'Equity Bank Rwanda',
+      'Cogebanque Rwanda',
+      'Access Bank Rwanda',
+      'Ecobank Rwanda',
+      'KCB Bank Rwanda',
+      'Urwego Bank',
+      'Other Rwandan Bank',
+    ],
+    'Nigeria': [
+      'Access Bank Nigeria',
+      'Zenith Bank Nigeria',
+      'Guaranty Trust Bank (GTBank)',
+      'First Bank of Nigeria',
+      'United Bank for Africa (UBA)',
+      'Fidelity Bank Nigeria',
+      'Stanbic IBTC Bank',
+      'Ecobank Nigeria',
+      'Kuda Microfinance Bank',
+      'OPay Digital Services',
+      'Palmpay Nigeria',
+      'Moniepoint Microfinance Bank',
+      'Sterling Bank',
+      'Union Bank of Nigeria',
+      'Wema Bank (ALAT)',
+      'Other Nigerian Commercial Bank',
+    ],
+    'Ghana': [
+      'GCB Bank Ghana',
+      'Ecobank Ghana',
+      'Absa Bank Ghana',
+      'Fidelity Bank Ghana',
+      'Stanbic Bank Ghana',
+      'CalBank Ghana',
+      'Guaranty Trust Bank Ghana',
+      'Zenith Bank Ghana',
+      'Standard Chartered Ghana',
+      'Other Ghanaian Bank',
+    ],
+    'South Africa': [
+      'Standard Bank South Africa',
+      'FirstNational Bank (FNB)',
+      'Absa Bank South Africa',
+      'Nedbank',
+      'Capitec Bank',
+      'Discovery Bank',
+      'TymeBank',
+      'Investec',
+      'Other South African Bank',
+    ],
+    'United Kingdom': [
+      'Barclays UK',
+      'HSBC UK',
+      'Lloyds Bank',
+      'NatWest / Royal Bank of Scotland',
+      'Santander UK',
+      'Monzo Bank',
+      'Revolut UK',
+      'Starling Bank',
+      'Halifax',
+      'Nationwide Building Society',
+      'Metro Bank',
+      'Other UK Bank',
+    ],
+    'Germany': [
+      'Deutsche Bank',
+      'Commerzbank',
+      'DZ Bank',
+      'KfW Group',
+      'N26 Bank',
+      'Sparkasse Financial Network',
+      'Volksbanken Raiffeisenbanken',
+      'HypoVereinsbank (UniCredit)',
+      'ING-DiBa Germany',
+      'Targobank',
+      'Other German Bank',
+    ],
+    'United States': [
+      'JPMorgan Chase Bank',
+      'Bank of America',
+      'Wells Fargo',
+      'Citigroup / Citibank',
+      'U.S. Bank',
+      'PNC Bank',
+      'Truist Bank',
+      'Capital One Bank',
+      'TD Bank US',
+      'Goldman Sachs (Marcus)',
+      'Charles Schwab Bank',
+      'Other US Financial Institution',
+    ],
+    'Canada': [
+      'Royal Bank of Canada (RBC)',
+      'TD Canada Trust',
+      'Scotiabank',
+      'Bank of Montreal (BMO)',
+      'CIBC (Canadian Imperial Bank of Commerce)',
+      'National Bank of Canada',
+      'Desjardins Group',
+      'Tangerine Bank',
+      'Other Canadian Bank',
+    ],
+    'United Arab Emirates': [
+      'First Abu Dhabi Bank (FAB)',
+      'Emirates NBD',
+      'Abu Dhabi Commercial Bank (ADCB)',
+      'Dubai Islamic Bank (DIB)',
+      'Mashreq Bank',
+      'RAKBANK',
+      'Abu Dhabi Islamic Bank (ADIB)',
+      'Commercial Bank of Dubai (CBD)',
+      'Other UAE Financial Institution',
+    ],
+    'India': [
+      'State Bank of India (SBI)',
+      'HDFC Bank',
+      'ICICI Bank',
+      'Axis Bank',
+      'Kotak Mahindra Bank',
+      'Punjab National Bank (PNB)',
+      'Bank of Baroda',
+      'IndusInd Bank',
+      'Other Indian Bank',
+    ],
+    'France': [
+      'BNP Paribas',
+      'Crédit Agricole',
+      'Société Générale',
+      'BPCE / Natixis',
+      'Crédit Mutuel',
+      'La Banque Postale',
+      'BoursoBank (Boursorama)',
+      'Other French Bank',
+    ],
+    'Other Global Region': [
+      'International Commercial Bank (SWIFT Transfer)',
+      'Digital Offshore Bank',
+      'Global Currency Account / Wise / Payoneer',
+      'Other Accredited Financial Institution',
+    ]
+  }
 
   // Transfer
   const [tFrom, setTFrom] = useState<keyof WalletBalances>('main')
@@ -216,13 +385,11 @@ export default function FundsHub({
         showNotice('Please enter Account Holder Name and Bank Account Number.')
         return
       }
-      destinationSummary = `Bank: ${bBankName} | Name: ${bAccountName.trim()} | Acc: ${bAccountNumber.trim()}`
-      if (bBranchName.trim()) destinationSummary += ` | Branch: ${bBranchName.trim()}`
+      destinationSummary = `Country: ${bCountry} | Bank: ${bBankName} | Acc Name: ${bAccountName.trim()} | Acc No: ${bAccountNumber.trim()}`
       if (bSwiftCode.trim()) destinationSummary += ` | SWIFT: ${bSwiftCode.trim()}`
-      if (bKraPin.trim()) destinationSummary += ` | KRA: ${bKraPin.trim()}`
     } else {
       if (!destinationSummary) {
-        showNotice('Enter destination wallet address.')
+        showNotice(wGateway === 'mpesa' ? 'Enter M-Pesa phone number.' : 'Enter destination wallet address.')
         return
       }
     }
@@ -233,9 +400,7 @@ export default function FundsHub({
     setWAddr('')
     setBAccountName('')
     setBAccountNumber('')
-    setBBranchName('')
     setBSwiftCode('')
-    setBKraPin('')
   }
 
   const confirmTransfer = () => {
@@ -546,70 +711,200 @@ export default function FundsHub({
 
       {/* ════════════════ WITHDRAW ══════════════════════════════════════════ */}
       {tab === 'withdraw' && (
-        <div className="th-simple-body">
-          <div className="th-avail-row">
-            Available Balance: <strong style={{color:'#20eb5a'}}>${fmt(wallets.main)}</strong>
+        <div className="th-simple-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+          {/* Available Balance Line */}
+          <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-muted)' }}>
+            Available Balance: <strong style={{ color: '#00e5ff', fontSize: '16px', fontWeight: 900 }}>${fmt(wallets.main)}</strong>
           </div>
-          <div className="th-net-chips">
-            {['USDT-TRC20','BTC','ETH','BANK_WIRE'].map(g => (
-              <button key={g} className={`th-net-chip ${wGateway===g?'th-net-chip-on':''}`} onClick={() => setWGateway(g)}>
-                {g === 'BANK_WIRE' ? 'Kenyan Bank Wire' : g}
+
+          {/* Network Chips Row */}
+          <div className="th-net-chips" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {['mpesa', 'USDT-TRC20', 'BTC', 'ETH', 'BANK_WIRE'].map(g => (
+              <button
+                key={g}
+                type="button"
+                className={`th-net-chip ${wGateway === g ? 'th-net-chip-on' : ''}`}
+                style={{
+                  background: wGateway === g ? 'rgba(0, 229, 255, 0.12)' : 'rgba(255, 255, 255, 0.03)',
+                  border: wGateway === g ? '1.5px solid #00e5ff' : '1px solid rgba(255, 255, 255, 0.12)',
+                  color: wGateway === g ? '#00e5ff' : '#a0aec0',
+                  borderRadius: '20px',
+                  padding: '6px 14px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+                onClick={() => setWGateway(g)}
+              >
+                {g === 'mpesa' ? '📱 M-Pesa' : g === 'BANK_WIRE' ? '🏛️ Bank Wire' : g}
               </button>
             ))}
           </div>
 
+          {/* Form Box */}
           {wGateway === 'BANK_WIRE' ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
-              <label className="th-field-label">Select Kenyan Bank
-                <select className="th-input" value={bBankName} onChange={e => setBBankName(e.target.value)}>
-                  {KENYAN_BANKS.map(bank => (
+            <div style={{
+              background: '#09101d',
+              border: '1px solid rgba(0, 229, 255, 0.3)',
+              borderRadius: '16px',
+              padding: '20px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+            }}>
+              {/* Select Country */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
+                  SELECT COUNTRY
+                </label>
+                <select
+                  className="th-input"
+                  value={bCountry}
+                  onChange={(e) => {
+                    const country = e.target.value
+                    setBCountry(country)
+                    const banks = COUNTRY_BANKS_MAP[country] || COUNTRY_BANKS_MAP['Kenya']
+                    setBBankName(banks[0])
+                  }}
+                  style={{ width: '100%', background: '#101929', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: '10px', color: '#ffffff', fontWeight: 700, padding: '10px 14px' }}
+                >
+                  {Object.keys(COUNTRY_BANKS_MAP).map(country => (
+                    <option key={country} value={country}>{country}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Select Bank Name */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
+                  SELECT BANK NAME
+                </label>
+                <select
+                  className="th-input"
+                  value={bBankName}
+                  onChange={(e) => setBBankName(e.target.value)}
+                  style={{ width: '100%', background: '#101929', border: '1px solid #00e5ff', borderRadius: '10px', color: '#ffffff', fontWeight: 700, padding: '10px 14px' }}
+                >
+                  {(COUNTRY_BANKS_MAP[bCountry] || COUNTRY_BANKS_MAP['Kenya']).map(bank => (
                     <option key={bank} value={bank}>{bank}</option>
                   ))}
                 </select>
-              </label>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <label className="th-field-label">Account Holder Full Name *
-                  <input className="th-input" placeholder="e.g. John Kamau Doe" value={bAccountName} onChange={e => setBAccountName(e.target.value)}/>
-                </label>
-                <label className="th-field-label">Bank Account Number / IBAN *
-                  <input className="th-input th-mono" placeholder="e.g. 1122334455" value={bAccountNumber} onChange={e => setBAccountNumber(e.target.value)}/>
-                </label>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-                <label className="th-field-label">Branch Name / Code
-                  <input className="th-input" placeholder="e.g. Westlands / 01" value={bBranchName} onChange={e => setBBranchName(e.target.value)}/>
+              {/* Account Number / IBAN */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
+                  ACCOUNT NUMBER / IBAN
                 </label>
-                <label className="th-field-label">SWIFT / BIC Code
-                  <input className="th-input th-mono" placeholder="e.g. KCBLKENX" value={bSwiftCode} onChange={e => setBSwiftCode(e.target.value)}/>
+                <input
+                  className="th-input th-mono"
+                  placeholder="Enter bank account number or IBAN"
+                  value={bAccountNumber}
+                  onChange={(e) => setBAccountNumber(e.target.value)}
+                  style={{ background: '#101929', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: '#ffffff', padding: '10px 14px' }}
+                />
+              </div>
+
+              {/* Account Holder Full Name */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
+                  ACCOUNT HOLDER FULL NAME
                 </label>
-                <label className="th-field-label">KRA PIN (Optional)
-                  <input className="th-input th-mono" placeholder="e.g. A012345678X" value={bKraPin} onChange={e => setBKraPin(e.target.value)}/>
+                <input
+                  className="th-input"
+                  placeholder="Enter account holder name"
+                  value={bAccountName}
+                  onChange={(e) => setBAccountName(e.target.value)}
+                  style={{ background: '#101929', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: '#ffffff', padding: '10px 14px' }}
+                />
+              </div>
+
+              {/* SWIFT / BIC Code */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
+                  SWIFT / BIC CODE (OPTIONAL)
                 </label>
+                <input
+                  className="th-input th-mono"
+                  placeholder="e.g. EQUKENNA"
+                  value={bSwiftCode}
+                  onChange={(e) => setBSwiftCode(e.target.value)}
+                  style={{ background: '#101929', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: '#ffffff', padding: '10px 14px' }}
+                />
               </div>
             </div>
           ) : (
-            <label className="th-field-label">Destination Crypto Address
-              <input className="th-input th-mono" placeholder="Paste crypto wallet address…" value={wAddr} onChange={e => setWAddr(e.target.value)}/>
-            </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+              <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
+                DESTINATION WALLET ADDRESS / NUMBER
+              </label>
+              <input
+                className="th-input th-mono"
+                placeholder={wGateway === 'mpesa' ? 'Enter M-Pesa phone number (e.g. 0712345678)…' : 'Paste crypto wallet address…'}
+                value={wAddr}
+                onChange={e => setWAddr(e.target.value)}
+                style={{ background: '#101929', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: '10px', color: '#ffffff', padding: '10px 14px' }}
+              />
+            </div>
           )}
 
-          <div className="th-quick-row" style={{ marginTop: '12px' }}>
-            {[minWithdrawalUSD,50,100,500].filter((v,i,a)=>a.indexOf(v)===i).sort((a,b)=>a-b).map(q => (
-              <button key={q} className={`th-quick ${wAmt===String(q)?'th-quick-on':''}`} onClick={() => setWAmt(String(q))}>
+          {/* Quick Amount Chips */}
+          <div className="th-quick-row" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {[minWithdrawalUSD, 50, 100, 500].filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b).map(q => (
+              <button key={q} type="button" className={`th-quick ${wAmt === String(q) ? 'th-quick-on' : ''}`} onClick={() => setWAmt(String(q))}>
                 ${q}
               </button>
             ))}
-            <button className="th-quick" onClick={() => setWAmt(wallets.main.toFixed(2))}>MAX</button>
+            <button type="button" className="th-quick" onClick={() => setWAmt(wallets.main.toFixed(2))}>MAX</button>
           </div>
-          <div className="th-input-wrap">
-            <span className="th-input-pre">$</span>
-            <input className="th-input" type="number" min={minWithdrawalUSD} placeholder="0.00" value={wAmt} onChange={e => setWAmt(e.target.value)}/>
+
+          {/* Amount Input */}
+          <div className="th-input-wrap" style={{ background: '#0a1220', border: '1px solid rgba(0, 229, 255, 0.3)', borderRadius: '10px', padding: '6px 12px', display: 'flex', alignItems: 'center' }}>
+            <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-muted)', marginRight: '8px' }}>$</span>
+            <input
+              className="th-input"
+              type="number"
+              min={minWithdrawalUSD}
+              placeholder="0.00"
+              value={wAmt}
+              onChange={e => setWAmt(e.target.value)}
+              style={{ background: 'transparent', border: 'none', color: '#ffffff', fontSize: '16px', fontWeight: 800, width: '100%', outline: 'none' }}
+            />
           </div>
-          <div className="th-hint" style={{marginTop:4}}><AlertCircle size={11}/> Processed within 24 hours after admin review.</div>
-          <button className="th-proceed-btn th-proceed-full th-proceed-red" onClick={confirmWithdraw} style={{marginTop:16}}>
-            <ArrowUpFromLine size={15}/> SUBMIT WITHDRAWAL
+
+          {/* Hint */}
+          <div className="th-hint" style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <AlertCircle size={11} color="#00e5ff" /> Processed within 24 hours after admin review.
+          </div>
+
+          {/* Submit Withdrawal Button */}
+          <button
+            type="button"
+            className="th-proceed-btn th-proceed-full th-proceed-red"
+            onClick={confirmWithdraw}
+            style={{
+              width: '100%',
+              background: 'linear-gradient(135deg, #ff1744 0%, #d50000 100%)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '12px',
+              padding: '14px',
+              fontSize: '15px',
+              fontWeight: 900,
+              letterSpacing: '0.5px',
+              cursor: 'pointer',
+              boxShadow: '0 8px 20px rgba(255, 23, 68, 0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+            }}
+          >
+            <ArrowUpFromLine size={16} /> WITHDRAW
           </button>
         </div>
       )}
