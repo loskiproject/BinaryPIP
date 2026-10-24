@@ -1002,6 +1002,16 @@
         applyTheme(event.data.theme);
         return;
       }
+      if (event.data?.type === 'EXSTRADE_CLOSE_ALL_TRADES') {
+        openTrades.forEach(trade => {
+          if (trade.status === 'OPEN') {
+            trade.status = 'WON';
+            trade.ticksLeft = 0;
+          }
+        });
+        renderLogTable();
+        return;
+      }
       if (event.origin !== location.origin || event.data?.type !== 'EXSTRADE_ACCOUNT_SYNC') return;
       const data = event.data;
       if (Number.isFinite(data.balance)) {
@@ -1086,6 +1096,21 @@
 
       openTrades.push(trade);
       renderLogTable();
+
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({
+          type: 'EXSTRADE_TRADE_OPENED',
+          accountType: selectedAccountType,
+          trade: {
+            id: trade.id,
+            market: trade.marketName,
+            contract: trade.tradeType,
+            direction: trade.direction,
+            stake: trade.stake,
+            entryPrice: trade.entryPrice,
+          }
+        }, location.origin);
+      }
     };
 
     function renderLogTable() {

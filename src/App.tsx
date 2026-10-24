@@ -1144,6 +1144,22 @@ export default function App() {
             }
           }
         }
+      } else if (message?.type === 'EXSTRADE_TRADE_OPENED' && message.trade) {
+        const trade = message.trade
+        const numId = Number(String(trade.id).replace('SYN-', '')) || Date.now()
+        setOpenPositions(curr => [
+          {
+            id: numId,
+            symbol: String(trade.market || 'Synthetic Index'),
+            type: trade.direction === 'higher' ? 'BUY' : 'SELL',
+            lots: 1,
+            openPrice: Number(trade.entryPrice || 1000),
+            profit: 0,
+            margin: Number(trade.stake || 10),
+            contractSize: 1,
+          },
+          ...curr.filter(p => p.id !== numId)
+        ])
       } else if (message?.type === 'EXSTRADE_TRADE_CLOSED') {
         const trade = message.trade
         const pnl = Number(trade?.pnl)
@@ -3287,13 +3303,13 @@ export default function App() {
             </div>
 
             <div style={{
-              fontSize: '12px',
+              fontSize: '13px',
               fontWeight: 800,
               color: targetProfitModal.amount >= 0 ? '#20eb5a' : '#ff4d4d',
               letterSpacing: '0.8px',
               textTransform: 'uppercase',
             }}>
-              {targetProfitModal.amount >= 0 ? '🎉 TARGET PROFIT REACHED & CLOSED' : '⚠️ TARGET PROFIT / STOP SETTLED'}
+              {targetProfitModal.amount >= 0 ? '🎉 TARGET PROFIT HITTED!' : '⚠️ TARGET PROFIT / STOP SETTLED'}
             </div>
 
             <div style={{
