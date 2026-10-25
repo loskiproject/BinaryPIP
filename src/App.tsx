@@ -208,8 +208,9 @@ const navigation: { id: View; label: string; icon: typeof LayoutDashboard }[] = 
 ]
 
 const _countryOptions = [
-  'Kenya', 'Tanzania', 'Uganda', 'Rwanda', 'Nigeria', 'Ghana', 'South Africa',
-  'United States', 'Canada', 'United Kingdom', 'United Arab Emirates', 'India', 'Germany', 'Japan', 'Other'
+  'Kenya', 'Tanzania', 'Uganda', 'Rwanda', 'Burundi', 'South Sudan', 'Ethiopia', 'Somalia', 'Nigeria', 'Ghana', 'South Africa',
+  'Egypt', 'Morocco', 'United States', 'Canada', 'United Kingdom', 'Germany', 'France', 'Italy', 'Spain', 'Netherlands', 'Switzerland',
+  'United Arab Emirates', 'Saudi Arabia', 'India', 'China', 'Japan', 'Australia', 'Brazil', 'Mexico', 'Global / Other Country'
 ]
 
 // COMPREHENSIVE LIVE QUOTES LIST ACROSS FOREX, CRYPTO, QUANTUM SYNTHETICS, COMMODITIES, INDICES
@@ -4482,7 +4483,9 @@ export default function App() {
                 </span>
                 <div className="verification-phone-row">
                   <select aria-label="Phone region" disabled={isKycApproved} value={profileDraft.country} onChange={(event) => setProfileDraft((current) => ({ ...current, country: event.target.value }))}>
-                    <option>Global</option><option>Kenya</option><option>United States</option><option>United Kingdom</option><option>India</option><option>South Africa</option>
+                    {_countryOptions.map(country => (
+                      <option key={country} value={country}>{country}</option>
+                    ))}
                   </select>
                   <input type="tel" readOnly={isKycApproved} value={profileDraft.phone} onChange={(event) => !isKycApproved && setProfileDraft((current) => ({ ...current, phone: event.target.value }))} placeholder="+XXX XXX XXX XXX" />
                 </div>
@@ -4515,7 +4518,9 @@ export default function App() {
                 <label className="verification-field">
                   <span><Globe size={13} /> Document Issuing Region</span>
                   <select disabled={isKycApproved} value={profileDraft.issuingRegion} onChange={(event) => setProfileDraft((current) => ({ ...current, issuingRegion: event.target.value }))}>
-                    <option>Global</option><option>Kenya</option><option>United States</option><option>United Kingdom</option><option>India</option><option>South Africa</option>
+                    {_countryOptions.map(country => (
+                      <option key={country} value={country}>{country}</option>
+                    ))}
                   </select>
                 </label>
                 <label className="verification-field">
