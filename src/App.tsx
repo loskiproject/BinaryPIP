@@ -1592,7 +1592,36 @@ export default function App() {
     }
 
     void loadRealData()
-    return () => { mounted = false }
+
+    // Supabase Realtime Subscriptions for live Admin edits
+    const channel = client.channel(`realtime_user_${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'wallets', filter: `user_id=eq.${user.id}` }, (payload) => {
+        if (payload.new && typeof payload.new === 'object') {
+          const newBal = Number((payload.new as { live_balance: number }).live_balance)
+          if (Number.isFinite(newBal)) {
+            setLiveBalance(newBal)
+            showNotice(`⚡ Wallet Balance Updated by Admin: $${newBal.toFixed(2)} USD`)
+          }
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` }, (payload) => {
+        if (payload.new && typeof payload.new === 'object') {
+          const profile = payload.new as { kyc_status?: string; account_status?: string; full_name?: string }
+          if (profile.kyc_status) {
+            setUser(u => u ? { ...u, accountStatus: 'active' } : u)
+            if (profile.kyc_status === 'verified') showNotice('🎉 KYC Verification Approved by Admin!')
+          }
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` }, () => {
+        void loadRealData()
+      })
+      .subscribe()
+
+    return () => {
+      mounted = false
+      void client.removeChannel(channel)
+    }
   }, [user])
 
   // Deposit Addresses

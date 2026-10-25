@@ -1338,6 +1338,37 @@ export default function AdminDashboard({ currentUser }: Props) {
     notify(`KYC rejected for ${kyc.userName}.`, 'warn')
   }
 
+  const saveUserWalletBalance = async (userId: string, newBalance: number) => {
+    try {
+      const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/wallets?user_id=eq.${userId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ live_balance: newBalance, updated_at: new Date().toISOString() }),
+      })
+
+      const updated = await patchRes.json()
+      if (!patchRes.ok || !Array.isArray(updated) || updated.length === 0) {
+        await fetch(`${SUPABASE_URL}/rest/v1/wallets?on_conflict=user_id`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ user_id: userId, live_balance: newBalance, updated_at: new Date().toISOString() }),
+        })
+      }
+    } catch {
+      // silent
+    }
+  }
+
   const approveTxn = async (txn: Transaction) => {
     if (!canAccess('canApproveWithdrawals')) { notify('No permission.', 'err'); return }
     setTransactions(curr => curr.map(t => t.id === txn.id ? { ...t, status: 'approved' } : t))
@@ -1357,16 +1388,7 @@ export default function AdminDashboard({ currentUser }: Props) {
         body: JSON.stringify({ status: 'approved', updated_at: new Date().toISOString() }),
       })
 
-      await fetch(`${SUPABASE_URL}/rest/v1/wallets`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Prefer': 'resolution=merge-duplicates',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({ user_id: txn.userId, live_balance: nextBal, updated_at: new Date().toISOString() }),
-      })
+      await saveUserWalletBalance(txn.userId, nextBal)
     } catch {
       // silent
     }
@@ -1407,20 +1429,7 @@ export default function AdminDashboard({ currentUser }: Props) {
     setSelectedUser(prev => prev?.id === targetUser.id ? { ...prev, balance: newBal } : prev)
 
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/wallets`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Prefer': 'resolution=merge-duplicates',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          user_id: targetUser.id,
-          live_balance: newBal,
-          updated_at: new Date().toISOString(),
-        }),
-      })
+      await saveUserWalletBalance(targetUser.id, newBal)
 
       await fetch(`${SUPABASE_URL}/rest/v1/transactions`, {
         method: 'POST',
