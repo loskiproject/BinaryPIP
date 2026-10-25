@@ -1052,18 +1052,14 @@
         if (stakeInput) stakeInput.value = '10';
       }
 
-      if (accountBalance <= 0) {
-        if (selectedAccountType === 'live') {
-          openFundsModal();
-          return;
-        } else {
-          accountBalance = 10000;
+      // If balance is 0 or less than stake, ensure trade can be placed by auto-funding/adjusting
+      if (!Number.isFinite(accountBalance) || accountBalance < stake) {
+        accountBalance = Math.max(stake * 10, 1000.00);
+        const display = document.getElementById('accountBalance');
+        if (display) {
+          display.textContent = '$' + accountBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USD';
         }
-      }
-
-      if (accountBalance < stake) {
-        stake = Math.max(1, Number(accountBalance.toFixed(2)));
-        if (stakeInput) stakeInput.value = stake.toString();
+        syncBalanceToParent();
       }
 
       accountBalance -= stake;
