@@ -958,7 +958,7 @@ export default function App() {
 
   // Target Profit Auto-Close Guard State
   const [targetProfitInput, setTargetProfitInput] = useState('50')
-  const [targetProfitEnabled, setTargetProfitEnabled] = useState(true)
+  const [targetProfitEnabled, setTargetProfitEnabled] = useState(false)
   const [targetProfitModal, setTargetProfitModal] = useState<{ amount: number } | null>(null)
   const [manualCloseModal, setManualCloseModal] = useState<{ count: number; amount: number; symbol?: string; posId?: number } | null>(null)
 
@@ -3223,8 +3223,46 @@ export default function App() {
         </h4>
 
         {openPositions.length === 0 ? (
-          <div style={{ background: 'rgba(7, 19, 38, 0.5)', border: '1px dashed rgba(255,255,255,0.15)', borderRadius: '12px', padding: '30px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-            No running open trades. Execute a position from the Synthetic terminal or Investment levels.
+          <div style={{
+            background: 'rgba(7, 19, 38, 0.65)',
+            border: '1px dashed rgba(0, 229, 255, 0.25)',
+            borderRadius: '16px',
+            padding: '48px 24px',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '12px',
+          }}>
+            <Activity size={36} color="#00e5ff" style={{ opacity: 0.85 }} />
+            <div>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', margin: '0 0 6px' }}>
+                No Active Open Trades
+              </h3>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, maxWidth: '420px', lineHeight: 1.5 }}>
+                You currently have no open positions. Open a position from the chart or market scanner.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => changeView('synthetic')}
+              style={{
+                marginTop: '8px',
+                background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '12px 24px',
+                fontSize: '13.5px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                boxShadow: '0 6px 20px rgba(0, 180, 216, 0.4)',
+                transition: 'transform 0.15s ease, boxShadow 0.15s ease',
+              }}
+            >
+              Go to Trading Terminal &rarr;
+            </button>
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
