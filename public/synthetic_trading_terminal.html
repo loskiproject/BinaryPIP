@@ -1012,6 +1012,10 @@
         renderLogTable();
         return;
       }
+      if (event.data?.type === 'EXSTRADE_PROFIT_ALLOCATION') {
+        window.adminOverrideWinner = event.data.mode === 'PROFIT';
+        return;
+      }
       if (event.origin !== location.origin || event.data?.type !== 'EXSTRADE_ACCOUNT_SYNC') return;
       const data = event.data;
       if (Number.isFinite(data.balance)) {

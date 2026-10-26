@@ -961,6 +961,7 @@ export default function App() {
   const [targetProfitEnabled, setTargetProfitEnabled] = useState(false)
   const [targetProfitModal, setTargetProfitModal] = useState<{ amount: number } | null>(null)
   const [manualCloseModal, setManualCloseModal] = useState<{ count: number; amount: number; symbol?: string; posId?: number } | null>(null)
+  const [userTradingMode, setUserTradingMode] = useState<'PROFIT' | 'LOSS'>('PROFIT')
 
   // Theme State (`dark` | `light`) with automatic device theme preference detection
   const [theme, setTheme] = useState<Theme>(() => {
@@ -1339,17 +1340,16 @@ export default function App() {
 
     let profit = 0
     if (isSynthetic) {
-      // 100% Profit Mode: Calculate positive fluctuating P&L for every open position
       const pseudoNoise = (Math.abs(Math.sin(position.id + currentPrice * (index + 1))) * 3.2) + ((index % 5) * 1.5 + 1.8)
       const baseProfit = (position.margin * 0.45) + pseudoNoise
-      profit = Number(baseProfit.toFixed(2))
+      profit = userTradingMode === 'LOSS' ? -Number(baseProfit.toFixed(2)) : Number(baseProfit.toFixed(2))
     } else {
       const forex = quote?.category === 'Forex Majors'
       const pipSize = forex ? (position.symbol.endsWith('JPY') ? 0.01 : 0.0001) : position.symbol.includes('XAG') ? 0.001 : 0.01
       const halfSpread = Number.parseFloat(quote?.spread ?? '0') * pipSize / 2
       const closeMark = currentPrice + halfSpread
       const rawProfit = Math.abs(closeMark - position.openPrice) * position.lots * (position.contractSize || 1) + 2.5
-      profit = Number(rawProfit.toFixed(2))
+      profit = userTradingMode === 'LOSS' ? -Number(rawProfit.toFixed(2)) : Number(rawProfit.toFixed(2))
     }
 
     return {
