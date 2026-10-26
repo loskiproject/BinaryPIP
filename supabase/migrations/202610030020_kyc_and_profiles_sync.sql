@@ -1,6 +1,6 @@
 -- ============================================================================
 -- BINARYPIP / EXSTRADE KYC & PROFILE VERIFICATION DATABASE SYNC
--- Dedicated SQL Migration Script to manage KYC approvals and profile sync in Supabase
+-- Safe, recursion-proof SQL Migration Script to manage KYC approvals in Supabase
 -- ============================================================================
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -22,25 +22,32 @@ CREATE TABLE IF NOT EXISTS public.kyc_cases (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. AUTOMATIC PROFILE KYC SYNC TRIGGER
+-- 2. AUTOMATIC PROFILE KYC SYNC TRIGGER (RECURSION SAFE)
 CREATE OR REPLACE FUNCTION public.sync_profile_kyc_approval()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 BEGIN
+    -- Prevent infinite trigger recursion stack depth loops
+    IF (pg_trigger_depth() > 1) THEN
+        RETURN NEW;
+    END IF;
+
     -- When KYC case or document is approved or verified:
     IF (NEW.status = 'approved' OR NEW.status = 'verified') THEN
+        -- Only update profile if not already verified
         UPDATE public.profiles
         SET kyc_status = 'verified',
             account_status = 'active',
             updated_at = NOW()
-        WHERE id = NEW.user_id;
+        WHERE id = NEW.user_id AND (kyc_status IS NULL OR kyc_status != 'verified');
 
+        -- Only update documents if not already verified
         UPDATE public.profile_documents
         SET status = 'verified',
             reviewed_at = NOW()
-        WHERE user_id = NEW.user_id;
+        WHERE user_id = NEW.user_id AND (status IS NULL OR status != 'verified');
     END IF;
     RETURN NEW;
 END;
