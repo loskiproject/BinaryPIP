@@ -4170,17 +4170,17 @@ export default function App() {
               accountBalanceDisplay.textContent = '$' + accountBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USD'
               if (accountLabel) accountLabel.textContent = state.accountName || 'Real Account'
               createButton.style.display = selectedAccountType === 'live' ? 'none' : 'inline-block'
-              const demoSelected = selectedAccountType === 'demo'
+              const canTrade = selectedAccountType === 'demo' || selectedAccountType === 'live'
               ;[upButton, downButton].forEach((button) => {
                 if (button) {
-                  button.disabled = !demoSelected
-                  button.title = demoSelected ? '' : 'Select a created demo account to place practice trades'
+                  button.disabled = !canTrade
+                  button.title = canTrade ? '' : 'Select a Demo or Real account to place trades'
                 }
               })
             })
             const originalExecuteTrade = window.executeTrade
             window.executeTrade = (direction) => {
-              if (selectedAccountType !== 'demo') return
+              if (selectedAccountType === 'none') return
               originalExecuteTrade(direction)
               publishBalance()
             }

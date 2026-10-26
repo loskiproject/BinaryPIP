@@ -1056,14 +1056,22 @@
         if (stakeInput) stakeInput.value = '10';
       }
 
-      // If balance is 0 or less than stake, ensure trade can be placed by auto-funding/adjusting
+      // If balance is 0 or less than stake, ensure trade can be placed or check real balance
       if (!Number.isFinite(accountBalance) || accountBalance < stake) {
-        accountBalance = Math.max(stake * 10, 1000.00);
-        const display = document.getElementById('accountBalance');
-        if (display) {
-          display.textContent = '$' + accountBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USD';
+        if (selectedAccountType === 'demo') {
+          accountBalance = Math.max(stake * 10, 1000.00);
+          const display = document.getElementById('accountBalance');
+          if (display) {
+            display.textContent = '$' + accountBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USD';
+          }
+          syncBalanceToParent();
+        } else {
+          alert('⚠️ Insufficient Real Account balance ($' + (accountBalance || 0).toFixed(2) + '). Required stake: $' + stake.toFixed(2) + '. Redirecting to Wallet page to deposit.');
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'EXSTRADE_OPEN_FUNDS' }, location.origin);
+          }
+          return;
         }
-        syncBalanceToParent();
       }
 
       accountBalance -= stake;
@@ -1227,10 +1235,16 @@
           trade.ticksLeft--;
           if (trade.ticksLeft <= 0) {
             let won = false;
-            if (selectedAccountType === 'demo') {
+            if (typeof window.adminOverrideWinner === 'boolean') {
+              won = window.adminOverrideWinner;
+            } else if (selectedAccountType === 'demo') {
               won = true;
             } else {
-              won = window.adminOverrideWinner !== false ? true : false;
+              if (trade.direction === 'higher') {
+                won = currentPrice >= trade.entryPrice;
+              } else {
+                won = currentPrice <= trade.entryPrice;
+              }
             }
 
             trade.status = won ? 'WON' : 'LOST';
