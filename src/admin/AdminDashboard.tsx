@@ -897,23 +897,21 @@ export default function AdminDashboard({ currentUser }: Props) {
         }
       }
 
-      // Read shared local transaction queue
-      let localTxns: Transaction[] = []
-      try {
-        const localStr = localStorage.getItem('binarypip_pending_transactions')
-        if (localStr) localTxns = JSON.parse(localStr)
-      } catch {
-        // silent
-      }
-
-      // Merge Supabase DB transactions + local pending transactions
-      const mergedMap = new Map<string, Transaction>()
-      localTxns.forEach(t => mergedMap.set(t.id, t))
-      dbTxns.forEach(t => mergedMap.set(t.id, t))
-
-      const mergedList = [...mergedMap.values()].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      if (mergedList.length > 0) {
-        setTransactions(mergedList)
+      // If real Supabase database transactions exist, use them as authoritative source
+      if (dbTxns.length > 0) {
+        setTransactions(dbTxns)
+      } else {
+        // Fallback to local queue if database is empty
+        let localTxns: Transaction[] = []
+        try {
+          const localStr = localStorage.getItem('binarypip_pending_transactions')
+          if (localStr) localTxns = JSON.parse(localStr)
+        } catch {
+          // silent
+        }
+        if (localTxns.length > 0) {
+          setTransactions(localTxns)
+        }
       }
     } catch {
       // silent
