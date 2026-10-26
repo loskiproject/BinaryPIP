@@ -5,7 +5,12 @@
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 1. CREATE KYC CASES TABLE
+-- 1. ENSURE COLUMNS EXIST ON PROFILE DOCUMENTS & PROFILES TABLES
+ALTER TABLE public.profile_documents ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS kyc_status VARCHAR(50) DEFAULT 'unverified';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS account_status VARCHAR(50) DEFAULT 'active';
+
+-- CREATE KYC CASES TABLE
 CREATE TABLE IF NOT EXISTS public.kyc_cases (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -16,10 +21,6 @@ CREATE TABLE IF NOT EXISTS public.kyc_cases (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-
--- Ensure profiles table has kyc_status and account_status columns
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS kyc_status VARCHAR(50) DEFAULT 'unverified';
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS account_status VARCHAR(50) DEFAULT 'active';
 
 -- 2. AUTOMATIC PROFILE KYC SYNC TRIGGER
 CREATE OR REPLACE FUNCTION public.sync_profile_kyc_approval()
