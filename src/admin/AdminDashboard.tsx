@@ -950,7 +950,7 @@ export default function AdminDashboard({ currentUser }: Props) {
     }
   }
 
-  // Load all real database data on startup
+  // Load all real database data on startup and poll every 5s
   useEffect(() => {
     void fetchUsers()
     void fetchKycFromDatabase()
@@ -958,6 +958,14 @@ export default function AdminDashboard({ currentUser }: Props) {
     void fetchTransactionsFromDatabase()
     void fetchGatewayFromDatabase()
     void fetchSettingsFromDatabase()
+
+    const timer = setInterval(() => {
+      void fetchUsers()
+      void fetchTransactionsFromDatabase()
+      void fetchKycFromDatabase()
+    }, 5000)
+
+    return () => clearInterval(timer)
   }, [fetchUsers])
 
   const handleMfaPass = () => {

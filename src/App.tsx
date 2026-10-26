@@ -2152,7 +2152,7 @@ export default function App() {
   }
 
   // Withdrawal Submit
-  const _handleWithdrawSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const _handleWithdrawSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const wAmount = parseFloat(withdrawAmount) || 100
     if (activeBalance < wAmount) {
@@ -2169,6 +2169,36 @@ export default function App() {
         void updateWalletBalanceInSupabase(user.id, nextBal)
       }
     }
+
+    let transactionId: string | undefined
+    let createdAt: string | undefined
+
+    if (supabase && user) {
+      const { data: transaction } = await supabase.from('transactions').insert({
+        user_id: user.id,
+        type: 'withdrawal',
+        amount: wAmount,
+        total_amount: wAmount,
+        asset: 'USD',
+        gateway_network: selectedNetwork,
+        reference_code: 'Modal Withdrawal',
+        status: 'pending',
+      }).select('id, created_at').maybeSingle()
+
+      transactionId = transaction?.id ? String(transaction.id) : undefined
+      createdAt = transaction?.created_at ? String(transaction.created_at) : undefined
+    }
+
+    recordFundingHistory({
+      id: transactionId,
+      createdAt,
+      type: 'withdrawal',
+      amount: wAmount,
+      creditedAmount: wAmount,
+      network: selectedNetwork,
+      status: 'pending',
+    })
+
     showNotice(`🎉 You have successfully withdrawn $${wAmount.toFixed(2)}. You should receive the funds in less than one minute.`)
     closeModal()
   }
