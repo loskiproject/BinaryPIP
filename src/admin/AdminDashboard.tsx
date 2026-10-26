@@ -1373,8 +1373,7 @@ export default function AdminDashboard({ currentUser }: Props) {
     if (!canAccess('canApproveWithdrawals')) { notify('No permission.', 'err'); return }
 
     const isDeposit = txn.type === 'deposit'
-    const bonusAmount = isDeposit ? (txn.amount * 0.5) : 0
-    const totalCredit = isDeposit ? (txn.amount + bonusAmount) : txn.amount
+    const totalCredit = txn.amount
 
     const targetUser = users.find(u => u.id === txn.userId)
     const currentBal = targetUser ? targetUser.balance : 0

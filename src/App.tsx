@@ -2030,8 +2030,7 @@ export default function App() {
 
   // Funds Hub deposit request handler — submits deposit for Admin approval
   const handleFundsDepositRequest = async (depositAmount: number, network: string, reference?: string) => {
-    const bonus = depositAmount * 0.5
-    const totalAdded = depositAmount + bonus
+    const totalAdded = depositAmount
     const refNote = reference ? ' (Ref: ' + reference + ')' : ''
 
     setLiveAccountCreated(true)
@@ -2047,7 +2046,6 @@ export default function App() {
         method: network,
         reference_id: reference || '',
         details: {
-          bonus_amount: bonus,
           total_amount: totalAdded,
           gateway_network: network,
           reference_code: reference || '',
@@ -2082,8 +2080,7 @@ export default function App() {
   const handleDepositSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const depAmount = parseFloat(amount) || 50
-    const bonus = depAmount * 0.5
-    const totalAdded = depAmount + bonus
+    const totalAdded = depAmount
 
     setLiveAccountCreated(true)
 
@@ -2096,7 +2093,6 @@ export default function App() {
         status: 'pending',
         method: selectedNetwork,
         details: {
-          bonus_amount: bonus,
           total_amount: totalAdded,
           gateway_network: selectedNetwork,
         },

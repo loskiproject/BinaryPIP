@@ -454,12 +454,12 @@ export default function FundsHub({
       {/* ════════════════ DEPOSIT ═══════════════════════════════════════════ */}
       {tab === 'deposit' && (
         <div className="th-deposit-grid">
-          {/* 50% REAL ACCOUNT DEPOSIT BONUS BANNER */}
+          {/* 50% DEPOSIT BONUS FOR NEW TRADERS BANNER */}
           <div style={{ gridColumn: '1 / -1', background: 'linear-gradient(135deg, rgba(0, 230, 118, 0.15), rgba(32,235,90, 0.1))', border: '1px solid rgba(0, 230, 118, 0.35)', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
             <Sparkles size={22} color="#00e676" style={{ flexShrink: 0 }} />
             <div>
-              <div style={{ color: '#00e676', fontWeight: 800, fontSize: '13px', letterSpacing: '0.4px' }}>🎁 50% INSTANT REAL ACCOUNT DEPOSIT BONUS ACTIVE</div>
-              <div style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '2px' }}>Every deposit to your Real Account instantly receives a 50% bonus! Example: Deposit $100 &rarr; Receive $150 total trading balance.</div>
+              <div style={{ color: '#00e676', fontWeight: 800, fontSize: '13px', letterSpacing: '0.4px' }}>🎁 50% DEPOSIT BONUS FOR NEW TRADERS</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '2px' }}>Special Welcome Bonus: Every new trader receives a 50% bonus on their first deposit!</div>
             </div>
           </div>
 
@@ -638,20 +638,12 @@ export default function FundsHub({
               </div>
             )}
 
-            {/* Live 50% Real Account Bonus Calculation Card */}
+            {/* Real Account Deposit Capital Calculation Card */}
             {((depositMethod === 'mpesa' && parseFloat(mpKes) > 0) || (depositMethod !== 'mpesa' && parseFloat(amount) > 0)) && (
               <div style={{ background: 'rgba(0, 230, 118, 0.08)', border: '1px solid rgba(0, 230, 118, 0.28)', borderRadius: '10px', padding: '12px 14px', marginTop: '14px', fontSize: '11.5px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)' }}>
-                  <span>Deposit Amount:</span>
-                  <strong>${(depositMethod === 'mpesa' ? (parseFloat(mpKes) || 0) / 130 : (parseFloat(amount) || 0)).toFixed(2)} USD</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#00e676', marginTop: '4px' }}>
-                  <span>+ 50% Real Account Bonus:</span>
-                  <strong>+${((depositMethod === 'mpesa' ? (parseFloat(mpKes) || 0) / 130 : (parseFloat(amount) || 0)) * 0.5).toFixed(2)} USD</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ffffff', fontWeight: 800, marginTop: '6px', paddingTop: '6px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                  <span>Total Capital Credited:</span>
-                  <span style={{ color: '#00e676', fontSize: '13px' }}>${((depositMethod === 'mpesa' ? (parseFloat(mpKes) || 0) / 130 : (parseFloat(amount) || 0)) * 1.5).toFixed(2)} USD</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ffffff', fontWeight: 800 }}>
+                  <span>Deposit Capital Credited:</span>
+                  <strong style={{ color: '#00e676', fontSize: '13px' }}>${(depositMethod === 'mpesa' ? (parseFloat(mpKes) || 0) / 130 : (parseFloat(amount) || 0)).toFixed(2)} USD</strong>
                 </div>
               </div>
             )}
