@@ -1371,30 +1371,61 @@ export default function AdminDashboard({ currentUser }: Props) {
 
   const approveTxn = async (txn: Transaction) => {
     if (!canAccess('canApproveWithdrawals')) { notify('No permission.', 'err'); return }
-    setTransactions(curr => curr.map(t => t.id === txn.id ? { ...t, status: 'approved' } : t))
+
+    const isDeposit = txn.type === 'deposit'
+    const bonusAmount = isDeposit ? (txn.amount * 0.5) : 0
+    const totalCredit = isDeposit ? (txn.amount + bonusAmount) : txn.amount
 
     const targetUser = users.find(u => u.id === txn.userId)
     const currentBal = targetUser ? targetUser.balance : 0
-    const bonusAmount = txn.type === 'deposit' ? txn.amount * 0.5 : 0
-    const totalCredit = txn.type === 'deposit' ? (txn.amount + bonusAmount) : txn.amount
-    const nextBal = txn.type === 'deposit' ? (currentBal + totalCredit) : Math.max(0, currentBal - txn.amount)
+    const nextBal = isDeposit ? (currentBal + totalCredit) : Math.max(0, currentBal - txn.amount)
 
+    // 1. Update local Admin state immediately
+    setTransactions(curr => curr.map(t => t.id === txn.id ? { ...t, status: 'approved' } : t))
     setUsers(curr => curr.map(u => u.id === txn.userId ? { ...u, balance: nextBal } : u))
 
+    // 2. Save transaction status in Supabase
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/transactions?id=eq.${txn.id}`, {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(txn.id)
+
+      let patchUrl = `${SUPABASE_URL}/rest/v1/transactions?id=eq.${txn.id}`
+      if (!isUuid) {
+        patchUrl = `${SUPABASE_URL}/rest/v1/transactions?user_id=eq.${txn.userId}&type=eq.${txn.type}&status=eq.pending`
+      }
+
+      const res = await fetch(patchUrl, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        headers: {
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
         body: JSON.stringify({ status: 'approved', updated_at: new Date().toISOString() }),
       })
 
+      const rows = await res.json()
+      if (!res.ok || !Array.isArray(rows) || rows.length === 0) {
+        // Fallback: update any pending deposit/withdrawal for this user
+        await fetch(`${SUPABASE_URL}/rest/v1/transactions?user_id=eq.${txn.userId}&type=eq.${txn.type}&status=eq.pending`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ status: 'approved', updated_at: new Date().toISOString() }),
+        })
+      }
+
+      // 3. Save updated user wallet balance in Supabase
       await saveUserWalletBalance(txn.userId, nextBal)
     } catch {
       // silent
     }
 
     addAudit(`APPROVE_${txn.type.toUpperCase()}`, txn.id, 'Transaction', `Approved ${txn.type} of ${fmtUSD(txn.amount)} (Total credited: ${fmtUSD(totalCredit)}) for ${txn.userName}`, 'info')
-    notify(`Deposit approved! $${totalCredit.toFixed(2)} credited to ${txn.userName}'s wallet.`)
+    notify(`Approved! $${totalCredit.toFixed(2)} credited to ${txn.userName}'s wallet.`)
   }
 
   const rejectTxn = async (txn: Transaction) => {
@@ -1402,9 +1433,20 @@ export default function AdminDashboard({ currentUser }: Props) {
     setTransactions(curr => curr.map(t => t.id === txn.id ? { ...t, status: 'rejected' } : t))
 
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/transactions?id=eq.${txn.id}`, {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(txn.id)
+
+      let patchUrl = `${SUPABASE_URL}/rest/v1/transactions?id=eq.${txn.id}`
+      if (!isUuid) {
+        patchUrl = `${SUPABASE_URL}/rest/v1/transactions?user_id=eq.${txn.userId}&type=eq.${txn.type}&status=eq.pending`
+      }
+
+      await fetch(patchUrl, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
         body: JSON.stringify({ status: 'rejected', updated_at: new Date().toISOString() }),
       })
     } catch {
