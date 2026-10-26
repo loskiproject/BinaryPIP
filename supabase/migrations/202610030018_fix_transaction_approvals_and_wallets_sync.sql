@@ -1,16 +1,19 @@
 -- ============================================================================
 -- TRANSACTIONS APPROVAL & WALLET REALTIME DATABASE SYNC
--- Idempotent SQL Script to enforce transaction approvals and wallet balance sync
+-- Safe, error-free SQL Script to enforce transaction approvals and wallet balance sync
 -- ============================================================================
 
--- 1. Disable restrictive RLS policies on transactions and wallets
+-- 1. Ensure updated_at column exists on transactions table
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+-- 2. Disable restrictive RLS policies on transactions and wallets
 ALTER TABLE public.transactions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.wallets DISABLE ROW LEVEL SECURITY;
 
 GRANT ALL ON TABLE public.transactions TO anon, authenticated, service_role;
 GRANT ALL ON TABLE public.wallets TO anon, authenticated, service_role;
 
--- 2. Function to automatically credit/debit wallet balance upon transaction approval
+-- 3. Function to automatically credit/debit wallet balance upon transaction approval
 CREATE OR REPLACE FUNCTION public.sync_transaction_status_and_wallet()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -34,20 +37,20 @@ BEGIN
 END;
 $$;
 
--- 3. Attach trigger to transactions table
+-- 4. Attach trigger to transactions table
 DROP TRIGGER IF EXISTS trg_sync_transaction_approval ON public.transactions;
 CREATE TRIGGER trg_sync_transaction_approval
     AFTER UPDATE OF status ON public.transactions
     FOR EACH ROW
     EXECUTE FUNCTION public.sync_transaction_status_and_wallet();
 
--- 4. Mark all pending deposits and withdrawals as approved in the database
+-- 5. Mark all pending deposits and withdrawals as approved in the database
 UPDATE public.transactions
 SET status = 'approved',
     updated_at = NOW()
 WHERE status = 'pending';
 
--- 5. Enable Supabase Realtime publication
+-- 6. Enable Supabase Realtime publication
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
