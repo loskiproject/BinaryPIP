@@ -793,6 +793,7 @@ export default function AdminDashboard({ currentUser }: Props) {
               fileUrl = '/generic-profile-portrait.svg'
             }
 
+            const isVerified = r.status === 'verified' || userProf?.status === 'verified' || userProf?.status === 'approved'
             return {
               id: r.id,
               userId: r.user_id,
@@ -804,7 +805,7 @@ export default function AdminDashboard({ currentUser }: Props) {
               mimeType: r.mime_type || 'image/jpeg',
               fileUrl,
               submittedAt: r.submitted_at,
-              status: r.status === 'verified' ? 'approved' : r.status === 'rejected' ? 'rejected' : 'pending',
+              status: isVerified ? 'approved' : r.status === 'rejected' ? 'rejected' : 'pending',
               rejectionReason: r.admin_notes || '',
             }
           })
@@ -815,6 +816,7 @@ export default function AdminDashboard({ currentUser }: Props) {
       if (profilesRes.ok) {
         Object.entries(profileMap).forEach(([uid, p]) => {
           if (!kycCases.some(c => c.userId === uid)) {
+            const isVerified = p.status === 'approved' || p.status === 'verified'
             kycCases.push({
               id: 'kyc-prof-' + uid,
               userId: uid,
@@ -824,7 +826,7 @@ export default function AdminDashboard({ currentUser }: Props) {
               mimeType: 'image/jpeg',
               fileUrl: '/generic-profile-portrait.svg',
               submittedAt: p.createdAt || new Date().toISOString(),
-              status: (p.status === 'approved' || p.status === 'verified') ? 'approved' : p.status === 'rejected' ? 'rejected' : 'pending',
+              status: isVerified ? 'approved' : p.status === 'rejected' ? 'rejected' : 'pending',
               rejectionReason: '',
             })
           }
