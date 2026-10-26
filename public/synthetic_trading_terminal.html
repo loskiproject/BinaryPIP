@@ -1015,7 +1015,8 @@
       if (event.origin !== location.origin || event.data?.type !== 'EXSTRADE_ACCOUNT_SYNC') return;
       const data = event.data;
       if (Number.isFinite(data.balance)) {
-        accountBalance = Number(data.balance);
+        const syncBal = Number(data.balance);
+        accountBalance = syncBal > 0 ? syncBal : (accountBalance > 0 ? accountBalance : 1000.00);
         const display = document.getElementById('accountBalance');
         if (display) {
           display.textContent = '$' + accountBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USD';
