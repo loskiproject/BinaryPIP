@@ -1140,10 +1140,11 @@ export default function App() {
         setActiveView('funds')
       } else if (message?.type === 'EXSTRADE_BALANCE_UPDATE') {
         const nextBalance = Number(message.balance)
+        const targetType = message.accountType || accountType
         if (Number.isFinite(nextBalance) && nextBalance >= 0) {
-          if (message.accountType === 'demo') {
+          if (targetType === 'demo') {
             setDemoBalance(nextBalance)
-          } else if (message.accountType === 'live') {
+          } else if (targetType === 'live') {
             setLiveBalance(nextBalance)
             if (user) {
               void updateWalletBalanceInSupabase(user.id, nextBalance)
@@ -1848,7 +1849,11 @@ export default function App() {
     if (accountType === 'demo') {
       setDemoBalance((balance) => balance + pos.profit)
     } else if (accountType === 'live') {
-      setLiveBalance((balance) => Math.max(0, balance + pos.profit))
+      setLiveBalance((balance) => {
+        const nextBal = Math.max(0, balance + pos.profit)
+        if (user) void updateWalletBalanceInSupabase(user.id, nextBal)
+        return nextBal
+      })
     }
 
     if (isManualTrigger) {
@@ -4139,13 +4144,10 @@ export default function App() {
             createButton.addEventListener('click', () => parent.postMessage({ type: 'EXSTRADE_CREATE_DEMO' }, location.origin))
 
             let selectedAccountType = 'none'
-            const publishBalance = () => {
-              const balance = Number.parseFloat(accountBalanceDisplay.textContent?.replace(/[^0-9.-]/g, '') ?? '0')
-              if (Number.isFinite(balance)) {
-                parent.postMessage({ type: 'EXSTRADE_BALANCE_UPDATE', accountType: selectedAccountType, balance }, location.origin)
-              }
-            }
-            accountSelect.addEventListener('change', () => parent.postMessage({ type: 'EXSTRADE_ACCOUNT_SELECT', accountType: accountSelect.value }, location.origin))
+            accountSelect.addEventListener('change', () => {
+              selectedAccountType = accountSelect.value
+              parent.postMessage({ type: 'EXSTRADE_ACCOUNT_SELECT', accountType: accountSelect.value }, location.origin)
+            })
             window.addEventListener('message', (event) => {
               if (event.origin !== location.origin || event.source !== parent || event.data?.type !== 'EXSTRADE_ACCOUNT_SYNC') return
               const state = event.data
@@ -4182,7 +4184,6 @@ export default function App() {
             window.executeTrade = (direction) => {
               if (selectedAccountType === 'none') return
               originalExecuteTrade(direction)
-              publishBalance()
             }
 
             const toolRail = document.querySelector('body > div.flex-1.flex.overflow-hidden > aside:first-child')
