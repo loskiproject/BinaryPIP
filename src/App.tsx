@@ -2031,15 +2031,11 @@ export default function App() {
         user_id: user.id,
         type: 'deposit',
         amount: depositAmount,
+        total_amount: totalAdded,
         asset: 'USD',
         status: 'pending',
-        method: network,
-        reference_id: reference || '',
-        details: {
-          total_amount: totalAdded,
-          gateway_network: network,
-          reference_code: reference || '',
-        },
+        gateway_network: network,
+        reference_code: reference || '',
       }).select('id, created_at').maybeSingle()
 
       recordFundingHistory({
@@ -2079,13 +2075,11 @@ export default function App() {
         user_id: user.id,
         type: 'deposit',
         amount: depAmount,
+        total_amount: totalAdded,
         asset: 'USD',
         status: 'pending',
-        method: selectedNetwork,
-        details: {
-          total_amount: totalAdded,
-          gateway_network: selectedNetwork,
-        },
+        gateway_network: selectedNetwork,
+        reference_code: '',
       }).select('id, created_at').maybeSingle()
 
       recordFundingHistory({
@@ -2135,14 +2129,11 @@ export default function App() {
         user_id: user.id,
         type: 'withdrawal',
         amount: withdrawalAmount,
+        total_amount: withdrawalAmount,
         asset: 'USD',
         status: 'pending',
-        method: network,
-        reference_id: destination,
-        details: {
-          destination_address: destination,
-          gateway_network: network,
-        },
+        gateway_network: network,
+        reference_code: destination,
       }).select('id, created_at').maybeSingle()
 
       transactionId = transaction?.id ? String(transaction.id) : undefined
