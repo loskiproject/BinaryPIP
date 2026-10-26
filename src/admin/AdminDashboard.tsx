@@ -842,11 +842,17 @@ export default function AdminDashboard({ currentUser }: Props) {
   // Fetch real financial transactions from Supabase
   const fetchTransactionsFromDatabase = async () => {
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/transactions?select=*&order=created_at.desc`, {
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
-      })
-      if (!res.ok) return
-      const rows = await res.json() as Array<{
+      const [txnsRes, profilesRes] = await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/transactions?select=*&order=created_at.desc`, {
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        }),
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id,full_name,email`, {
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        }),
+      ])
+
+      if (!txnsRes.ok) return
+      const rows = await txnsRes.json() as Array<{
         id: string
         user_id: string
         type: 'deposit' | 'withdrawal' | 'adjustment'
@@ -859,19 +865,32 @@ export default function AdminDashboard({ currentUser }: Props) {
         admin_notes: string
         created_at: string
       }>
+
+      let profMap: Record<string, { name: string; email: string }> = {}
+      if (profilesRes.ok) {
+        const profRows = await profilesRes.json() as Array<{ id: string; full_name: string; email: string }>
+        profMap = profRows.reduce((acc, p) => {
+          acc[p.id] = { name: p.full_name || (p.email ? p.email.split('@')[0] : 'User'), email: p.email || '—' }
+          return acc
+        }, {} as typeof profMap)
+      }
+
       if (Array.isArray(rows) && rows.length > 0) {
-        setTransactions(rows.map(r => ({
-          id: r.id,
-          userId: r.user_id,
-          userName: `User #${r.user_id.substring(0, 8)}`,
-          userEmail: `user_${r.user_id.substring(0, 6)}@binarypip.com`,
-          type: r.type,
-          amount: Number(r.total_amount || r.amount),
-          network: r.gateway_network || 'MPESA',
-          status: r.status,
-          createdAt: r.created_at,
-          flagReason: r.admin_notes || undefined,
-        })))
+        setTransactions(rows.map(r => {
+          const uProf = profMap[r.user_id]
+          return {
+            id: r.id,
+            userId: r.user_id,
+            userName: uProf?.name || `User #${r.user_id.substring(0, 8)}`,
+            userEmail: uProf?.email || `user_${r.user_id.substring(0, 6)}@binarypip.com`,
+            type: r.type,
+            amount: Number(r.total_amount || r.amount),
+            network: r.gateway_network || 'MPESA',
+            status: r.status,
+            createdAt: r.created_at,
+            flagReason: r.admin_notes || undefined,
+          }
+        }))
       }
     } catch {
       // silent
@@ -1383,30 +1402,12 @@ export default function AdminDashboard({ currentUser }: Props) {
     setTransactions(curr => curr.map(t => t.id === txn.id ? { ...t, status: 'approved' } : t))
     setUsers(curr => curr.map(u => u.id === txn.userId ? { ...u, balance: nextBal } : u))
 
-    // 2. Save transaction status in Supabase
+    // 2. Save transaction status in Supabase Database
     try {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(txn.id)
 
-      let patchUrl = `${SUPABASE_URL}/rest/v1/transactions?id=eq.${txn.id}`
-      if (!isUuid) {
-        patchUrl = `${SUPABASE_URL}/rest/v1/transactions?user_id=eq.${txn.userId}&type=eq.${txn.type}&status=eq.pending`
-      }
-
-      const res = await fetch(patchUrl, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Prefer': 'return=representation',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({ status: 'approved', updated_at: new Date().toISOString() }),
-      })
-
-      const rows = await res.json()
-      if (!res.ok || !Array.isArray(rows) || rows.length === 0) {
-        // Fallback: update any pending deposit/withdrawal for this user
-        await fetch(`${SUPABASE_URL}/rest/v1/transactions?user_id=eq.${txn.userId}&type=eq.${txn.type}&status=eq.pending`, {
+      if (isUuid) {
+        await fetch(`${SUPABASE_URL}/rest/v1/transactions?id=eq.${txn.id}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -1417,7 +1418,18 @@ export default function AdminDashboard({ currentUser }: Props) {
         })
       }
 
-      // 3. Save updated user wallet balance in Supabase
+      // Also update matching pending transaction by user_id
+      await fetch(`${SUPABASE_URL}/rest/v1/transactions?user_id=eq.${txn.userId}&type=eq.${txn.type}&status=eq.pending`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ status: 'approved', updated_at: new Date().toISOString() }),
+      })
+
+      // 3. Save updated user wallet balance in Supabase Database
       await saveUserWalletBalance(txn.userId, nextBal)
     } catch {
       // silent
@@ -1434,12 +1446,19 @@ export default function AdminDashboard({ currentUser }: Props) {
     try {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(txn.id)
 
-      let patchUrl = `${SUPABASE_URL}/rest/v1/transactions?id=eq.${txn.id}`
-      if (!isUuid) {
-        patchUrl = `${SUPABASE_URL}/rest/v1/transactions?user_id=eq.${txn.userId}&type=eq.${txn.type}&status=eq.pending`
+      if (isUuid) {
+        await fetch(`${SUPABASE_URL}/rest/v1/transactions?id=eq.${txn.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ status: 'rejected', updated_at: new Date().toISOString() }),
+        })
       }
 
-      await fetch(patchUrl, {
+      await fetch(`${SUPABASE_URL}/rest/v1/transactions?user_id=eq.${txn.userId}&type=eq.${txn.type}&status=eq.pending`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
