@@ -2009,7 +2009,7 @@ export default function App() {
         sessionStorage.setItem('pending_real_account', 'true')
         setAccountType('none')
         setActiveView('verification')
-        showNotice('🔒 Redirecting to Login page. Log in or sign up to access your Real Account & 50% Bonus.')
+        showNotice('🔒 Redirecting to Login page. Log in or sign up to access your Real Account.')
         return
       }
 
@@ -2018,9 +2018,9 @@ export default function App() {
 
       if (liveBalance <= 0) {
         changeView('wallet')
-        showNotice('🟢 Real Account selected ($0.00 balance). Redirecting to Wallet page to deposit (+50% Bonus!).')
+        showNotice('🟢 Real Account selected ($0.00 balance). Redirecting to Wallet page to make a deposit.')
       } else {
-        showNotice(`🟢 Switched to Real Account. Balance: $${liveBalance.toFixed(2)} (50% Deposit Bonus Active!)`)
+        showNotice(`🟢 Switched to Real Account. Balance: $${liveBalance.toFixed(2)}`)
       }
       return
     }
@@ -5256,7 +5256,7 @@ export default function App() {
               >
                 <option value="none">Select an account</option>
                 <option value="demo">🟡 {demoAccountName || 'Demo Account'} (${demoBalance.toFixed(2)})</option>
-                <option value="live">🟢 Real Account (${liveBalance.toFixed(2)}) — +50% Bonus</option>
+                <option value="live">🟢 Real Account (${liveBalance.toFixed(2)})</option>
               </select>
 
               {accountType === 'demo' && demoAccountName ? (
