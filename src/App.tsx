@@ -1576,18 +1576,8 @@ export default function App() {
             status: ['approved', 'pending', 'rejected', 'flagged'].includes(transaction.status) ? transaction.status : 'pending',
             createdAt: String(transaction.created_at || new Date().toISOString()),
           }))
-        setFundingHistory(current => {
-          const merged = new Map(remoteFunding.map(record => [record.id, record]))
-          current.forEach(record => {
-            const duplicateRemote = [...merged.values()].some(remote =>
-              remote.type === record.type &&
-              remote.amount === record.amount &&
-              remote.network === record.network &&
-              Math.abs(new Date(remote.createdAt).getTime() - new Date(record.createdAt).getTime()) < 10000
-            )
-            if (!merged.has(record.id) && !duplicateRemote) merged.set(record.id, record)
-          })
-          return [...merged.values()].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        setFundingHistory(() => {
+          return remoteFunding.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         })
       }
       // Fetch user profile trading mode from Supabase for Profit/Loss Allocation
@@ -2982,14 +2972,17 @@ export default function App() {
               </thead>
               <tbody>
                 {visibleRows.map(row => {
-                  const value = row.kind === 'trade' ? row.amount : row.kind === 'deposit' ? row.creditedAmount : -row.amount
+                  const value = row.kind === 'trade' ? row.amount : row.kind === 'deposit' ? row.amount : -row.amount
+                  const statusLabel = row.status === 'approved' || row.status === 'successful' ? 'Approved' : row.status === 'pending' ? 'Pending' : row.status === 'rejected' ? 'Rejected' : row.status
+                  const statusClass = row.status === 'approved' || row.status === 'successful' ? 'approved' : row.status === 'pending' ? 'pending' : row.status === 'rejected' ? 'rejected' : row.status
+
                   return (
                     <tr key={row.id}>
                       <td><small>{new Date(row.createdAt).toLocaleString()}</small></td>
                       <td><strong>{row.title}</strong></td>
-                      <td>{row.details}{row.kind === 'deposit' && row.creditedAmount > row.amount && <small className="history-bonus">Includes {currency(row.creditedAmount - row.amount)} bonus</small>}</td>
-                      <td><span className={`history-status history-status-${row.status}`}>{row.status}</span></td>
-                      <td><strong className={value >= 0 ? 'ticker-up' : 'ticker-down'}>{value < 0 ? '-' : value > 0 ? '+' : ''}{currency(value)}</strong></td>
+                      <td>{row.details}</td>
+                      <td><span className={`history-status history-status-${statusClass}`}>{statusLabel}</span></td>
+                      <td><strong className={value >= 0 ? 'ticker-up' : 'ticker-down'}>{value < 0 ? '-' : '+'}{currency(value)}</strong></td>
                     </tr>
                   )
                 })}
