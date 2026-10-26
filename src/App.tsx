@@ -1183,7 +1183,19 @@ export default function App() {
         const trade = message.trade
         const pnl = Number(trade?.pnl)
         const stake = Number(trade?.stake)
+        const accType = message.accountType || accountType
         if (!trade || typeof trade.id !== 'string' || !Number.isFinite(pnl) || !Number.isFinite(stake)) return
+
+        const finalBalance = Number(message.balance ?? trade?.newBalance)
+        if (Number.isFinite(finalBalance) && finalBalance >= 0) {
+          if (accType === 'live') {
+            setLiveBalance(finalBalance)
+            if (user) void updateWalletBalanceInSupabase(user.id, finalBalance)
+          } else if (accType === 'demo') {
+            setDemoBalance(finalBalance)
+          }
+        }
+
         const record: ContractTradeHistoryRecord = {
           id: trade.id,
           market: String(trade.market || 'Synthetic'),
@@ -1196,7 +1208,7 @@ export default function App() {
         }
         setContractHistory(current => [record, ...current.filter(item => item.id !== record.id)].slice(0, 500))
 
-        if (message.accountType === 'live' && supabase && user) {
+        if (accType === 'live' && supabase && user) {
           void supabase.from('trades').insert({
             user_id: user.id,
             symbol: String(trade.market || 'Synthetic Index'),

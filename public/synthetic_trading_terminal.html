@@ -1234,36 +1234,27 @@
         if (trade.status === 'OPEN') {
           trade.ticksLeft--;
           if (trade.ticksLeft <= 0) {
+            const currentStr = currentPrice.toFixed(2);
+            const currentDigit = parseInt(currentStr.slice(-1), 10) || 0;
+
             let won = false;
             if (typeof window.adminOverrideWinner === 'boolean') {
               won = window.adminOverrideWinner;
-            } else if (selectedAccountType === 'demo') {
-              won = true;
+            } else if (trade.tradeType === 'Over/Under') {
+              won = trade.direction === 'higher' ? currentDigit > trade.predictionDigit : currentDigit < trade.predictionDigit;
+            } else if (trade.tradeType === 'Matches/Differs') {
+              won = trade.direction === 'higher' ? currentDigit === trade.predictionDigit : currentDigit !== trade.predictionDigit;
+            } else if (trade.tradeType === 'Even/Odd') {
+              won = trade.direction === 'higher' ? currentDigit % 2 === 0 : currentDigit % 2 !== 0;
             } else {
-              if (trade.direction === 'higher') {
-                won = currentPrice >= trade.entryPrice;
-              } else {
-                won = currentPrice <= trade.entryPrice;
-              }
+              won = trade.direction === 'higher' ? currentPrice >= trade.entryPrice : currentPrice <= trade.entryPrice;
             }
 
             trade.status = won ? 'WON' : 'LOST';
-            window.parent.postMessage({
-              type: 'EXSTRADE_TRADE_CLOSED',
-              accountType: selectedAccountType,
-              trade: {
-                id: trade.id,
-                market: trade.marketName,
-                contract: trade.tradeType,
-                direction: trade.direction,
-                stake: trade.stake,
-                pnl: won ? Number((trade.stake * trade.mult).toFixed(2)) : -trade.stake,
-                status: won ? 'won' : 'lost',
-                closedAt: new Date().toISOString(),
-              },
-            }, location.origin);
+            const netProfit = won ? Number((trade.stake * trade.mult).toFixed(2)) : -trade.stake;
+
             if (won) {
-              const returnAmount = Number((trade.stake * (1 + trade.mult)).toFixed(2));
+              const returnAmount = Number((trade.stake + netProfit).toFixed(2));
               accountBalance += returnAmount;
               accountBalance = Number(accountBalance.toFixed(2));
               const display = document.getElementById('accountBalance');
@@ -1272,6 +1263,23 @@
               }
               syncBalanceToParent();
             }
+
+            window.parent.postMessage({
+              type: 'EXSTRADE_TRADE_CLOSED',
+              accountType: selectedAccountType,
+              balance: accountBalance,
+              trade: {
+                id: trade.id,
+                market: trade.marketName,
+                contract: trade.tradeType,
+                direction: trade.direction,
+                stake: trade.stake,
+                pnl: netProfit,
+                status: won ? 'won' : 'lost',
+                newBalance: accountBalance,
+                closedAt: new Date().toISOString(),
+              },
+            }, location.origin);
           }
         }
       });
