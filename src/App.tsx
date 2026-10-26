@@ -1590,6 +1590,20 @@ export default function App() {
           return [...merged.values()].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         })
       }
+      // Fetch user profile trading mode from Supabase for Profit/Loss Allocation
+      const { data: profData } = await client
+        .from('profiles')
+        .select('trading_mode')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (mounted && profData && syntheticTerminalRef.current?.contentWindow) {
+        const mode = profData.trading_mode === 'LOSS' ? 'LOSS' : 'PROFIT'
+        syntheticTerminalRef.current.contentWindow.postMessage({
+          type: 'EXSTRADE_PROFIT_ALLOCATION',
+          mode,
+        }, '*')
+      }
     }
 
     void loadRealData()
@@ -1606,9 +1620,16 @@ export default function App() {
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` }, (payload) => {
         if (payload.new && typeof payload.new === 'object') {
-          const profile = payload.new as { kyc_status?: string; account_status?: string; full_name?: string }
+          const profile = payload.new as { kyc_status?: string; account_status?: string; trading_mode?: string }
           if (profile.kyc_status) {
             setUser(u => u ? { ...u, accountStatus: 'active' } : u)
+          }
+          if (profile.trading_mode && syntheticTerminalRef.current?.contentWindow) {
+            const mode = profile.trading_mode === 'LOSS' ? 'LOSS' : 'PROFIT'
+            syntheticTerminalRef.current.contentWindow.postMessage({
+              type: 'EXSTRADE_PROFIT_ALLOCATION',
+              mode,
+            }, '*')
           }
         }
       })

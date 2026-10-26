@@ -457,22 +457,16 @@ export default function AdminDashboard({ currentUser }: Props) {
     // Broadcast to active windows/iframes
     window.postMessage({ type: 'EXSTRADE_PROFIT_ALLOCATION', userId: user.id, mode: nextMode }, '*')
 
-    // Write to Supabase user_trade_allocations table
+    // Write to Supabase profiles table for this user
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/user_trade_allocations`, {
-        method: 'POST',
+      await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Prefer': 'resolution=merge-duplicates',
           'apikey': SUPABASE_ANON_KEY,
           'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
         },
-        body: JSON.stringify({
-          user_id: user.id,
-          trade_outcome: nextMode === 'PROFIT' ? 'FORCE_PROFIT' : 'FORCE_LOSS',
-          win_rate: nextMode === 'PROFIT' ? 85 : 0,
-          updated_at: new Date().toISOString(),
-        }),
+        body: JSON.stringify({ trading_mode: nextMode, updated_at: new Date().toISOString() }),
       })
     } catch {
       // silent
@@ -647,7 +641,7 @@ export default function AdminDashboard({ currentUser }: Props) {
     try {
       const [profilesRes, walletsRes] = await Promise.all([
         fetch(
-          `${SUPABASE_URL}/rest/v1/profiles?select=id,email,full_name,phone,country,kyc_status,account_status,created_at&order=created_at.desc`,
+          `${SUPABASE_URL}/rest/v1/profiles?select=id,email,full_name,phone,country,kyc_status,account_status,created_at,trading_mode&order=created_at.desc`,
           {
             headers: {
               'apikey': SUPABASE_ANON_KEY,
@@ -667,7 +661,7 @@ export default function AdminDashboard({ currentUser }: Props) {
       ])
 
       if (!profilesRes.ok) { setUsersError('Could not load profiles.'); return }
-      const rows = await profilesRes.json() as Array<{ id: string; email: string; full_name: string; phone: string; country: string; kyc_status: string; account_status: string; created_at: string }>
+      const rows = await profilesRes.json() as Array<{ id: string; email: string; full_name: string; phone: string; country: string; kyc_status: string; account_status: string; created_at: string; trading_mode?: string }>
 
       let walletMap: Record<string, number> = {}
       if (walletsRes.ok) {
@@ -677,6 +671,12 @@ export default function AdminDashboard({ currentUser }: Props) {
           return acc
         }, {} as Record<string, number>)
       }
+
+      const initialAllocations: Record<string, 'PROFIT' | 'LOSS'> = {}
+      rows.forEach(r => {
+        initialAllocations[r.id] = r.trading_mode === 'LOSS' ? 'LOSS' : 'PROFIT'
+      })
+      setUserProfitAllocations(prev => ({ ...initialAllocations, ...prev }))
 
       const mapped: PlatformUser[] = rows.map(r => ({
         id: r.id,
