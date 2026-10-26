@@ -851,46 +851,67 @@ export default function AdminDashboard({ currentUser }: Props) {
         }),
       ])
 
-      if (!txnsRes.ok) return
-      const rows = await txnsRes.json() as Array<{
-        id: string
-        user_id: string
-        type: 'deposit' | 'withdrawal' | 'adjustment'
-        amount: number
-        bonus_amount: number
-        total_amount: number
-        gateway_network: string
-        reference_code: string
-        status: 'pending' | 'approved' | 'rejected' | 'flagged'
-        admin_notes: string
-        created_at: string
-      }>
+      let dbTxns: Transaction[] = []
+      if (txnsRes.ok) {
+        const rows = await txnsRes.json() as Array<{
+          id: string
+          user_id: string
+          type: 'deposit' | 'withdrawal' | 'adjustment'
+          amount: number
+          bonus_amount: number
+          total_amount: number
+          gateway_network: string
+          reference_code: string
+          status: 'pending' | 'approved' | 'rejected' | 'flagged'
+          admin_notes: string
+          created_at: string
+        }>
 
-      let profMap: Record<string, { name: string; email: string }> = {}
-      if (profilesRes.ok) {
-        const profRows = await profilesRes.json() as Array<{ id: string; full_name: string; email: string }>
-        profMap = profRows.reduce((acc, p) => {
-          acc[p.id] = { name: p.full_name || (p.email ? p.email.split('@')[0] : 'User'), email: p.email || '—' }
-          return acc
-        }, {} as typeof profMap)
+        let profMap: Record<string, { name: string; email: string }> = {}
+        if (profilesRes.ok) {
+          const profRows = await profilesRes.json() as Array<{ id: string; full_name: string; email: string }>
+          profMap = profRows.reduce((acc, p) => {
+            acc[p.id] = { name: p.full_name || (p.email ? p.email.split('@')[0] : 'User'), email: p.email || '—' }
+            return acc
+          }, {} as typeof profMap)
+        }
+
+        if (Array.isArray(rows) && rows.length > 0) {
+          dbTxns = rows.map(r => {
+            const uProf = profMap[r.user_id]
+            return {
+              id: r.id,
+              userId: r.user_id,
+              userName: uProf?.name || `User #${r.user_id.substring(0, 8)}`,
+              userEmail: uProf?.email || `user_${r.user_id.substring(0, 6)}@binarypip.com`,
+              type: r.type,
+              amount: Number(r.total_amount || r.amount),
+              network: r.gateway_network || 'MPESA',
+              status: r.status,
+              createdAt: r.created_at,
+              flagReason: r.admin_notes || undefined,
+            }
+          })
+        }
       }
 
-      if (Array.isArray(rows) && rows.length > 0) {
-        setTransactions(rows.map(r => {
-          const uProf = profMap[r.user_id]
-          return {
-            id: r.id,
-            userId: r.user_id,
-            userName: uProf?.name || `User #${r.user_id.substring(0, 8)}`,
-            userEmail: uProf?.email || `user_${r.user_id.substring(0, 6)}@binarypip.com`,
-            type: r.type,
-            amount: Number(r.total_amount || r.amount),
-            network: r.gateway_network || 'MPESA',
-            status: r.status,
-            createdAt: r.created_at,
-            flagReason: r.admin_notes || undefined,
-          }
-        }))
+      // Read shared local transaction queue
+      let localTxns: Transaction[] = []
+      try {
+        const localStr = localStorage.getItem('binarypip_pending_transactions')
+        if (localStr) localTxns = JSON.parse(localStr)
+      } catch {
+        // silent
+      }
+
+      // Merge Supabase DB transactions + local pending transactions
+      const mergedMap = new Map<string, Transaction>()
+      localTxns.forEach(t => mergedMap.set(t.id, t))
+      dbTxns.forEach(t => mergedMap.set(t.id, t))
+
+      const mergedList = [...mergedMap.values()].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      if (mergedList.length > 0) {
+        setTransactions(mergedList)
       }
     } catch {
       // silent
@@ -1439,6 +1460,19 @@ export default function AdminDashboard({ currentUser }: Props) {
 
       // 3. Save updated user wallet balance in Supabase Database
       await saveUserWalletBalance(txn.userId, nextBal)
+
+      // 4. Update local transaction queue status for instant client reflection
+      try {
+        const localStr = localStorage.getItem('binarypip_pending_transactions')
+        if (localStr) {
+          const queue = JSON.parse(localStr) as Transaction[]
+          const updated = queue.map(t => (t.id === txn.id || (t.userId === txn.userId && t.type === txn.type && t.status === 'pending')) ? { ...t, status: 'approved' } : t)
+          localStorage.setItem('binarypip_pending_transactions', JSON.stringify(updated))
+          window.dispatchEvent(new Event('storage'))
+        }
+      } catch {
+        // silent
+      }
     } catch {
       // silent
     }
@@ -1475,6 +1509,19 @@ export default function AdminDashboard({ currentUser }: Props) {
         },
         body: JSON.stringify({ status: 'rejected', updated_at: new Date().toISOString() }),
       })
+
+      // Update local transaction queue status
+      try {
+        const localStr = localStorage.getItem('binarypip_pending_transactions')
+        if (localStr) {
+          const queue = JSON.parse(localStr) as Transaction[]
+          const updated = queue.map(t => (t.id === txn.id || (t.userId === txn.userId && t.type === txn.type && t.status === 'pending')) ? { ...t, status: 'rejected' } : t)
+          localStorage.setItem('binarypip_pending_transactions', JSON.stringify(updated))
+          window.dispatchEvent(new Event('storage'))
+        }
+      } catch {
+        // silent
+      }
     } catch {
       // silent
     }

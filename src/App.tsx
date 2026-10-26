@@ -1980,6 +1980,28 @@ export default function App() {
       createdAt: draft.createdAt ?? new Date().toISOString(),
     }
     setFundingHistory(current => [record, ...current.filter(item => item.id !== record.id)].slice(0, 500))
+
+    // Save to shared localStorage queue so Admin Dashboard picks it up instantly
+    try {
+      const pendingTxn = {
+        id: record.id,
+        userId: user?.id || 'local-user',
+        userName: user?.fullName || (user?.email ? user.email.split('@')[0] : 'Client'),
+        userEmail: user?.email || 'client@binarypip.com',
+        type: record.type,
+        amount: record.amount,
+        network: record.network,
+        status: record.status || 'pending',
+        createdAt: record.createdAt,
+      }
+      const existingStr = localStorage.getItem('binarypip_pending_transactions')
+      const existing = existingStr ? JSON.parse(existingStr) : []
+      const updated = [pendingTxn, ...existing.filter((x: any) => x.id !== pendingTxn.id)].slice(0, 200)
+      localStorage.setItem('binarypip_pending_transactions', JSON.stringify(updated))
+      window.dispatchEvent(new Event('storage'))
+    } catch {
+      // silent
+    }
   }
 
   // Account Selector Handler (with Auth Login Check for Real Account & Funds Redirection)
