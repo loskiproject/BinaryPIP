@@ -1234,16 +1234,24 @@
         if (trade.status === 'OPEN') {
           trade.ticksLeft--;
           if (trade.ticksLeft <= 0) {
-            let won = true;
-            if (window.adminOverrideWinner === false) {
-              won = false;
-            } else if (typeof window.adminOverrideWinner === 'boolean') {
+            const currentStr = currentPrice.toFixed(2);
+            const currentDigit = parseInt(currentStr.slice(-1), 10) || 0;
+
+            let won = false;
+            if (typeof window.adminOverrideWinner === 'boolean') {
               won = window.adminOverrideWinner;
+            } else if (trade.tradeType === 'Over/Under') {
+              won = trade.direction === 'higher' ? currentDigit > trade.predictionDigit : currentDigit < trade.predictionDigit;
+            } else if (trade.tradeType === 'Matches/Differs') {
+              won = trade.direction === 'higher' ? currentDigit === trade.predictionDigit : currentDigit !== trade.predictionDigit;
+            } else if (trade.tradeType === 'Even/Odd') {
+              won = trade.direction === 'higher' ? currentDigit % 2 === 0 : currentDigit % 2 !== 0;
+            } else {
+              won = trade.direction === 'higher' ? currentPrice >= trade.entryPrice : currentPrice <= trade.entryPrice;
             }
 
-            const mult = Number(trade.mult) > 0 ? Number(trade.mult) : 0.95;
             trade.status = won ? 'WON' : 'LOST';
-            const netProfit = won ? Number((trade.stake * mult).toFixed(2)) : -trade.stake;
+            const netProfit = won ? Number((trade.stake * trade.mult).toFixed(2)) : -trade.stake;
 
             if (won) {
               const returnAmount = Number((trade.stake + netProfit).toFixed(2));

@@ -1861,11 +1861,15 @@ export default function App() {
       ...curr
     ])
 
+    const marginReturned = pos.margin || 0
+    const profitMade = pos.profit || 0
+    const totalReturned = marginReturned + profitMade
+
     if (accountType === 'demo') {
-      setDemoBalance((balance) => balance + pos.profit)
+      setDemoBalance((balance) => balance + totalReturned)
     } else if (accountType === 'live') {
       setLiveBalance((balance) => {
-        const nextBal = Math.max(0, balance + pos.profit)
+        const nextBal = Math.max(0, balance + totalReturned)
         if (user) void updateWalletBalanceInSupabase(user.id, nextBal)
         return nextBal
       })
