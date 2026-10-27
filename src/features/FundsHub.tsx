@@ -3,7 +3,7 @@ import {
   ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight,
   Copy, CheckCircle2, AlertCircle, Smartphone,
   DollarSign, RefreshCw, ChevronDown, EyeOff, Eye,
-  Zap, Sparkles, Wallet,
+  Zap, Sparkles, Wallet, Upload, X,
 } from 'lucide-react'
 
 export type WalletBalances = {
@@ -298,6 +298,19 @@ export default function FundsHub({
   const [_stkCheckoutId, setStkCheckoutId] = useState('')
   const [stkVerifying, setStkVerifying] = useState(false)
 
+  // Crypto Proof / TxHash / Success Modal State
+  const [cryptoTxHash, setCryptoTxHash] = useState('')
+  const [cryptoScreenshotName, setCryptoScreenshotName] = useState<string | null>(null)
+  const [depositSuccessModal, setDepositSuccessModal] = useState<{ amountUSD: number; method: string; ref: string } | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setCryptoScreenshotName(file.name)
+    }
+  }
+
   // Activity log
   const [logLines, setLogLines] = useState<string[]>([])
   const logRef = useRef(0)
@@ -337,31 +350,45 @@ export default function FundsHub({
 
   const handleProceedDeposit = async () => {
     if (depositMethod === 'mpesa') {
-      // validate then call STK
       if (!mpPhone.match(/^07\d{8}$|^\+2547\d{8}$/)) { showNotice('Enter a valid M-Pesa number (07XXXXXXXX).'); return }
-      const kes = parseFloat(mpKes || amount)
-      if (!kes || kes < minDepositKES) { showNotice(`Minimum M-Pesa deposit is KES ${minDepositKES}.`); return }
-      setStkStep('pushing')
-      try {
-        const supabaseUrl  = import.meta.env.VITE_SUPABASE_URL  as string
-        const supabaseKey  = import.meta.env.VITE_SUPABASE_ANON_KEY as string
-        const res = await fetch(`${supabaseUrl}/functions/v1/mpesa-stk-push`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${supabaseKey}`, 'apikey': supabaseKey },
-          body: JSON.stringify({ phone: mpPhone.trim(), amount: Math.ceil(kes), customerName: 'BINARYPIP CLIENT' }),
-        })
-        const data = await res.json() as { success?: boolean; error?: string; checkoutRequestId?: string }
-        if (!res.ok || !data.success) { setStkStep('error'); setStkError(data.error ?? 'STK Push failed.'); return }
-        setStkCheckoutId(data.checkoutRequestId ?? '')
-        setStkStep('waiting')
-      } catch { setStkStep('error'); setStkError('Network error. Check your connection.') }
+      const kes = parseFloat(mpKes)
+      if (!kes || kes < minDepositKES) { showNotice(`Minimum M-Pesa deposit is KES ${minDepositKES.toLocaleString()}.`); return }
+      if (!mpCode.trim()) { showNotice('Please enter your M-Pesa confirmation transaction code.'); return }
+
+      const usdEquiv = kes / 130
+      const refCode = `M-Pesa Code: ${mpCode.trim().toUpperCase()} | Phone: ${mpPhone.trim()}`
+      onDepositRequest(usdEquiv, 'MPESA', refCode)
+
+      setDepositSuccessModal({
+        amountUSD: usdEquiv,
+        method: 'M-Pesa',
+        ref: mpCode.trim().toUpperCase(),
+      })
+
+      setMpPhone('')
+      setMpKes('')
+      setMpCode('')
     } else {
-      // Crypto deposit
+      // Crypto Deposit
       const amt = parseFloat(amount)
       if (!amt || amt < minDepositUSD) { showNotice(`Minimum deposit is $${minDepositUSD}.`); return }
-      onDepositRequest(amt, depositMethod)
-      showNotice(`✅ Crypto deposit of $${fmt(amt)} via ${depositMethod} submitted. Awaiting admin confirmation.`)
+
+      let refCode = cryptoTxHash.trim() ? `TxHash: ${cryptoTxHash.trim()}` : `Crypto Deposit (${depositMethod})`
+      if (cryptoScreenshotName) {
+        refCode += ` | Proof: ${cryptoScreenshotName}`
+      }
+
+      onDepositRequest(amt, depositMethod, refCode)
+
+      setDepositSuccessModal({
+        amountUSD: amt,
+        method: depositMethod,
+        ref: cryptoTxHash.trim() || cryptoScreenshotName || 'Crypto Transfer',
+      })
+
       setAmount('')
+      setCryptoTxHash('')
+      setCryptoScreenshotName(null)
     }
   }
 
@@ -467,11 +494,12 @@ export default function FundsHub({
           <div className="th-panel">
             <div className="th-panel-title">CHOOSE WALLET</div>
             <div className="th-wallet-list">
-              {(Object.keys(wallets) as (keyof WalletBalances)[]).map(k => {
+              {(['main', 'synthetic'] as (keyof WalletBalances)[]).map(k => {
                 const m = WALLET_META[k]
                 return (
                   <button
                     key={k}
+                    type="button"
                     className={`th-wallet-item ${selectedWallet === k ? 'th-wallet-selected' : ''}`}
                     onClick={() => setSelectedWallet(k)}
                     style={{ '--wc': m.color } as React.CSSProperties}
@@ -529,7 +557,7 @@ export default function FundsHub({
             {depositMethod === 'mpesa' && stkStep === 'form' && (
               <div className="th-mpesa-fields">
                 <label className="th-field-label">
-                  M-Pesa Phone
+                  M-Pesa Phone Number
                   <div className="th-input-wrap">
                     <span className="th-input-pre">🇰🇪</span>
                     <input className="th-input" type="tel" placeholder="07XXXXXXXX"
@@ -546,6 +574,15 @@ export default function FundsHub({
                   <span className="th-hint">
                     Min KES {minDepositKES.toLocaleString()} · ~${(parseFloat(mpKes) > 0 ? (parseFloat(mpKes) / 130) : minDepositUSD).toFixed(2)} USD
                   </span>
+                </label>
+                <label className="th-field-label" style={{ marginTop: '10px' }}>
+                  M-Pesa Transaction Code (from SMS)
+                  <div className="th-input-wrap">
+                    <span className="th-input-pre">📲</span>
+                    <input className="th-input th-mono" placeholder="e.g. QJK7WXYZ12"
+                      value={mpCode} onChange={e => setMpCode(e.target.value.toUpperCase())} />
+                  </div>
+                  <span className="th-hint">Enter the transaction code from your M-Pesa confirmation SMS</span>
                 </label>
               </div>
             )}
@@ -634,6 +671,47 @@ export default function FundsHub({
                   <span className="th-hint">
                     Min ${minDepositUSD} USD · ~KES {(parseFloat(amount) > 0 ? (parseFloat(amount) * 130) : (minDepositUSD * 130)).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </span>
+                </label>
+
+                <label className="th-field-label" style={{ marginTop: '10px' }}>
+                  Transaction Hash / Reference Code
+                  <div className="th-input-wrap">
+                    <span className="th-input-pre">🔗</span>
+                    <input className="th-input th-mono" placeholder="Paste TxHash or transfer reference"
+                      value={cryptoTxHash} onChange={e => setCryptoTxHash(e.target.value)} />
+                  </div>
+                </label>
+
+                <label className="th-field-label" style={{ marginTop: '10px' }}>
+                  Upload Payment Screenshot / Proof
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    style={{ display: 'none' }}
+                    onChange={handleFileSelect}
+                  />
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{
+                      background: 'rgba(15,23,42,0.6)',
+                      border: '1px dashed rgba(0,230,118,0.4)',
+                      borderRadius: '10px',
+                      padding: '12px',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '10px',
+                      marginTop: '6px',
+                    }}
+                  >
+                    <Upload size={18} color="#00e676" />
+                    <span style={{ fontSize: '12px', color: cryptoScreenshotName ? '#00e676' : 'var(--text-muted)', fontWeight: 700 }}>
+                      {cryptoScreenshotName ? `📷 ${cryptoScreenshotName}` : 'Click to upload payment screenshot'}
+                    </span>
+                  </div>
                 </label>
               </div>
             )}
@@ -1073,6 +1151,133 @@ export default function FundsHub({
               }}
             >
               OK
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── DEPOSIT SUBMITTED SUCCESS POPUP BANNER MODAL ── */}
+      {depositSuccessModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 99999,
+          background: 'rgba(3, 9, 22, 0.88)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px',
+        }} onClick={() => setDepositSuccessModal(null)}>
+          <div style={{
+            background: '#071326',
+            border: '1px solid rgba(0, 230, 118, 0.4)',
+            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 35px rgba(0, 230, 118, 0.25)',
+            borderRadius: '24px',
+            padding: '36px 28px 28px',
+            maxWidth: '450px',
+            width: '100%',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '20px',
+            position: 'relative',
+          }} onClick={e => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setDepositSuccessModal(null)}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: 'none',
+                color: '#a0aec0',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              <X size={16} />
+            </button>
+
+            {/* Top Icon Badge */}
+            <div style={{
+              width: '68px',
+              height: '68px',
+              borderRadius: '50%',
+              background: 'rgba(0, 230, 118, 0.15)',
+              border: '2px solid #00e676',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#00e676',
+              boxShadow: '0 0 24px rgba(0, 230, 118, 0.35)',
+            }}>
+              <CheckCircle2 size={36} color="#00e676" />
+            </div>
+
+            <div>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: '#00e676', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                CONFIRMATION SUBMITTED
+              </span>
+              <h2 style={{ fontSize: '22px', fontWeight: 900, color: '#ffffff', margin: '6px 0 0' }}>
+                Deposit Submitted Successfully!
+              </h2>
+            </div>
+
+            <div style={{
+              background: 'rgba(3, 20, 42, 0.75)',
+              border: '1px solid rgba(0, 230, 118, 0.3)',
+              borderRadius: '14px',
+              padding: '16px 18px',
+              textAlign: 'left',
+              width: '100%',
+            }}>
+              <div style={{
+                fontSize: '13px',
+                fontWeight: 700,
+                color: '#00e676',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginBottom: '6px',
+              }}>
+                ⏳ Pending Verification Stage
+              </div>
+              <p style={{
+                fontSize: '12.5px',
+                color: '#e2e8f0',
+                lineHeight: 1.6,
+                margin: 0,
+              }}>
+                Your deposit of <strong style={{ color: '#00e676' }}>${depositSuccessModal.amountUSD.toFixed(2)} USD</strong> via <strong>{depositSuccessModal.method}</strong> is under verification. Your balance will be updated once payment is confirmed.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setDepositSuccessModal(null)}
+              style={{
+                width: '100%',
+                background: 'linear-gradient(135deg, #00e676 0%, #00b0ff 100%)',
+                color: '#030916',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '14px',
+                fontSize: '14px',
+                fontWeight: 900,
+                cursor: 'pointer',
+                boxShadow: '0 8px 24px rgba(0, 230, 118, 0.35)',
+              }}
+            >
+              Got it, Thank You!
             </button>
           </div>
         </div>
