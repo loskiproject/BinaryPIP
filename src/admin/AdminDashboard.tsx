@@ -453,6 +453,11 @@ export default function AdminDashboard({ currentUser }: Props) {
     setUserProfitAllocations(updated)
     localStorage.setItem('admin_user_profit_allocations', JSON.stringify(updated))
     localStorage.setItem('admin_override_winner', nextMode === 'PROFIT' ? 'true' : 'false')
+    try {
+      localStorage.setItem('exstrade_profit_allocation_sync', JSON.stringify({ userId: user.id, mode: nextMode, ts: Date.now() }))
+    } catch {
+      // silent
+    }
 
     // Broadcast to active windows/iframes
     window.postMessage({ type: 'EXSTRADE_PROFIT_ALLOCATION', userId: user.id, mode: nextMode }, '*')
@@ -465,6 +470,7 @@ export default function AdminDashboard({ currentUser }: Props) {
           'Content-Type': 'application/json',
           'apikey': SUPABASE_ANON_KEY,
           'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Prefer': 'return=minimal',
         },
         body: JSON.stringify({ trading_mode: nextMode, updated_at: new Date().toISOString() }),
       })
@@ -476,10 +482,10 @@ export default function AdminDashboard({ currentUser }: Props) {
       'PROFIT_ALLOCATION_CHANGE',
       user.id,
       'Finance',
-      `Admin set trade outcome for ${user.name} (${user.email}) to ${nextMode === 'PROFIT' ? '🟢 FORCE PROFIT (+85% WINS)' : '🔴 FORCE LOSS (100% HOUSE LOSS)'}`,
+      `Admin set trade outcome for ${user.name} (${user.email}) to ${nextMode === 'PROFIT' ? '🟢 FORCE PROFIT' : '🔴 FORCE LOSS'}`,
       nextMode === 'PROFIT' ? 'warning' : 'info'
     )
-    showToast(`Trade outcome for ${user.name}: ${nextMode === 'PROFIT' ? '🟢 PROFIT (WINS)' : '🔴 LOSS (100% HOUSE LOSS)'}`)
+    showToast(`Trade outcome for ${user.name}: ${nextMode === 'PROFIT' ? '🟢 PROFIT (WINS)' : '🔴 LOSS (HOUSE LOSS)'}`)
   }
 
   // Notify user modal
@@ -897,21 +903,22 @@ export default function AdminDashboard({ currentUser }: Props) {
         }
       }
 
-      // If real Supabase database transactions exist, use them as authoritative source
-      if (dbTxns.length > 0) {
-        setTransactions(dbTxns)
-      } else {
-        // Fallback to local queue if database is empty
-        let localTxns: Transaction[] = []
-        try {
-          const localStr = localStorage.getItem('binarypip_pending_transactions')
-          if (localStr) localTxns = JSON.parse(localStr)
-        } catch {
-          // silent
-        }
-        if (localTxns.length > 0) {
-          setTransactions(localTxns)
-        }
+      // Merge database transactions AND local pending queue so NO client transaction is omitted
+      let localTxns: Transaction[] = []
+      try {
+        const localStr = localStorage.getItem('binarypip_pending_transactions')
+        if (localStr) localTxns = JSON.parse(localStr)
+      } catch {
+        // silent
+      }
+
+      const mergedMap = new Map<string, Transaction>()
+      localTxns.forEach(t => mergedMap.set(t.id, t))
+      dbTxns.forEach(t => mergedMap.set(t.id, t))
+
+      const allMerged = Array.from(mergedMap.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      if (allMerged.length > 0) {
+        setTransactions(allMerged)
       }
     } catch {
       // silent
@@ -2211,9 +2218,14 @@ export default function AdminDashboard({ currentUser }: Props) {
                             </button>
                             {/* Trade Outcome Allocation Buttons: Green Profit vs Red Loss */}
                             <button
+                              type="button"
                               className="sa-btn-xs"
-                              onClick={() => setUserProfitAllocationMode(u, 'PROFIT')}
-                              title="Set user live trades to PROFIT (+85% Win Rate)"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                void setUserProfitAllocationMode(u, 'PROFIT')
+                              }}
+                              title="Set user live trades to PROFIT (WINS)"
                               style={{
                                 background: userProfitAllocations[u.id] === 'PROFIT' ? '#1ccf84' : 'rgba(28,207,132,0.12)',
                                 border: '1px solid #1ccf84',
@@ -2224,41 +2236,52 @@ export default function AdminDashboard({ currentUser }: Props) {
                               <Sparkles size={11} /> Profit
                             </button>
                             <button
+                              type="button"
                               className="sa-btn-xs"
-                              onClick={() => setUserProfitAllocationMode(u, 'LOSS')}
-                              title="Set user live trades to 100% HOUSE LOSS (Default)"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                void setUserProfitAllocationMode(u, 'LOSS')
+                              }}
+                              title="Set user live trades to 100% HOUSE LOSS"
                               style={{
-                                background: (userProfitAllocations[u.id] === 'LOSS' || !userProfitAllocations[u.id]) ? '#f04452' : 'rgba(240,68,82,0.12)',
+                                background: userProfitAllocations[u.id] === 'LOSS' ? '#f04452' : 'rgba(240,68,82,0.12)',
                                 border: '1px solid #f04452',
-                                color: (userProfitAllocations[u.id] === 'LOSS' || !userProfitAllocations[u.id]) ? '#ffffff' : '#f04452',
+                                color: userProfitAllocations[u.id] === 'LOSS' ? '#ffffff' : '#f04452',
                                 fontWeight: 800,
                               }}
                             >
                               <TrendingDown size={11} /> Loss
                             </button>
                             <button
+                              type="button"
                               className="sa-btn-xs sa-btn-xs-ok"
-                              onClick={() => setBalanceModal({ user: u, amount: '', mode: 'credit', reason: '' })}
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setBalanceModal({ user: u, amount: '', mode: 'credit', reason: '' })
+                              }}
                               title="Load / Allocate money directly to this user Real Account balance"
                             >
                               <DollarSign size={11} /> Load Funds
                             </button>
                             {u.accountStatus === 'pending' ? (
-                              <button className="sa-btn-xs sa-btn-xs-ok" onClick={() => approveAccount(u)}>
+                              <button type="button" className="sa-btn-xs sa-btn-xs-ok" onClick={(e) => { e.preventDefault(); e.stopPropagation(); void approveAccount(u) }}>
                                 <CheckCircle2 size={11} /> Approve
                               </button>
                             ) : (
                               <button
+                                type="button"
                                 className={`sa-btn-xs ${u.status === 'active' ? 'sa-btn-xs-danger' : 'sa-btn-xs-ok'}`}
-                                onClick={() => toggleUserStatus(u)}
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); void toggleUserStatus(u) }}
                               >
                                 {u.status === 'active' ? <><Ban size={11} /> Suspend</> : <><CheckCircle2 size={11} /> Activate</>}
                               </button>
                             )}
-                            <button className="sa-btn-xs sa-btn-xs-outline" title="Edit details" onClick={() => openEditUser(u)}>
+                            <button type="button" className="sa-btn-xs sa-btn-xs-outline" title="Edit details" onClick={(e) => { e.preventDefault(); e.stopPropagation(); openEditUser(u) }}>
                               <Pencil size={11} />
                             </button>
-                            <button className="sa-btn-xs sa-btn-xs-danger" title="Permanently delete user" onClick={() => deleteUser(u)}>
+                            <button type="button" className="sa-btn-xs sa-btn-xs-danger" title="Permanently delete user" onClick={(e) => { e.preventDefault(); e.stopPropagation(); void deleteUser(u) }}>
                               <Trash2 size={11} /> Delete
                             </button>
                           </div>
@@ -2417,10 +2440,10 @@ export default function AdminDashboard({ currentUser }: Props) {
                     </div>
                     {kyc.status === 'pending' && (
                       <div className="sa-kyc-actions">
-                        <button className="sa-btn sa-btn-ok" onClick={() => approveKyc(kyc)}>
+                        <button type="button" className="sa-btn sa-btn-ok" onClick={(e) => { e.preventDefault(); e.stopPropagation(); void approveKyc(kyc) }}>
                           <CheckCircle2 size={13} /> Approve
                         </button>
-                        <button className="sa-btn sa-btn-outline" onClick={() => { setSelectedKyc(kyc); setKycRejectReason('') }}>
+                        <button type="button" className="sa-btn sa-btn-outline" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedKyc(kyc); setKycRejectReason('') }}>
                           <XCircle size={13} /> Reject
                         </button>
                       </div>
@@ -2479,10 +2502,10 @@ export default function AdminDashboard({ currentUser }: Props) {
                       onChange={e => setKycRejectReason(e.target.value)}
                     />
                     <div className="sa-modal-actions">
-                      <button className="sa-btn sa-btn-danger" onClick={() => rejectKyc(selectedKyc, kycRejectReason)}>
+                      <button type="button" className="sa-btn sa-btn-danger" onClick={(e) => { e.preventDefault(); e.stopPropagation(); void rejectKyc(selectedKyc, kycRejectReason) }}>
                         <XCircle size={14} /> Confirm Rejection
                       </button>
-                      <button className="sa-btn sa-btn-ghost" onClick={() => setSelectedKyc(null)}>Cancel</button>
+                      <button type="button" className="sa-btn sa-btn-ghost" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedKyc(null) }}>Cancel</button>
                     </div>
                   </div>
                 </div>
@@ -2563,8 +2586,8 @@ export default function AdminDashboard({ currentUser }: Props) {
                         <td>
                           {(txn.status === 'pending' || txn.status === 'flagged') ? (
                             <div className="sa-action-row">
-                              <button className="sa-btn-xs sa-btn-xs-ok" onClick={() => approveTxn(txn)}><CheckCircle2 size={11} /> Approve</button>
-                              <button className="sa-btn-xs sa-btn-xs-danger" onClick={() => rejectTxn(txn)}><XCircle size={11} /> Reject</button>
+                              <button type="button" className="sa-btn-xs sa-btn-xs-ok" onClick={(e) => { e.preventDefault(); e.stopPropagation(); void approveTxn(txn) }}><CheckCircle2 size={11} /> Approve</button>
+                              <button type="button" className="sa-btn-xs sa-btn-xs-danger" onClick={(e) => { e.preventDefault(); e.stopPropagation(); void rejectTxn(txn) }}><XCircle size={11} /> Reject</button>
                             </div>
                           ) : <span className="sa-dim">—</span>}
                         </td>
@@ -2777,16 +2800,16 @@ export default function AdminDashboard({ currentUser }: Props) {
                         </td>
                         <td>
                           <div className="sa-action-row">
-                            <button className="sa-btn-xs sa-btn-xs-outline"
-                              onClick={() => { setEditAddrDraft({ network: a.network, assetName: a.assetName, address: a.address, note: a.note }); setEditAddrId(a.id) }}>
+                            <button type="button" className="sa-btn-xs sa-btn-xs-outline"
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditAddrDraft({ network: a.network, assetName: a.assetName, address: a.address, note: a.note }); setEditAddrId(a.id) }}>
                               <Pencil size={11} /> Edit
                             </button>
-                            <button className={`sa-btn-xs ${a.enabled ? 'sa-btn-xs-danger' : 'sa-btn-xs-ok'}`}
-                              onClick={() => toggleGatewayAddress(a.id)}>
+                            <button type="button" className={`sa-btn-xs ${a.enabled ? 'sa-btn-xs-danger' : 'sa-btn-xs-ok'}`}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); void toggleGatewayAddress(a.id) }}>
                               {a.enabled ? <><ToggleLeft size={11} /> Disable</> : <><ToggleRight size={11} /> Enable</>}
                             </button>
-                            <button className="sa-btn-xs sa-btn-xs-danger"
-                              onClick={() => deleteGatewayAddress(a.id)}>
+                            <button type="button" className="sa-btn-xs sa-btn-xs-danger"
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); void deleteGatewayAddress(a.id) }}>
                               <Trash2 size={11} />
                             </button>
                           </div>
