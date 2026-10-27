@@ -2110,6 +2110,74 @@ export default function App() {
     setAccountType('none')
   }
 
+  const isValidUuid = (str?: string): boolean =>
+    typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)
+
+  const getValidUserId = (): string => {
+    if (user && isValidUuid(user.id)) return user.id
+    try {
+      const activeAuth = JSON.parse(localStorage.getItem('sb-xggjgegiuqhyqapcfdto-auth-token') || 'null')
+      if (activeAuth?.user?.id && isValidUuid(activeAuth.user.id)) return activeAuth.user.id
+    } catch {}
+
+    let saved = localStorage.getItem('binarypip_persistent_client_uuid')
+    if (!saved || !isValidUuid(saved)) {
+      const part1 = Math.floor(Math.random() * 0xffffffff).toString(16).padStart(8, '0')
+      const part2 = Math.floor(Math.random() * 0xffff).toString(16).padStart(4, '0')
+      const part3 = '4' + Math.floor(Math.random() * 0x0fff).toString(16).padStart(3, '0')
+      const part4 = ((Math.floor(Math.random() * 0x3fff) | 0x8000)).toString(16)
+      const part5 = Math.floor(Math.random() * 0xffffffffffff).toString(16).padStart(12, '0')
+      saved = `${part1}-${part2}-${part3}-${part4}-${part5}`
+      localStorage.setItem('binarypip_persistent_client_uuid', saved)
+    }
+    return saved
+  }
+
+  const ensureProfileAndWalletExistInSupabase = async (targetUserId: string) => {
+    if (!supabaseUrl || !supabaseKey) return
+    const userName = user?.fullName || 'Client User'
+    const userEmail = user?.email || 'client@binarypip.com'
+
+    try {
+      await fetch(`${supabaseUrl}/rest/v1/profiles`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Prefer': 'resolution=merge-duplicates',
+        },
+        body: JSON.stringify({
+          id: targetUserId,
+          email: userEmail,
+          full_name: userName,
+          role: 'client',
+          account_status: 'active',
+          kyc_status: 'verified',
+          updated_at: new Date().toISOString(),
+        }),
+      })
+
+      await fetch(`${supabaseUrl}/rest/v1/wallets`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Prefer': 'resolution=merge-duplicates',
+        },
+        body: JSON.stringify({
+          user_id: targetUserId,
+          live_balance: liveBalance,
+          demo_balance: demoBalance,
+          updated_at: new Date().toISOString(),
+        }),
+      })
+    } catch {
+      // silent
+    }
+  }
+
   // Funds Hub deposit request handler — submits deposit for Admin approval
   const handleFundsDepositRequest = async (depositAmount: number, network: string, reference?: string) => {
     const totalAdded = depositAmount
@@ -2120,11 +2188,43 @@ export default function App() {
     let transactionId: string | undefined
     let createdAt: string | undefined
 
-    if (user) {
-      if (supabase) {
-        try {
-          const { data: transaction } = await supabase.from('transactions').insert({
-            user_id: user.id,
+    const activeUserId = getValidUserId()
+    await ensureProfileAndWalletExistInSupabase(activeUserId)
+
+    if (supabase) {
+      try {
+        const { data: transaction } = await supabase.from('transactions').insert({
+          user_id: activeUserId,
+          type: 'deposit',
+          amount: depositAmount,
+          total_amount: totalAdded,
+          asset: 'USD',
+          gateway_network: network,
+          reference_code: reference || '',
+          status: 'pending',
+        }).select('id, created_at').maybeSingle()
+
+        if (transaction) {
+          transactionId = String(transaction.id)
+          createdAt = String(transaction.created_at)
+        }
+      } catch {
+        // silent
+      }
+    }
+
+    if (!transactionId && supabaseUrl && supabaseKey) {
+      try {
+        const restRes = await fetch(`${supabaseUrl}/rest/v1/transactions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Prefer': 'return=representation',
+          },
+          body: JSON.stringify({
+            user_id: activeUserId,
             type: 'deposit',
             amount: depositAmount,
             total_amount: totalAdded,
@@ -2132,48 +2232,17 @@ export default function App() {
             gateway_network: network,
             reference_code: reference || '',
             status: 'pending',
-          }).select('id, created_at').maybeSingle()
-
-          if (transaction) {
-            transactionId = String(transaction.id)
-            createdAt = String(transaction.created_at)
+          }),
+        })
+        if (restRes.ok) {
+          const rows = await restRes.json()
+          if (Array.isArray(rows) && rows[0]) {
+            transactionId = String(rows[0].id)
+            createdAt = String(rows[0].created_at)
           }
-        } catch {
-          // silent
         }
-      }
-
-      if (!transactionId && supabaseUrl && supabaseKey) {
-        try {
-          const restRes = await fetch(`${supabaseUrl}/rest/v1/transactions`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': supabaseKey,
-              'Authorization': `Bearer ${supabaseKey}`,
-              'Prefer': 'return=representation',
-            },
-            body: JSON.stringify({
-              user_id: user.id,
-              type: 'deposit',
-              amount: depositAmount,
-              total_amount: totalAdded,
-              asset: 'USD',
-              gateway_network: network,
-              reference_code: reference || '',
-              status: 'pending',
-            }),
-          })
-          if (restRes.ok) {
-            const rows = await restRes.json()
-            if (Array.isArray(rows) && rows[0]) {
-              transactionId = String(rows[0].id)
-              createdAt = String(rows[0].created_at)
-            }
-          }
-        } catch {
-          // silent
-        }
+      } catch {
+        // silent
       }
     }
 
@@ -2202,11 +2271,43 @@ export default function App() {
     let transactionId: string | undefined
     let createdAt: string | undefined
 
-    if (user) {
-      if (supabase) {
-        try {
-          const { data: transaction } = await supabase.from('transactions').insert({
-            user_id: user.id,
+    const activeUserId = getValidUserId()
+    await ensureProfileAndWalletExistInSupabase(activeUserId)
+
+    if (supabase) {
+      try {
+        const { data: transaction } = await supabase.from('transactions').insert({
+          user_id: activeUserId,
+          type: 'deposit',
+          amount: depAmount,
+          total_amount: totalAdded,
+          asset: 'USD',
+          gateway_network: selectedNetwork,
+          reference_code: '',
+          status: 'pending',
+        }).select('id, created_at').maybeSingle()
+
+        if (transaction) {
+          transactionId = String(transaction.id)
+          createdAt = String(transaction.created_at)
+        }
+      } catch {
+        // silent
+      }
+    }
+
+    if (!transactionId && supabaseUrl && supabaseKey) {
+      try {
+        const restRes = await fetch(`${supabaseUrl}/rest/v1/transactions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Prefer': 'return=representation',
+          },
+          body: JSON.stringify({
+            user_id: activeUserId,
             type: 'deposit',
             amount: depAmount,
             total_amount: totalAdded,
@@ -2214,48 +2315,17 @@ export default function App() {
             gateway_network: selectedNetwork,
             reference_code: '',
             status: 'pending',
-          }).select('id, created_at').maybeSingle()
-
-          if (transaction) {
-            transactionId = String(transaction.id)
-            createdAt = String(transaction.created_at)
+          }),
+        })
+        if (restRes.ok) {
+          const rows = await restRes.json()
+          if (Array.isArray(rows) && rows[0]) {
+            transactionId = String(rows[0].id)
+            createdAt = String(rows[0].created_at)
           }
-        } catch {
-          // silent
         }
-      }
-
-      if (!transactionId && supabaseUrl && supabaseKey) {
-        try {
-          const restRes = await fetch(`${supabaseUrl}/rest/v1/transactions`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': supabaseKey,
-              'Authorization': `Bearer ${supabaseKey}`,
-              'Prefer': 'return=representation',
-            },
-            body: JSON.stringify({
-              user_id: user.id,
-              type: 'deposit',
-              amount: depAmount,
-              total_amount: totalAdded,
-              asset: 'USD',
-              gateway_network: selectedNetwork,
-              reference_code: '',
-              status: 'pending',
-            }),
-          })
-          if (restRes.ok) {
-            const rows = await restRes.json()
-            if (Array.isArray(rows) && rows[0]) {
-              transactionId = String(rows[0].id)
-              createdAt = String(rows[0].created_at)
-            }
-          }
-        } catch {
-          // silent
-        }
+      } catch {
+        // silent
       }
     }
 
@@ -2281,19 +2351,51 @@ export default function App() {
       const nextLiveBalance = Math.max(0, liveBalance - withdrawalAmount)
       setLiveBalance(nextLiveBalance)
 
-      if (user) {
-        await updateWalletBalanceInSupabase(user.id, nextLiveBalance)
-      }
+      const activeUserId = getValidUserId()
+      await ensureProfileAndWalletExistInSupabase(activeUserId)
+      await updateWalletBalanceInSupabase(activeUserId, nextLiveBalance)
     }
 
     let transactionId: string | undefined
     let createdAt: string | undefined
 
-    if (user) {
-      if (supabase) {
-        try {
-          const { data: transaction } = await supabase.from('transactions').insert({
-            user_id: user.id,
+    const activeUserId = getValidUserId()
+    await ensureProfileAndWalletExistInSupabase(activeUserId)
+
+    if (supabase) {
+      try {
+        const { data: transaction } = await supabase.from('transactions').insert({
+          user_id: activeUserId,
+          type: 'withdrawal',
+          amount: withdrawalAmount,
+          total_amount: withdrawalAmount,
+          asset: 'USD',
+          gateway_network: network,
+          reference_code: destination,
+          status: 'pending',
+        }).select('id, created_at').maybeSingle()
+
+        if (transaction) {
+          transactionId = String(transaction.id)
+          createdAt = String(transaction.created_at)
+        }
+      } catch {
+        // silent
+      }
+    }
+
+    if (!transactionId && supabaseUrl && supabaseKey) {
+      try {
+        const restRes = await fetch(`${supabaseUrl}/rest/v1/transactions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Prefer': 'return=representation',
+          },
+          body: JSON.stringify({
+            user_id: activeUserId,
             type: 'withdrawal',
             amount: withdrawalAmount,
             total_amount: withdrawalAmount,
@@ -2301,48 +2403,17 @@ export default function App() {
             gateway_network: network,
             reference_code: destination,
             status: 'pending',
-          }).select('id, created_at').maybeSingle()
-
-          if (transaction) {
-            transactionId = String(transaction.id)
-            createdAt = String(transaction.created_at)
+          }),
+        })
+        if (restRes.ok) {
+          const rows = await restRes.json()
+          if (Array.isArray(rows) && rows[0]) {
+            transactionId = String(rows[0].id)
+            createdAt = String(rows[0].created_at)
           }
-        } catch {
-          // silent
         }
-      }
-
-      if (!transactionId && supabaseUrl && supabaseKey) {
-        try {
-          const restRes = await fetch(`${supabaseUrl}/rest/v1/transactions`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': supabaseKey,
-              'Authorization': `Bearer ${supabaseKey}`,
-              'Prefer': 'return=representation',
-            },
-            body: JSON.stringify({
-              user_id: user.id,
-              type: 'withdrawal',
-              amount: withdrawalAmount,
-              total_amount: withdrawalAmount,
-              asset: 'USD',
-              gateway_network: network,
-              reference_code: destination,
-              status: 'pending',
-            }),
-          })
-          if (restRes.ok) {
-            const rows = await restRes.json()
-            if (Array.isArray(rows) && rows[0]) {
-              transactionId = String(rows[0].id)
-              createdAt = String(rows[0].created_at)
-            }
-          }
-        } catch {
-          // silent
-        }
+      } catch {
+        // silent
       }
     }
 
