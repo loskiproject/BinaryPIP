@@ -628,17 +628,17 @@ export default function AdminDashboard({ currentUser }: Props) {
     addAudit('FAILED_LOGIN', cleanEmail, 'Auth', `Failed login attempt for ${cleanEmail}`, 'warning')
   }
 
-  // ── Fetch real users from Supabase REST API directly (Bypasses Edge Function 403) ──
-  const fetchUsers = useCallback(async () => {
+  // ── Fetch real users from Supabase REST API directly ──
+  const fetchUsers = useCallback(async (isManual = false) => {
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return
-    setUsersLoading(true)
+    if (isManual) setUsersLoading(true)
     setUsersError('')
     try {
       await fetchUsersFromProfiles()
     } catch {
       setUsersError('Failed to load users from database.')
     } finally {
-      setUsersLoading(false)
+      if (isManual) setUsersLoading(false)
     }
   }, [])
 
@@ -2202,7 +2202,17 @@ export default function AdminDashboard({ currentUser }: Props) {
                   <h1>Client Accounts <span className="sa-count">{filteredUsers.length}</span></h1>
                 </div>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <button className="sa-btn sa-btn-outline sa-btn-sm" onClick={fetchUsers} disabled={usersLoading} title="Refresh users">
+                  <button
+                    type="button"
+                    className="sa-btn sa-btn-outline sa-btn-sm"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      void fetchUsers(true)
+                    }}
+                    disabled={usersLoading}
+                    title="Refresh users"
+                  >
                     <RefreshCw size={13} style={{ animation: usersLoading ? 'sa-spin 1s linear infinite' : 'none' }} />
                     {usersLoading ? 'Loading…' : 'Refresh'}
                   </button>
