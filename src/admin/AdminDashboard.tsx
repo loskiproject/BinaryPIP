@@ -887,11 +887,12 @@ export default function AdminDashboard({ currentUser }: Props) {
         if (Array.isArray(rows) && rows.length > 0) {
           dbTxns = rows.map(r => {
             const uProf = profMap[r.user_id]
+            const targetU = users.find(u => u.id === r.user_id)
             return {
               id: r.id,
               userId: r.user_id,
-              userName: uProf?.name || `User #${r.user_id.substring(0, 8)}`,
-              userEmail: uProf?.email || `user_${r.user_id.substring(0, 6)}@binarypip.com`,
+              userName: uProf?.name || targetU?.name || `User #${r.user_id.substring(0, 8)}`,
+              userEmail: uProf?.email || targetU?.email || `user_${r.user_id.substring(0, 6)}@binarypip.com`,
               type: r.type,
               amount: Number(r.total_amount || r.amount),
               network: r.gateway_network || 'MPESA',
@@ -903,7 +904,7 @@ export default function AdminDashboard({ currentUser }: Props) {
         }
       }
 
-      // Merge database transactions AND local pending queue so NO client transaction is omitted
+      // Read local queue
       let localTxns: Transaction[] = []
       try {
         const localStr = localStorage.getItem('binarypip_pending_transactions')
@@ -912,9 +913,23 @@ export default function AdminDashboard({ currentUser }: Props) {
         // silent
       }
 
+      // Intelligent deduplication: DB transactions take absolute priority!
       const mergedMap = new Map<string, Transaction>()
-      localTxns.forEach(t => mergedMap.set(t.id, t))
-      dbTxns.forEach(t => mergedMap.set(t.id, t))
+
+      // First add local transactions
+      localTxns.forEach(t => {
+        mergedMap.set(t.id, t)
+      })
+
+      // DB transactions overwrite local entries with exact same ID or user+type+amount match
+      dbTxns.forEach(dbItem => {
+        for (const [key, locItem] of mergedMap.entries()) {
+          if (locItem.userId === dbItem.userId && locItem.type === dbItem.type && Math.abs(locItem.amount - dbItem.amount) < 0.01 && locItem.status === 'pending') {
+            mergedMap.delete(key)
+          }
+        }
+        mergedMap.set(dbItem.id, dbItem)
+      })
 
       const allMerged = Array.from(mergedMap.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       if (allMerged.length > 0) {
@@ -978,7 +993,7 @@ export default function AdminDashboard({ currentUser }: Props) {
     }
   }
 
-  // Load all real database data on startup and poll every 5s
+  // Load all real database data on startup and poll every 2.5s
   useEffect(() => {
     void fetchUsers()
     void fetchKycFromDatabase()
@@ -991,9 +1006,34 @@ export default function AdminDashboard({ currentUser }: Props) {
       void fetchUsers()
       void fetchTransactionsFromDatabase()
       void fetchKycFromDatabase()
-    }, 5000)
+    }, 2500)
 
-    return () => clearInterval(timer)
+    const handleStorageEvent = (e: StorageEvent) => {
+      if (e.key === 'binarypip_pending_transactions' || e.key === 'exstrade_deposit_request') {
+        void fetchTransactionsFromDatabase()
+      }
+    }
+    window.addEventListener('storage', handleStorageEvent)
+
+    let channel: any = null
+    if (supabase) {
+      channel = supabase.channel('admin_realtime_transactions')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
+          void fetchTransactionsFromDatabase()
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+          void fetchUsers()
+        })
+        .subscribe()
+    }
+
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener('storage', handleStorageEvent)
+      if (supabase && channel) {
+        void supabase.removeChannel(channel)
+      }
+    }
   }, [fetchUsers])
 
   const handleMfaPass = () => {
@@ -1434,41 +1474,42 @@ export default function AdminDashboard({ currentUser }: Props) {
     const currentBal = targetUser ? targetUser.balance : 0
     const nextBal = isDeposit ? (currentBal + totalCredit) : Math.max(0, currentBal - txn.amount)
 
-    // 1. Update local Admin state immediately
+    // 1. Update local Admin state immediately for instant responsiveness
     setTransactions(curr => curr.map(t => t.id === txn.id ? { ...t, status: 'approved' } : t))
-    setUsers(curr => curr.map(u => u.id === txn.userId ? { ...u, balance: nextBal } : u))
+    if (targetUser) {
+      setUsers(curr => curr.map(u => u.id === txn.userId ? { ...u, balance: nextBal } : u))
+    }
 
-    // 2. Save transaction status in Supabase Database
+    // 2. Direct PATCH to Supabase Database
     try {
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(txn.id)
-
-      if (isUuid) {
-        await fetch(`${SUPABASE_URL}/rest/v1/transactions?id=eq.${txn.id}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({ status: 'approved', updated_at: new Date().toISOString() }),
-        })
-      }
-
-      // Also update matching pending transaction by user_id
-      await fetch(`${SUPABASE_URL}/rest/v1/transactions?user_id=eq.${txn.userId}&type=eq.${txn.type}&status=eq.pending`, {
+      await fetch(`${SUPABASE_URL}/rest/v1/transactions?id=eq.${txn.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'apikey': SUPABASE_ANON_KEY,
           'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Prefer': 'return=minimal',
         },
         body: JSON.stringify({ status: 'approved', updated_at: new Date().toISOString() }),
       })
 
-      // 3. Save updated user wallet balance in Supabase Database
-      await saveUserWalletBalance(txn.userId, nextBal)
+      if (txn.userId) {
+        await fetch(`${SUPABASE_URL}/rest/v1/transactions?user_id=eq.${txn.userId}&type=eq.${txn.type}&status=eq.pending`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify({ status: 'approved', updated_at: new Date().toISOString() }),
+        })
 
-      // 4. Update local transaction queue status for instant client reflection
+        // 3. Save updated user wallet balance in Supabase Database
+        await saveUserWalletBalance(txn.userId, nextBal)
+      }
+
+      // 4. Update local transaction queue in localStorage
       try {
         const localStr = localStorage.getItem('binarypip_pending_transactions')
         if (localStr) {
@@ -1493,29 +1534,39 @@ export default function AdminDashboard({ currentUser }: Props) {
     setTransactions(curr => curr.map(t => t.id === txn.id ? { ...t, status: 'rejected' } : t))
 
     try {
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(txn.id)
-
-      if (isUuid) {
-        await fetch(`${SUPABASE_URL}/rest/v1/transactions?id=eq.${txn.id}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({ status: 'rejected', updated_at: new Date().toISOString() }),
-        })
-      }
-
-      await fetch(`${SUPABASE_URL}/rest/v1/transactions?user_id=eq.${txn.userId}&type=eq.${txn.type}&status=eq.pending`, {
+      await fetch(`${SUPABASE_URL}/rest/v1/transactions?id=eq.${txn.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'apikey': SUPABASE_ANON_KEY,
           'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Prefer': 'return=minimal',
         },
         body: JSON.stringify({ status: 'rejected', updated_at: new Date().toISOString() }),
       })
+
+      if (txn.userId) {
+        await fetch(`${SUPABASE_URL}/rest/v1/transactions?user_id=eq.${txn.userId}&type=eq.${txn.type}&status=eq.pending`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify({ status: 'rejected', updated_at: new Date().toISOString() }),
+        })
+
+        // Refund withdrawn amount if withdrawal was rejected
+        if (txn.type === 'withdrawal') {
+          const targetUser = users.find(u => u.id === txn.userId)
+          if (targetUser) {
+            const refundedBal = targetUser.balance + txn.amount
+            setUsers(curr => curr.map(u => u.id === txn.userId ? { ...u, balance: refundedBal } : u))
+            await saveUserWalletBalance(txn.userId, refundedBal)
+          }
+        }
+      }
 
       // Update local transaction queue status
       try {
