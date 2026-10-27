@@ -1186,6 +1186,9 @@ export default function App() {
         const accType = message.accountType || accountType
         if (!trade || typeof trade.id !== 'string' || !Number.isFinite(pnl) || !Number.isFinite(stake)) return
 
+        const numId = Number(String(trade.id).replace('SYN-', '')) || Date.now()
+        setOpenPositions(curr => curr.filter(p => p.id !== numId))
+
         const finalBalance = Number(message.balance ?? trade?.newBalance)
         if (Number.isFinite(finalBalance) && finalBalance >= 0) {
           if (accType === 'live') {
