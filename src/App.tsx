@@ -2049,12 +2049,13 @@ export default function App() {
     }
     setFundingHistory(current => [record, ...current.filter(item => item.id !== record.id)].slice(0, 500))
 
-    // Save to shared localStorage queue so Admin Dashboard picks it up instantly
+    // Save to shared localStorage queue and broadcast event so Admin Dashboard picks it up instantly
     try {
+      const activeUserId = user?.id || historyOwnerKey || 'client-user'
       const pendingTxn = {
         id: record.id,
-        userId: user?.id || 'local-user',
-        userName: user?.fullName || (user?.email ? user.email.split('@')[0] : 'Client'),
+        userId: activeUserId,
+        userName: user?.fullName || (user?.email ? user.email.split('@')[0] : 'Client User'),
         userEmail: user?.email || 'client@binarypip.com',
         type: record.type,
         amount: record.amount,
@@ -2067,6 +2068,7 @@ export default function App() {
       const updated = [pendingTxn, ...existing.filter((x: any) => x.id !== pendingTxn.id)].slice(0, 200)
       localStorage.setItem('binarypip_pending_transactions', JSON.stringify(updated))
       window.dispatchEvent(new Event('storage'))
+      window.postMessage({ type: 'EXSTRADE_TRANSACTION_SUBMITTED', transaction: pendingTxn }, '*')
     } catch {
       // silent
     }

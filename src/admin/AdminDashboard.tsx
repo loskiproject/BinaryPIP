@@ -1013,7 +1013,13 @@ export default function AdminDashboard({ currentUser }: Props) {
         void fetchTransactionsFromDatabase()
       }
     }
+    const handleWindowMessage = (e: MessageEvent) => {
+      if (e.data && (e.data.type === 'EXSTRADE_TRANSACTION_SUBMITTED' || e.data.type === 'EXSTRADE_DEPOSIT_REQUEST')) {
+        void fetchTransactionsFromDatabase()
+      }
+    }
     window.addEventListener('storage', handleStorageEvent)
+    window.addEventListener('message', handleWindowMessage)
 
     let channel: any = null
     if (supabase) {
@@ -1030,6 +1036,7 @@ export default function AdminDashboard({ currentUser }: Props) {
     return () => {
       clearInterval(timer)
       window.removeEventListener('storage', handleStorageEvent)
+      window.removeEventListener('message', handleWindowMessage)
       if (supabase && channel) {
         void supabase.removeChannel(channel)
       }
