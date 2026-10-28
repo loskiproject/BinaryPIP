@@ -77,6 +77,7 @@ import LiveChat from './features/LiveChat'
 import FundsHub from './features/FundsHub'
 import AuthPortal, { type SignupPayload } from './auth/AuthPortal'
 import AdminDashboard from './admin/AdminDashboard'
+import InstallPwaWidget from './components/InstallPwaWidget'
 
 type View = 'overview' | 'assets' | 'tiers' | 'synthetic' | 'institutions' | 'settings' | 'kyc_hub' | 'profile' | 'wallet' | 'funds' | 'help' | 'positions' | 'history' | 'verification'
 type AuthMode = 'login' | 'signup'
@@ -6017,6 +6018,9 @@ export default function App() {
           )
         })}
       </nav>
+
+      {/* FLOATING PWA DOWNLOAD APP WIDGET FOR MOBILE & DESKTOP BROWSERS */}
+      <InstallPwaWidget />
 
       {/* LIVE SUPPORT CHAT WIDGET */}
       {user && user.id !== 'local-demo-user' && (
