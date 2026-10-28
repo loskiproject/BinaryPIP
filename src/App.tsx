@@ -2192,19 +2192,24 @@ export default function App() {
     const activeUserId = getValidUserId()
     await ensureProfileAndWalletExistInSupabase(activeUserId)
 
+    const payload = {
+      user_id: activeUserId,
+      type: 'deposit',
+      amount: depositAmount,
+      asset: 'USD',
+      method: network,
+      reference_id: reference || '',
+      details: {
+        gateway_network: network,
+        reference_code: reference || '',
+        total_amount: totalAdded,
+      },
+      status: 'pending',
+    }
+
     if (supabase) {
       try {
-        const { data: transaction } = await supabase.from('transactions').insert({
-          user_id: activeUserId,
-          type: 'deposit',
-          amount: depositAmount,
-          total_amount: totalAdded,
-          asset: 'USD',
-          gateway_network: network,
-          reference_code: reference || '',
-          status: 'pending',
-        }).select('id, created_at').maybeSingle()
-
+        const { data: transaction } = await supabase.from('transactions').insert(payload).select('id, created_at').maybeSingle()
         if (transaction) {
           transactionId = String(transaction.id)
           createdAt = String(transaction.created_at)
@@ -2224,16 +2229,7 @@ export default function App() {
             'Authorization': `Bearer ${supabaseKey}`,
             'Prefer': 'return=representation',
           },
-          body: JSON.stringify({
-            user_id: activeUserId,
-            type: 'deposit',
-            amount: depositAmount,
-            total_amount: totalAdded,
-            asset: 'USD',
-            gateway_network: network,
-            reference_code: reference || '',
-            status: 'pending',
-          }),
+          body: JSON.stringify(payload),
         })
         if (restRes.ok) {
           const rows = await restRes.json()
@@ -2275,19 +2271,24 @@ export default function App() {
     const activeUserId = getValidUserId()
     await ensureProfileAndWalletExistInSupabase(activeUserId)
 
+    const payload = {
+      user_id: activeUserId,
+      type: 'deposit',
+      amount: depAmount,
+      asset: 'USD',
+      method: selectedNetwork,
+      reference_id: '',
+      details: {
+        gateway_network: selectedNetwork,
+        reference_code: '',
+        total_amount: totalAdded,
+      },
+      status: 'pending',
+    }
+
     if (supabase) {
       try {
-        const { data: transaction } = await supabase.from('transactions').insert({
-          user_id: activeUserId,
-          type: 'deposit',
-          amount: depAmount,
-          total_amount: totalAdded,
-          asset: 'USD',
-          gateway_network: selectedNetwork,
-          reference_code: '',
-          status: 'pending',
-        }).select('id, created_at').maybeSingle()
-
+        const { data: transaction } = await supabase.from('transactions').insert(payload).select('id, created_at').maybeSingle()
         if (transaction) {
           transactionId = String(transaction.id)
           createdAt = String(transaction.created_at)
@@ -2307,16 +2308,7 @@ export default function App() {
             'Authorization': `Bearer ${supabaseKey}`,
             'Prefer': 'return=representation',
           },
-          body: JSON.stringify({
-            user_id: activeUserId,
-            type: 'deposit',
-            amount: depAmount,
-            total_amount: totalAdded,
-            asset: 'USD',
-            gateway_network: selectedNetwork,
-            reference_code: '',
-            status: 'pending',
-          }),
+          body: JSON.stringify(payload),
         })
         if (restRes.ok) {
           const rows = await restRes.json()
@@ -2363,19 +2355,24 @@ export default function App() {
     const activeUserId = getValidUserId()
     await ensureProfileAndWalletExistInSupabase(activeUserId)
 
+    const payload = {
+      user_id: activeUserId,
+      type: 'withdrawal',
+      amount: withdrawalAmount,
+      asset: 'USD',
+      method: network,
+      reference_id: destination,
+      details: {
+        gateway_network: network,
+        destination_address: destination,
+        total_amount: withdrawalAmount,
+      },
+      status: 'pending',
+    }
+
     if (supabase) {
       try {
-        const { data: transaction } = await supabase.from('transactions').insert({
-          user_id: activeUserId,
-          type: 'withdrawal',
-          amount: withdrawalAmount,
-          total_amount: withdrawalAmount,
-          asset: 'USD',
-          gateway_network: network,
-          reference_code: destination,
-          status: 'pending',
-        }).select('id, created_at').maybeSingle()
-
+        const { data: transaction } = await supabase.from('transactions').insert(payload).select('id, created_at').maybeSingle()
         if (transaction) {
           transactionId = String(transaction.id)
           createdAt = String(transaction.created_at)
@@ -2395,16 +2392,7 @@ export default function App() {
             'Authorization': `Bearer ${supabaseKey}`,
             'Prefer': 'return=representation',
           },
-          body: JSON.stringify({
-            user_id: activeUserId,
-            type: 'withdrawal',
-            amount: withdrawalAmount,
-            total_amount: withdrawalAmount,
-            asset: 'USD',
-            gateway_network: network,
-            reference_code: destination,
-            status: 'pending',
-          }),
+          body: JSON.stringify(payload),
         })
         if (restRes.ok) {
           const rows = await restRes.json()
