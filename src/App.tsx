@@ -2154,7 +2154,7 @@ export default function App() {
           full_name: userName,
           role: 'client',
           account_status: 'active',
-          kyc_status: 'verified',
+          kyc_status: 'unverified',
           updated_at: new Date().toISOString(),
         }),
       })
@@ -2709,6 +2709,17 @@ export default function App() {
       showNotice(`Document record could not be created: ${recordError.message}`)
       return
     }
+
+    try {
+      await supabase.from('profiles').update({
+        kyc_status: 'pending',
+        document_type: documentUploadType,
+        updated_at: new Date().toISOString(),
+      }).eq('id', user.id)
+    } catch {
+      // silent
+    }
+
     setVerificationDocuments((documents) => [{
       id: data.id,
       name: data.original_name,
