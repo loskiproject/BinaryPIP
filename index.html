@@ -13,10 +13,17 @@
     <meta name="theme-color" content="#030916" />
     <meta name="description" content="BinaryPip trading terminal. Trade, analyze, grow." />
     <meta property="og:image" content="/binarypip-logo.svg" />
-    <title>BinaryPip | Trading Terminal</title>
+    <title>BinaryPip | Trading Terminals</title>
     <link rel="icon" type="image/svg+xml" href="/binarypip-mark.svg" />
     <link rel="shortcut icon" type="image/svg+xml" href="/binarypip-mark.svg" />
     <link rel="apple-touch-icon" href="/binarypip-logo.svg" />
+    <script>
+      window.deferredPwaPrompt = null;
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        window.deferredPwaPrompt = e;
+      });
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">

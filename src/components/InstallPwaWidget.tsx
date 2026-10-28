@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Download, Smartphone, X, Share2, PlusSquare, Sparkles, CheckCircle2 } from 'lucide-react'
+import { Download, Smartphone, X, Share2, PlusSquare } from 'lucide-react'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -8,72 +8,66 @@ interface BeforeInstallPromptEvent extends Event {
 
 export default function InstallPwaWidget() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
-  const [isStandalone, setIsStandalone] = useState(false)
   const [isIos, setIsIos] = useState(false)
   const [showIosModal, setShowIosModal] = useState(false)
-  const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
-    // 1. Check if running as installed standalone app
-    const checkStandalone = () => {
-      const isStandaloneMode =
-        window.matchMedia('(display-mode: standalone)').matches ||
-        ('standalone' in navigator && (navigator as { standalone?: boolean }).standalone === true) ||
-        document.referrer.includes('android-app://')
-      setIsStandalone(Boolean(isStandaloneMode))
-    }
-
-    checkStandalone()
-
-    // 2. Check if iOS device
+    // Check if iOS device
     const userAgent = window.navigator.userAgent.toLowerCase()
     const iosDevice = /iphone|ipad|ipod/.test(userAgent) && !(window as unknown as { MSStream?: unknown }).MSStream
     setIsIos(iosDevice)
 
-    // 3. Capture PWA beforeinstallprompt event (Android / Chrome / Desktop)
+    // Capture PWA beforeinstallprompt event (Android / Chrome / Edge / Desktop)
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault()
-      setDeferredPrompt(e as BeforeInstallPromptEvent)
+      const promptEvent = e as BeforeInstallPromptEvent
+      setDeferredPrompt(promptEvent)
+      ;(window as unknown as { deferredPwaPrompt?: BeforeInstallPromptEvent }).deferredPwaPrompt = promptEvent
     }
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-    window.addEventListener('appinstalled', () => {
-      setIsStandalone(true)
-      setDeferredPrompt(null)
-    })
+
+    // Check if global prompt was already captured in index.html before React mounted
+    const globalPwaPrompt = (window as unknown as { deferredPwaPrompt?: BeforeInstallPromptEvent }).deferredPwaPrompt
+    if (globalPwaPrompt) {
+      setDeferredPrompt(globalPwaPrompt)
+    }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
     }
   }, [])
 
-  // If app is already installed & running in standalone mode, or user dismissed, don't show floating button
-  if (isStandalone || dismissed) {
-    return null
-  }
-
   const handleInstallClick = async () => {
+    // 1. First attempt native 1-click install prompt if available (Android, Chrome, Edge, Windows, Mac)
+    const activePrompt = (window as unknown as { deferredPwaPrompt?: BeforeInstallPromptEvent }).deferredPwaPrompt || deferredPrompt
+
+    if (activePrompt) {
+      try {
+        await activePrompt.prompt()
+        const choice = await activePrompt.userChoice
+        if (choice.outcome === 'accepted') {
+          ;(window as unknown as { deferredPwaPrompt?: unknown }).deferredPwaPrompt = null
+          setDeferredPrompt(null)
+          return
+        }
+      } catch {
+        // silent
+      }
+    }
+
+    // 2. On iOS Safari or browsers where prompt isn't directly callable, show the instant guide
     if (isIos) {
       setShowIosModal(true)
       return
     }
 
-    if (deferredPrompt) {
-      deferredPrompt.prompt()
-      const choiceResult = await deferredPrompt.userChoice
-      if (choiceResult.outcome === 'accepted') {
-        setIsStandalone(true)
-      }
-      setDeferredPrompt(null)
-    } else {
-      // Fallback for browsers where beforeinstallprompt hasn't fired yet or Safari
-      setShowIosModal(true)
-    }
+    setShowIosModal(true)
   }
 
   return (
     <>
-      {/* ── FLOATING DOWNLOAD / INSTALL APP BUTTON ── */}
+      {/* ── ALWAYS VISIBLE FLOATING DOWNLOAD APP BUTTON ── */}
       <div
         style={{
           position: 'fixed',
@@ -83,7 +77,6 @@ export default function InstallPwaWidget() {
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          animation: 'pwaPulseGlow 3s infinite ease-in-out',
         }}
       >
         <button
@@ -94,7 +87,7 @@ export default function InstallPwaWidget() {
             color: '#030916',
             border: 'none',
             borderRadius: '24px',
-            padding: '9px 15px',
+            padding: '9px 16px',
             fontSize: '12px',
             fontWeight: 800,
             letterSpacing: '0.4px',
@@ -113,30 +106,9 @@ export default function InstallPwaWidget() {
           <span>DOWNLOAD APP</span>
           <Download size={14} color="#030916" />
         </button>
-
-        <button
-          type="button"
-          onClick={() => setDismissed(true)}
-          title="Dismiss install button"
-          style={{
-            background: 'rgba(3, 14, 30, 0.85)',
-            border: '1px solid rgba(0, 230, 118, 0.3)',
-            color: '#a0aec0',
-            borderRadius: '50%',
-            width: '26px',
-            height: '26px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            backdropFilter: 'blur(8px)',
-          }}
-        >
-          <X size={13} />
-        </button>
       </div>
 
-      {/* ── IOS / MANUAL INSTALL INSTRUCTIONS POPUP MODAL ── */}
+      {/* ── IOS / SAFARI INSTANT INSTALL GUIDE MODAL ── */}
       {showIosModal && (
         <div
           style={{
