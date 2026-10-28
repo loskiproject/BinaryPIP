@@ -451,7 +451,7 @@ export default function FundsHub({
       {/* ── TOTAL BALANCE ────────────────────────────────────────────────── */}
       <div className="th-balance-bar">
         <div className="th-balance-left">
-          <div className="th-balance-label">Total Balance</div>
+          <div className="th-balance-label" style={{ color: '#00e676' }}>Total Balance</div>
           <div className="th-balance-value">
             {hideBalance ? '••••••' : `$${fmt(total)} USD`}
             <button className="th-eye-btn" onClick={() => setHideBalance(p => !p)}>
