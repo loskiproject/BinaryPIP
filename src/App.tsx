@@ -1609,13 +1609,14 @@ export default function App() {
         }
       }
 
+      const targetUserId = getValidUserId()
       const { data: transactionsData } = await client
         .from('transactions')
         .select('*')
-        .eq('user_id', user.id)
+        .or(`user_id.eq.${targetUserId}${user?.id && user.id !== targetUserId ? `,user_id.eq.${user.id}` : ''}`)
         .order('created_at', { ascending: false })
 
-      if (mounted && Array.isArray(transactionsData)) {
+      if (mounted && Array.isArray(transactionsData) && transactionsData.length > 0) {
         const remoteFunding = transactionsData
           .filter(transaction => transaction.type === 'deposit' || transaction.type === 'withdrawal')
           .map((transaction): FundingHistoryRecord => ({
@@ -1623,20 +1624,25 @@ export default function App() {
             type: transaction.type,
             amount: Number(transaction.amount),
             creditedAmount: Number(transaction.total_amount ?? transaction.amount),
-            network: String(transaction.gateway_network || 'Other'),
-            reference: transaction.reference_code ? String(transaction.reference_code) : undefined,
-            status: ['approved', 'pending', 'rejected', 'flagged'].includes(transaction.status) ? transaction.status : 'pending',
+            network: String(transaction.method || transaction.gateway_network || transaction.details?.gateway_network || 'Other'),
+            reference: transaction.reference_id || transaction.reference_code || transaction.details?.reference_code || undefined,
+            status: ['approved', 'pending', 'rejected', 'flagged', 'completed'].includes(transaction.status) ? transaction.status : 'pending',
             createdAt: String(transaction.created_at || new Date().toISOString()),
           }))
         setFundingHistory(() => {
           return remoteFunding.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         })
+        try {
+          localStorage.setItem(`binarypip_funding_history_${historyOwnerKey}`, JSON.stringify(remoteFunding))
+        } catch {
+          // silent
+        }
       }
       // Fetch user profile trading mode from Supabase for Profit/Loss Allocation
       const { data: profData } = await client
         .from('profiles')
         .select('trading_mode')
-        .eq('id', user.id)
+        .eq('id', targetUserId)
         .maybeSingle()
 
       if (mounted && profData) {
@@ -1655,8 +1661,9 @@ export default function App() {
     void loadRealData()
 
     // Supabase Realtime Subscriptions for live Admin edits (silent updates without popup notifications)
-    const channel = client.channel(`realtime_user_${user.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'wallets', filter: `user_id=eq.${user.id}` }, (payload) => {
+    const targetUserId = getValidUserId()
+    const channel = client.channel(`realtime_user_${targetUserId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'wallets' }, (payload) => {
         if (payload.new && typeof payload.new === 'object') {
           const newBal = Number((payload.new as { live_balance: number }).live_balance)
           if (Number.isFinite(newBal)) {
@@ -1664,7 +1671,7 @@ export default function App() {
           }
         }
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (payload) => {
         if (payload.new && typeof payload.new === 'object') {
           const profile = payload.new as { kyc_status?: string; account_status?: string; trading_mode?: string }
           if (profile.kyc_status) {
@@ -1683,7 +1690,7 @@ export default function App() {
           }
         }
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
         void loadRealData()
       })
       .subscribe()
