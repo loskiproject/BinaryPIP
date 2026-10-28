@@ -8,16 +8,37 @@ interface BeforeInstallPromptEvent extends Event {
 
 export default function InstallPwaWidget() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [isStandalone, setIsStandalone] = useState(false)
   const [isIos, setIsIos] = useState(false)
   const [showIosModal, setShowIosModal] = useState(false)
+  const [dismissed, setDismissed] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem('binarypip_pwa_dismissed') === 'true'
+    } catch {
+      return false
+    }
+  })
 
   useEffect(() => {
-    // Check if iOS device
+    // 1. Check if running inside installed App (standalone / fullscreen)
+    const checkStandalone = () => {
+      const isStandaloneMode =
+        window.matchMedia('(display-mode: standalone)').matches ||
+        window.matchMedia('(display-mode: fullscreen)').matches ||
+        window.matchMedia('(display-mode: minimal-ui)').matches ||
+        ('standalone' in navigator && (navigator as { standalone?: boolean }).standalone === true) ||
+        document.referrer.includes('android-app://')
+      setIsStandalone(Boolean(isStandaloneMode))
+    }
+
+    checkStandalone()
+
+    // 2. Check if iOS device
     const userAgent = window.navigator.userAgent.toLowerCase()
     const iosDevice = /iphone|ipad|ipod/.test(userAgent) && !(window as unknown as { MSStream?: unknown }).MSStream
     setIsIos(iosDevice)
 
-    // Capture PWA beforeinstallprompt event (Android / Chrome / Edge / Desktop)
+    // 3. Capture PWA beforeinstallprompt event (Android / Chrome / Edge / Desktop)
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault()
       const promptEvent = e as BeforeInstallPromptEvent
@@ -26,8 +47,11 @@ export default function InstallPwaWidget() {
     }
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    window.addEventListener('appinstalled', () => {
+      setIsStandalone(true)
+    })
 
-    // Check if global prompt was already captured in index.html before React mounted
+    // Check if global prompt was captured in index.html
     const globalPwaPrompt = (window as unknown as { deferredPwaPrompt?: BeforeInstallPromptEvent }).deferredPwaPrompt
     if (globalPwaPrompt) {
       setDeferredPrompt(globalPwaPrompt)
@@ -38,8 +62,22 @@ export default function InstallPwaWidget() {
     }
   }, [])
 
+  // If client is already inside the installed standalone App, or closed the button, hide it completely!
+  if (isStandalone || dismissed) {
+    return null
+  }
+
+  const handleDismiss = () => {
+    setDismissed(true)
+    try {
+      sessionStorage.setItem('binarypip_pwa_dismissed', 'true')
+    } catch {
+      // silent
+    }
+  }
+
   const handleInstallClick = async () => {
-    // 1. First attempt native 1-click install prompt if available (Android, Chrome, Edge, Windows, Mac)
+    // Attempt native 1-click install prompt if available (Android, Chrome, Edge, Windows, Mac)
     const activePrompt = (window as unknown as { deferredPwaPrompt?: BeforeInstallPromptEvent }).deferredPwaPrompt || deferredPrompt
 
     if (activePrompt) {
@@ -47,6 +85,7 @@ export default function InstallPwaWidget() {
         await activePrompt.prompt()
         const choice = await activePrompt.userChoice
         if (choice.outcome === 'accepted') {
+          setIsStandalone(true)
           ;(window as unknown as { deferredPwaPrompt?: unknown }).deferredPwaPrompt = null
           setDeferredPrompt(null)
           return
@@ -56,7 +95,7 @@ export default function InstallPwaWidget() {
       }
     }
 
-    // 2. On iOS Safari or browsers where prompt isn't directly callable, show the instant guide
+    // On iOS Safari or browsers where prompt isn't directly callable, show the guide
     if (isIos) {
       setShowIosModal(true)
       return
@@ -67,7 +106,7 @@ export default function InstallPwaWidget() {
 
   return (
     <>
-      {/* ── ALWAYS VISIBLE FLOATING DOWNLOAD APP BUTTON ── */}
+      {/* ── FLOATING DOWNLOAD APP BUTTON (WEB BROWSERS ONLY) ── */}
       <div
         style={{
           position: 'fixed',
@@ -76,7 +115,8 @@ export default function InstallPwaWidget() {
           zIndex: 99990,
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
+          gap: '6px',
+          animation: 'pwaPulseGlow 3s infinite ease-in-out',
         }}
       >
         <button
@@ -87,7 +127,7 @@ export default function InstallPwaWidget() {
             color: '#030916',
             border: 'none',
             borderRadius: '24px',
-            padding: '9px 16px',
+            padding: '9px 15px',
             fontSize: '12px',
             fontWeight: 800,
             letterSpacing: '0.4px',
@@ -105,6 +145,38 @@ export default function InstallPwaWidget() {
           <Smartphone size={16} color="#030916" />
           <span>DOWNLOAD APP</span>
           <Download size={14} color="#030916" />
+        </button>
+
+        {/* Dismiss Close (✕) Button */}
+        <button
+          type="button"
+          onClick={handleDismiss}
+          title="Dismiss install button"
+          aria-label="Close install app banner"
+          style={{
+            background: 'rgba(3, 14, 30, 0.85)',
+            border: '1px solid rgba(0, 230, 118, 0.35)',
+            color: '#a0aec0',
+            borderRadius: '50%',
+            width: '28px',
+            height: '28px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            backdropFilter: 'blur(8px)',
+            transition: 'color 0.2s ease, background 0.2s ease',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.color = '#ffffff'
+            e.currentTarget.style.background = 'rgba(255, 23, 68, 0.6)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.color = '#a0aec0'
+            e.currentTarget.style.background = 'rgba(3, 14, 30, 0.85)'
+          }}
+        >
+          <X size={14} />
         </button>
       </div>
 
