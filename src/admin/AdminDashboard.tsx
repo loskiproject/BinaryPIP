@@ -1471,37 +1471,61 @@ export default function AdminDashboard({ currentUser }: Props) {
     }
   }
 
+  const isValidUuid = (str?: string): boolean =>
+    typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)
+
   const approveTxn = async (txn: Transaction) => {
     if (!canAccess('canApproveWithdrawals')) { notify('No permission.', 'err'); return }
 
     const isDeposit = txn.type === 'deposit'
     const totalCredit = txn.amount
 
-    const targetUser = users.find(u => u.id === txn.userId)
+    const targetUser = users.find(u => u.id === txn.userId || (u.email && u.email.toLowerCase() === txn.userEmail.toLowerCase()))
     const currentBal = targetUser ? targetUser.balance : 0
-    const nextBal = isDeposit ? (currentBal + totalCredit) : Math.max(0, currentBal - txn.amount)
+    // If deposit: add credit once. If withdrawal: balance was ALREADY deducted on submission! Do not deduct again!
+    const nextBal = isDeposit ? (currentBal + totalCredit) : currentBal
 
     // 1. Update local Admin state immediately for instant responsiveness
-    setTransactions(curr => curr.map(t => t.id === txn.id ? { ...t, status: 'approved' } : t))
-    if (targetUser) {
-      setUsers(curr => curr.map(u => u.id === txn.userId ? { ...u, balance: nextBal } : u))
+    setTransactions(curr => curr.map(t => (t.id === txn.id || (t.userId === txn.userId && t.type === txn.type && t.status === 'pending')) ? { ...t, status: 'approved' } : t))
+    if (targetUser && isDeposit) {
+      setUsers(curr => curr.map(u => (u.id === targetUser.id || u.email === targetUser.email) ? { ...u, balance: nextBal } : u))
     }
 
     // 2. Direct PATCH to Supabase Database
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/transactions?id=eq.${txn.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          'Prefer': 'return=minimal',
-        },
-        body: JSON.stringify({ status: 'approved', updated_at: new Date().toISOString() }),
-      })
+      if (isValidUuid(txn.id)) {
+        await fetch(`${SUPABASE_URL}/rest/v1/transactions?id=eq.${txn.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify({ status: 'approved', updated_at: new Date().toISOString() }),
+        })
+      }
 
-      if (txn.userId) {
-        await fetch(`${SUPABASE_URL}/rest/v1/transactions?user_id=eq.${txn.userId}&type=eq.${txn.type}&status=eq.pending`, {
+      // Resolve profile ID by email as well to guarantee database update
+      let targetUserId = txn.userId
+      if (txn.userEmail) {
+        try {
+          const profRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(txn.userEmail)}&select=id`, {
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+          })
+          if (profRes.ok) {
+            const profs = await profRes.json()
+            if (Array.isArray(profs) && profs[0]?.id) {
+              targetUserId = profs[0].id
+            }
+          }
+        } catch {
+          // silent
+        }
+      }
+
+      if (targetUserId) {
+        await fetch(`${SUPABASE_URL}/rest/v1/transactions?user_id=eq.${targetUserId}&type=eq.${txn.type}&status=eq.pending`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -1512,8 +1536,10 @@ export default function AdminDashboard({ currentUser }: Props) {
           body: JSON.stringify({ status: 'approved', updated_at: new Date().toISOString() }),
         })
 
-        // 3. Save updated user wallet balance in Supabase Database
-        await saveUserWalletBalance(txn.userId, nextBal)
+        // 3. Save updated user wallet balance in Supabase Database (if deposit)
+        if (isDeposit) {
+          await saveUserWalletBalance(targetUserId, nextBal)
+        }
       }
 
       // 4. Update local transaction queue in localStorage
@@ -1532,28 +1558,59 @@ export default function AdminDashboard({ currentUser }: Props) {
       // silent
     }
 
-    addAudit(`APPROVE_${txn.type.toUpperCase()}`, txn.id, 'Transaction', `Approved ${txn.type} of ${fmtUSD(txn.amount)} (Total credited: ${fmtUSD(totalCredit)}) for ${txn.userName}`, 'info')
-    notify(`Approved! $${totalCredit.toFixed(2)} credited to ${txn.userName}'s wallet.`)
+    addAudit(`APPROVE_${txn.type.toUpperCase()}`, txn.id, 'Transaction', `Approved ${txn.type} of ${fmtUSD(txn.amount)} for ${txn.userName}`, 'info')
+    notify(`Approved! $${txn.amount.toFixed(2)} ${txn.type} for ${txn.userName}.`)
   }
 
   const rejectTxn = async (txn: Transaction) => {
     if (!canAccess('canApproveWithdrawals')) { notify('No permission.', 'err'); return }
-    setTransactions(curr => curr.map(t => t.id === txn.id ? { ...t, status: 'rejected' } : t))
 
+    const targetUser = users.find(u => u.id === txn.userId || (u.email && u.email.toLowerCase() === txn.userEmail.toLowerCase()))
+    const currentBal = targetUser ? targetUser.balance : 0
+    // If WITHDRAWAL rejected: refund the reserved amount back to balance
+    // If DEPOSIT rejected: balance remains unchanged
+    const refundedBal = txn.type === 'withdrawal' ? (currentBal + txn.amount) : currentBal
+
+    // 1. Update local Admin state
+    setTransactions(curr => curr.map(t => (t.id === txn.id || (t.userId === txn.userId && t.type === txn.type && t.status === 'pending')) ? { ...t, status: 'rejected' } : t))
+    if (targetUser && txn.type === 'withdrawal') {
+      setUsers(curr => curr.map(u => (u.id === targetUser.id || u.email === targetUser.email) ? { ...u, balance: refundedBal } : u))
+    }
+
+    // 2. Direct PATCH to Supabase Database
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/transactions?id=eq.${txn.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          'Prefer': 'return=minimal',
-        },
-        body: JSON.stringify({ status: 'rejected', updated_at: new Date().toISOString() }),
-      })
+      if (isValidUuid(txn.id)) {
+        await fetch(`${SUPABASE_URL}/rest/v1/transactions?id=eq.${txn.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify({ status: 'rejected', updated_at: new Date().toISOString() }),
+        })
+      }
 
-      if (txn.userId) {
-        await fetch(`${SUPABASE_URL}/rest/v1/transactions?user_id=eq.${txn.userId}&type=eq.${txn.type}&status=eq.pending`, {
+      let targetUserId = txn.userId
+      if (txn.userEmail) {
+        try {
+          const profRes = await fetch(`${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(txn.userEmail)}&select=id`, {
+            headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+          })
+          if (profRes.ok) {
+            const profs = await profRes.json()
+            if (Array.isArray(profs) && profs[0]?.id) {
+              targetUserId = profs[0].id
+            }
+          }
+        } catch {
+          // silent
+        }
+      }
+
+      if (targetUserId) {
+        await fetch(`${SUPABASE_URL}/rest/v1/transactions?user_id=eq.${targetUserId}&type=eq.${txn.type}&status=eq.pending`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -1566,12 +1623,7 @@ export default function AdminDashboard({ currentUser }: Props) {
 
         // Refund withdrawn amount if withdrawal was rejected
         if (txn.type === 'withdrawal') {
-          const targetUser = users.find(u => u.id === txn.userId)
-          if (targetUser) {
-            const refundedBal = targetUser.balance + txn.amount
-            setUsers(curr => curr.map(u => u.id === txn.userId ? { ...u, balance: refundedBal } : u))
-            await saveUserWalletBalance(txn.userId, refundedBal)
-          }
+          await saveUserWalletBalance(targetUserId, refundedBal)
         }
       }
 

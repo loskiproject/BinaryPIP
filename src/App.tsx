@@ -1632,7 +1632,7 @@ export default function App() {
         .or(`user_id.eq.${targetUserId}${user?.id && user.id !== targetUserId ? `,user_id.eq.${user.id}` : ''}`)
         .order('created_at', { ascending: false })
 
-      if (mounted && Array.isArray(transactionsData) && transactionsData.length > 0) {
+      if (mounted && Array.isArray(transactionsData)) {
         const remoteFunding = transactionsData
           .filter(transaction => transaction.type === 'deposit' || transaction.type === 'withdrawal')
           .map((transaction): FundingHistoryRecord => ({
