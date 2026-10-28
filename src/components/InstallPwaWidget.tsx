@@ -6,10 +6,19 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
-export default function InstallPwaWidget() {
+interface InstallPwaWidgetProps {
+  isLoggedIn?: boolean
+}
+
+export default function InstallPwaWidget({ isLoggedIn = false }: InstallPwaWidgetProps) {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [isIos, setIsIos] = useState(false)
   const [showIosModal, setShowIosModal] = useState(false)
+
+  // Hide widget if user is logged in
+  if (isLoggedIn) {
+    return null
+  }
 
   useEffect(() => {
     // Check if iOS device

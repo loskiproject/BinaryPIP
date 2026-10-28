@@ -6019,8 +6019,8 @@ export default function App() {
         })}
       </nav>
 
-      {/* FLOATING PWA DOWNLOAD APP WIDGET FOR MOBILE & DESKTOP BROWSERS */}
-      <InstallPwaWidget />
+      {/* FLOATING PWA DOWNLOAD APP WIDGET — SHOWS ONLY BEFORE USER LOGS IN */}
+      {!user && <InstallPwaWidget isLoggedIn={Boolean(user)} />}
 
       {/* LIVE SUPPORT CHAT WIDGET */}
       {user && user.id !== 'local-demo-user' && (
