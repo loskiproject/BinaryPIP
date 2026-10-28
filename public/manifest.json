@@ -1,5 +1,5 @@
 {
-  "name": "BinaryPip | Trading Terminals",
+  "name": "BinaryPip | Trading Terminal",
   "short_name": "BinaryPip",
   "description": "BinaryPip trading terminal. Trade, analyze, grow.",
   "start_url": "/",
@@ -9,22 +9,16 @@
   "theme_color": "#030916",
   "icons": [
     {
-      "src": "/binarypip-mark.svg",
-      "sizes": "192x192 512x512",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
       "src": "/binarypip-logo.svg",
-      "sizes": "512x512",
+      "sizes": "512x512 192x192 144x144 96x96",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/logo.jpeg",
-      "sizes": "192x192 512x512",
-      "type": "image/jpeg",
-      "purpose": "any"
+      "src": "/binarypip-mark.svg",
+      "sizes": "512x512 192x192 144x144 96x96",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
     }
   ]
 }
