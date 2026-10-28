@@ -2052,11 +2052,12 @@ export default function App() {
     // Save to shared localStorage queue and broadcast event so Admin Dashboard picks it up instantly
     try {
       const activeUserId = user?.id || historyOwnerKey || 'client-user'
+      const userEmail = user?.email || `user_${String(activeUserId).substring(0, 8)}@binarypip.com`
       const pendingTxn = {
         id: record.id,
         userId: activeUserId,
         userName: user?.fullName || (user?.email ? user.email.split('@')[0] : 'Client User'),
-        userEmail: user?.email || 'client@binarypip.com',
+        userEmail,
         type: record.type,
         amount: record.amount,
         network: record.network,
@@ -2136,7 +2137,7 @@ export default function App() {
   const ensureProfileAndWalletExistInSupabase = async (targetUserId: string) => {
     if (!supabaseUrl || !supabaseKey) return
     const userName = user?.fullName || 'Client User'
-    const userEmail = user?.email || 'client@binarypip.com'
+    const userEmail = user?.email || `user_${targetUserId.substring(0, 8)}@binarypip.com`
 
     try {
       await fetch(`${supabaseUrl}/rest/v1/profiles`, {
