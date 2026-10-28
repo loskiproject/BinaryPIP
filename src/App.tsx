@@ -172,7 +172,7 @@ type FundingHistoryRecord = {
   creditedAmount: number
   network: string
   reference?: string
-  status: 'pending' | 'approved' | 'rejected' | 'flagged'
+  status: 'pending' | 'approved' | 'rejected' | 'flagged' | 'completed'
   createdAt: string
 }
 
@@ -1609,7 +1609,22 @@ export default function App() {
         }
       }
 
-      const targetUserId = getValidUserId()
+      let targetUserId = user?.id || getValidUserId()
+      if (user?.email) {
+        try {
+          const { data: dbProf } = await client
+            .from('profiles')
+            .select('id')
+            .eq('email', user.email)
+            .maybeSingle()
+          if (dbProf?.id) {
+            targetUserId = dbProf.id
+          }
+        } catch {
+          // silent
+        }
+      }
+
       const { data: transactionsData } = await client
         .from('transactions')
         .select('*')
@@ -3243,7 +3258,7 @@ export default function App() {
     const realizedPnl = [...closedTrades.map(trade => trade.pnl), ...contractHistory.map(trade => trade.pnl)]
       .reduce((total, pnl) => total + pnl, 0)
     const depositsTotal = fundingHistory
-      .filter(record => record.type === 'deposit' && record.status === 'approved')
+      .filter(record => record.type === 'deposit' && (record.status === 'approved' || record.status === 'completed'))
       .reduce((total, record) => total + record.amount, 0)
     const withdrawalsTotal = fundingHistory
       .filter(record => record.type === 'withdrawal' && record.status !== 'rejected')
@@ -3319,8 +3334,9 @@ export default function App() {
               <tbody>
                 {visibleRows.map(row => {
                   const value = row.kind === 'trade' ? row.amount : row.kind === 'deposit' ? row.amount : -row.amount
-                  const statusLabel = row.status === 'approved' || row.status === 'successful' ? 'Approved' : row.status === 'pending' ? 'Pending' : row.status === 'rejected' ? 'Rejected' : row.status
-                  const statusClass = row.status === 'approved' || row.status === 'successful' ? 'approved' : row.status === 'pending' ? 'pending' : row.status === 'rejected' ? 'rejected' : row.status
+                  const isApproved = row.status === 'approved' || row.status === 'successful' || row.status === 'completed'
+                  const statusLabel = isApproved ? 'Approved' : row.status === 'pending' ? 'Pending' : row.status === 'rejected' ? 'Rejected' : row.status
+                  const statusClass = isApproved ? 'approved' : row.status === 'pending' ? 'pending' : row.status === 'rejected' ? 'rejected' : row.status
 
                   return (
                     <tr key={row.id}>
