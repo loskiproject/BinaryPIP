@@ -33,6 +33,7 @@ import {
   RotateCw,
   Clock,
   List,
+  Users,
   Newspaper,
   Flame,
   Lightbulb,
@@ -78,8 +79,9 @@ import FundsHub from './features/FundsHub'
 import AuthPortal, { type SignupPayload } from './auth/AuthPortal'
 import AdminDashboard from './admin/AdminDashboard'
 import InstallPwaWidget from './components/InstallPwaWidget'
+import CopyTradingHub from './features/CopyTradingHub'
 
-type View = 'overview' | 'assets' | 'tiers' | 'synthetic' | 'institutions' | 'settings' | 'kyc_hub' | 'profile' | 'wallet' | 'funds' | 'help' | 'positions' | 'history' | 'verification'
+type View = 'overview' | 'assets' | 'tiers' | 'synthetic' | 'copy_trading' | 'institutions' | 'settings' | 'kyc_hub' | 'profile' | 'wallet' | 'funds' | 'help' | 'positions' | 'history' | 'verification'
 type AuthMode = 'login' | 'signup'
 type AccountType = 'none' | 'demo' | 'live'
 type Theme = 'dark' | 'light' | 'midnight' | 'cyberpunk'
@@ -201,6 +203,7 @@ type SignupForm = { fullName: string; email: string; phone: string; country: str
 const navigation: { id: View; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'synthetic', label: 'Synthetic', icon: TrendingUp },
+  { id: 'copy_trading', label: 'Copy Trading', icon: Users },
   { id: 'positions', label: 'Open Trades', icon: Activity },
   { id: 'tiers', label: 'Investments', icon: CandlestickChart },
   { id: 'funds', label: 'Wallet', icon: Wallet },
@@ -5786,6 +5789,23 @@ export default function App() {
 
         <div className={`page-content ${(activeView === 'synthetic' || activeView === 'overview' || activeView === 'assets') ? 'page-content-synthetic' : ''}`}>
           {(activeView === 'overview' || activeView === 'assets' || activeView === 'synthetic') && renderSyntheticContracts()}
+          {activeView === 'copy_trading' && (
+            <CopyTradingHub
+              userBalance={activeBalance}
+              onAllocateBalance={(amt) => {
+                const nextBal = Math.max(0, activeBalance - amt)
+                if (accountType === 'demo') {
+                  setDemoBalance(nextBal)
+                } else {
+                  setLiveBalance(nextBal)
+                  if (user) {
+                    void updateWalletBalanceInSupabase(user.id, nextBal)
+                  }
+                }
+              }}
+              showNotice={showNotice}
+            />
+          )}
           {activeView === 'tiers' && renderCryptoAllocationLevels()}
           {activeView === 'institutions' && renderInstitutionsView()}
           {activeView === 'positions' && renderOpenAndClosedTrades()}
@@ -5998,6 +6018,7 @@ export default function App() {
         {([
           { id: 'overview' as View, label: 'Overview', icon: LayoutDashboard },
           { id: 'synthetic' as View, label: 'Trade', icon: TrendingUp },
+          { id: 'copy_trading' as View, label: 'Copying', icon: Users },
           { id: 'tiers' as View, label: 'Invest', icon: CandlestickChart },
           { id: 'funds' as View, label: 'Wallet', icon: Wallet },
           { id: 'history' as View, label: 'History', icon: Clock },
