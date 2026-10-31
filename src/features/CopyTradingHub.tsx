@@ -23,6 +23,9 @@ export interface ActiveCopySubscription {
 
 interface CopyTradingHubProps {
   userBalance: number
+  userId?: string
+  supabaseUrl?: string
+  supabaseKey?: string
   onAllocateBalance: (amount: number) => void
   showNotice: (msg: string) => void
 }
@@ -201,7 +204,7 @@ const generateAllTraders540 = (): MasterTrader[] => {
 
 const MASTER_TRADERS_540: MasterTrader[] = generateAllTraders540()
 
-export default function CopyTradingHub({ userBalance, onAllocateBalance, showNotice }: CopyTradingHubProps) {
+export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supabaseKey, onAllocateBalance, showNotice }: CopyTradingHubProps) {
   const [selectedTrader, setSelectedTrader] = useState<MasterTrader | null>(null)
   const [allocationAmount, setAllocationAmount] = useState('100')
   const [profitShare, setProfitShare] = useState('10')
@@ -210,6 +213,49 @@ export default function CopyTradingHub({ userBalance, onAllocateBalance, showNot
 
   const [activeSubscriptions, setActiveSubscriptions] = useState<ActiveCopySubscription[]>([])
   const [successModal, setSuccessModal] = useState<{ traderName: string; amount: number } | null>(null)
+
+  // 1. Fetch persistent copy trading subscriptions from Supabase PostgreSQL database
+  React.useEffect(() => {
+    const fetchDbSubscriptions = async () => {
+      if (!supabaseUrl || !supabaseKey || !userId) {
+        try {
+          const localStr = localStorage.getItem(`binarypip_copy_subs_${userId || 'guest'}`)
+          if (localStr) setActiveSubscriptions(JSON.parse(localStr))
+        } catch {
+          // silent
+        }
+        return
+      }
+
+      try {
+        const res = await fetch(`${supabaseUrl}/rest/v1/user_copy_subscriptions?user_id=eq.${userId}&status=eq.active&select=*`, {
+          headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` },
+        })
+        if (res.ok) {
+          const rows = await res.json()
+          if (Array.isArray(rows)) {
+            const dbSubs: ActiveCopySubscription[] = rows.map((r: any) => ({
+              traderId: String(r.trader_id),
+              traderName: String(r.trader_name),
+              amount: Number(r.amount),
+              profitShare: Number(r.profit_share || 10),
+              startedAt: new Date(r.started_at || r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            }))
+            setActiveSubscriptions(dbSubs)
+            try {
+              localStorage.setItem(`binarypip_copy_subs_${userId}`, JSON.stringify(dbSubs))
+            } catch {
+              // silent
+            }
+          }
+        }
+      } catch {
+        // silent
+      }
+    }
+
+    void fetchDbSubscriptions()
+  }, [userId, supabaseUrl, supabaseKey])
 
   const filteredTraders = MASTER_TRADERS_540.filter(trader => {
     const matchesSearch = trader.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -234,7 +280,7 @@ export default function CopyTradingHub({ userBalance, onAllocateBalance, showNot
     // Deduct allocation from user total balance
     onAllocateBalance(amt)
 
-    // Record subscription
+    // Record subscription locally & in Supabase PostgreSQL
     const newSub: ActiveCopySubscription = {
       traderId: selectedTrader.id,
       traderName: selectedTrader.name,
@@ -243,7 +289,40 @@ export default function CopyTradingHub({ userBalance, onAllocateBalance, showNot
       startedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     }
 
-    setActiveSubscriptions(prev => [newSub, ...prev.filter(s => s.traderId !== newSub.traderId)])
+    const updated = [newSub, ...activeSubscriptions.filter(s => s.traderId !== newSub.traderId)]
+    setActiveSubscriptions(updated)
+
+    try {
+      localStorage.setItem(`binarypip_copy_subs_${userId || 'guest'}`, JSON.stringify(updated))
+    } catch {
+      // silent
+    }
+
+    // Save permanently to Supabase Database
+    if (supabaseUrl && supabaseKey && userId) {
+      try {
+        void fetch(`${supabaseUrl}/rest/v1/user_copy_subscriptions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Prefer': 'resolution=merge-duplicates',
+          },
+          body: JSON.stringify({
+            user_id: userId,
+            trader_id: selectedTrader.id,
+            trader_name: selectedTrader.name,
+            amount: amt,
+            profit_share: parseFloat(profitShare) || 10,
+            status: 'active',
+            started_at: new Date().toISOString(),
+          }),
+        })
+      } catch {
+        // silent
+      }
+    }
 
     const traderName = selectedTrader.name
     setSelectedTrader(null)
@@ -258,7 +337,36 @@ export default function CopyTradingHub({ userBalance, onAllocateBalance, showNot
   const handleStopCopying = (sub: ActiveCopySubscription) => {
     // Refund allocated balance back to main balance
     onAllocateBalance(-sub.amount)
-    setActiveSubscriptions(prev => prev.filter(s => s.traderId !== sub.traderId))
+    const updated = activeSubscriptions.filter(s => s.traderId !== sub.traderId)
+    setActiveSubscriptions(updated)
+
+    try {
+      localStorage.setItem(`binarypip_copy_subs_${userId || 'guest'}`, JSON.stringify(updated))
+    } catch {
+      // silent
+    }
+
+    // Update status to 'stopped' in Supabase PostgreSQL Database
+    if (supabaseUrl && supabaseKey && userId) {
+      try {
+        void fetch(`${supabaseUrl}/rest/v1/user_copy_subscriptions?user_id=eq.${userId}&trader_id=eq.${sub.traderId}&status=eq.active`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify({
+            status: 'stopped',
+            stopped_at: new Date().toISOString(),
+          }),
+        })
+      } catch {
+        // silent
+      }
+    }
+
     showNotice(`Stopped copying ${sub.traderName}. $${sub.amount.toFixed(2)} capital returned to your balance.`)
   }
 

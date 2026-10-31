@@ -5792,6 +5792,9 @@ export default function App() {
           {activeView === 'copy_trading' && (
             <CopyTradingHub
               userBalance={activeBalance}
+              userId={user?.id || getValidUserId()}
+              supabaseUrl={supabaseUrl}
+              supabaseKey={supabaseKey}
               onAllocateBalance={(amt) => {
                 const nextBal = Math.max(0, activeBalance - amt)
                 if (accountType === 'demo') {
