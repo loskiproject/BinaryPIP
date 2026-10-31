@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Users, Star, Search, CheckCircle2, X, Shield, Sparkles } from 'lucide-react'
+import { Users, Star, Search, CheckCircle2, X, Shield, Sparkles, TrendingUp } from 'lucide-react'
 
 export interface MasterTrader {
   id: string
@@ -18,6 +18,7 @@ export interface ActiveCopySubscription {
   traderName: string
   amount: number
   profitShare: number
+  estimatedReturn: number
   startedAt: string
 }
 
@@ -118,7 +119,6 @@ const INITIAL_HANDCRAFTED: MasterTrader[] = [
 
 // Generate 100% Unique Profile Photo Avatars across all 540 Traders
 const getUniqueAvatar = (index: number, name: string): string => {
-  // Handcrafted portraits
   const unsplashPhotos = [
     'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
     'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
@@ -141,21 +141,18 @@ const getUniqueAvatar = (index: number, name: string): string => {
     return unsplashPhotos[index % unsplashPhotos.length]
   }
 
-  // Next 180 use RandomUser male & female photo IDs (men/1.jpg to men/90.jpg, women/1.jpg to women/90.jpg)
   if (index <= 195) {
     const isMale = index % 2 === 0
     const photoNum = Math.floor((index - 15) / 2) % 90 + 1
     return `https://randomuser.me/api/portraits/${isMale ? 'men' : 'women'}/${photoNum}.jpg`
   }
 
-  // Next 200 use UI-Avatars with unique initials & custom neon backgrounds
   if (index <= 395) {
     const bgColors = ['071326', '00e676', '00b0ff', 'ff1744', 'ffb300', '7c4dff', '00e5ff', '29b6f6', 'ab47bc', '26a69a', 'ef5350', '66bb6a']
     const bg = bgColors[index % bgColors.length]
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${bg}&color=ffffff&size=150&bold=true&font-size=0.42`
   }
 
-  // Remaining 145 use DiceBear custom avataaars API seed
   return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name + index)}`
 }
 
@@ -170,7 +167,6 @@ const generateAllTraders540 = (): MasterTrader[] => {
     const ln = LAST_NAMES[(idx * 5 + (idx % 11)) % LAST_NAMES.length]
     let name = `${fn} ${ln}`
 
-    // Ensure 100% unique trader name
     if (usedNames.has(name.toLowerCase())) {
       name = `${fn} ${ln} ${idx}`
     }
@@ -178,9 +174,9 @@ const generateAllTraders540 = (): MasterTrader[] => {
 
     const risk: 'Low' | 'Medium' | 'High' = idx % 5 === 0 ? 'High' : (idx % 2 === 0 ? 'Low' : 'Medium')
     const bio = BIOS[(idx * 4 + (idx % 9)) % BIOS.length]
-    const winRate = Number((82.0 + ((idx * 19) % 170) / 10).toFixed(1)) // 82.0% to 99.0%
-    const totalProfit = 11000 + ((idx * 2431) % 285000) // $11,000 to $296,000
-    const copiers = 30 + ((idx * 47) % 1500) // 30 to 1,530 copiers
+    const winRate = Number((82.0 + ((idx * 19) % 170) / 10).toFixed(1))
+    const totalProfit = 11000 + ((idx * 2431) % 285000)
+    const copiers = 30 + ((idx * 47) % 1500)
     const avatar = getUniqueAvatar(idx, name)
     const specialty = SPECIALTIES[(idx * 3 + (idx % 13)) % SPECIALTIES.length]
 
@@ -198,7 +194,6 @@ const generateAllTraders540 = (): MasterTrader[] => {
     idx++
   }
 
-  // Sort alphabetically A to Z by trader name
   return list.sort((a, b) => a.name.localeCompare(b.name))
 }
 
@@ -212,9 +207,9 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
   const [riskFilter, setRiskFilter] = useState<'All' | 'Low' | 'Medium' | 'High'>('All')
 
   const [activeSubscriptions, setActiveSubscriptions] = useState<ActiveCopySubscription[]>([])
-  const [successModal, setSuccessModal] = useState<{ traderName: string; amount: number } | null>(null)
+  const [successModal, setSuccessModal] = useState<{ traderName: string; amount: number; estimatedReturn: number } | null>(null)
 
-  // 1. Fetch persistent copy trading subscriptions from Supabase PostgreSQL database
+  // Fetch persistent copy trading subscriptions from Supabase PostgreSQL database
   React.useEffect(() => {
     const fetchDbSubscriptions = async () => {
       if (!supabaseUrl || !supabaseKey || !userId) {
@@ -239,6 +234,7 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
               traderName: String(r.trader_name),
               amount: Number(r.amount),
               profitShare: Number(r.profit_share || 10),
+              estimatedReturn: Number(r.estimated_return || (Number(r.amount) * 1.85)),
               startedAt: new Date(r.started_at || r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             }))
             setActiveSubscriptions(dbSubs)
@@ -265,6 +261,13 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
     return matchesSearch && matchesRisk
   })
 
+  // Dynamic Estimated Return Profit Calculation
+  const currentAllocAmt = parseFloat(allocationAmount) || 0
+  const winRateFactor = selectedTrader ? selectedTrader.winRate / 100 : 0.95
+  const riskMultiplier = selectedTrader ? (selectedTrader.risk === 'Low' ? 1.85 : selectedTrader.risk === 'Medium' ? 2.10 : 2.45) : 1.85
+  const estimatedReturnVal = (currentAllocAmt * winRateFactor * riskMultiplier)
+  const estimatedReturnFormatted = estimatedReturnVal.toFixed(2)
+
   const handleStartCopying = () => {
     if (!selectedTrader) return
     const amt = parseFloat(allocationAmount)
@@ -280,12 +283,15 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
     // Deduct allocation from user total balance
     onAllocateBalance(amt)
 
-    // Record subscription locally & in Supabase PostgreSQL
+    const estimatedReturn = parseFloat(estimatedReturnFormatted)
+
+    // Record subscription
     const newSub: ActiveCopySubscription = {
       traderId: selectedTrader.id,
       traderName: selectedTrader.name,
       amount: amt,
       profitShare: parseFloat(profitShare) || 10,
+      estimatedReturn,
       startedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     }
 
@@ -315,6 +321,7 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
             trader_name: selectedTrader.name,
             amount: amt,
             profit_share: parseFloat(profitShare) || 10,
+            estimated_return: estimatedReturn,
             status: 'active',
             started_at: new Date().toISOString(),
           }),
@@ -331,6 +338,7 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
     setSuccessModal({
       traderName,
       amount: amt,
+      estimatedReturn,
     })
   }
 
@@ -428,7 +436,8 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
                 <div>
                   <strong style={{ color: '#ffffff', fontSize: '14px', display: 'block' }}>{sub.traderName}</strong>
                   <span style={{ fontSize: '12px', color: '#00e676', fontWeight: 700 }}>Allocated: ${sub.amount.toFixed(2)} USD</span>
-                  <span style={{ fontSize: '11px', color: '#a0aec0', display: 'block', marginTop: '2px' }}>Started at {sub.startedAt}</span>
+                  <span style={{ fontSize: '11px', color: '#00e5ff', display: 'block', marginTop: '1px', fontWeight: 700 }}>Projected Return: +${sub.estimatedReturn.toFixed(2)} USD</span>
+                  <span style={{ fontSize: '10px', color: '#a0aec0', display: 'block', marginTop: '2px' }}>Started at {sub.startedAt}</span>
                 </div>
                 <button
                   type="button"
@@ -754,6 +763,27 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
                   }}
                 />
               </div>
+
+              {/* DYNAMIC ESTIMATED RETURN PROFIT CARD */}
+              <div style={{
+                background: 'rgba(0, 230, 118, 0.08)',
+                border: '1px solid rgba(0, 230, 118, 0.35)',
+                borderRadius: '12px',
+                padding: '12px 14px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+              }}>
+                <span style={{ fontSize: '10px', fontWeight: 800, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <TrendingUp size={12} color="#00e676" /> ESTIMATED RETURN PROFIT
+                </span>
+                <strong style={{ fontSize: '20px', fontWeight: 900, color: '#00e676', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+                  +${estimatedReturnFormatted} USD
+                </strong>
+                <span style={{ fontSize: '11px', color: '#a0aec0' }}>
+                  Based on {selectedTrader.winRate}% Win Probability ({selectedTrader.risk} Risk Profile)
+                </span>
+              </div>
             </div>
 
             {/* Modal Buttons */}
@@ -885,12 +915,20 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
                 marginTop: '10px',
                 paddingTop: '10px',
                 borderTop: '1px solid rgba(255,255,255,0.08)',
-                fontSize: '12px',
-                color: '#ffd700',
-                fontWeight: 700,
+                fontSize: '13px',
+                color: '#00e676',
+                fontWeight: 800,
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
+              }}>
+                📈 Projected Return Profit: +${successModal.estimatedReturn.toFixed(2)} USD
+              </div>
+              <div style={{
+                marginTop: '6px',
+                fontSize: '11.5px',
+                color: '#ffd700',
+                fontWeight: 700,
               }}>
                 💡 Tip: Check your balance regularly to monitor profits made!
               </div>
