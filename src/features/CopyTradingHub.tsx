@@ -46,25 +46,36 @@ const AVATAR_POOL = [
 ]
 
 const FIRST_NAMES = [
+  'Kwame', 'Olumide', 'Gideon', 'Tariq', 'Kofi', 'Babatunde', 'Chiwetel', 'Tendai', 'Jabari', 'Chidubem',
   'Sylvia', 'Elena', 'Marcus', 'Victor', 'Amina', 'Dmitri', 'Sarah', 'Kenji', 'Carlos', 'Hannah',
-  'Lucas', 'Priya', 'Alexander', 'Isabella', 'David', 'Zoe', 'Tariq', 'Chloë', 'Gideon', 'Arthur',
-  'Mei-Ling', 'Mateo', 'Nadia', 'Liam', 'Yuki', 'Fatima', 'Sven', 'Olumide', 'Camila', 'Viktor',
-  'Benjamin', 'Aarav', 'Freja', 'Jackson', 'Kwang-Sun', 'Amara', 'Dante', 'Sophie', 'Gabriel',
-  'Astrid', 'Hassan', 'Chloe', 'Rohan', 'Katarina', 'Dominic', 'Zeynep', 'Nathanael', 'Keiko', 'Mikhail',
+  'Lucas', 'Priya', 'Alexander', 'Isabella', 'David', 'Zoe', 'Tariq', 'Chloë', 'Arthur', 'Mei-Ling',
+  'Mateo', 'Nadia', 'Liam', 'Yuki', 'Fatima', 'Sven', 'Camila', 'Viktor', 'Benjamin', 'Aarav',
+  'Freja', 'Jackson', 'Kwang-Sun', 'Amara', 'Dante', 'Sophie', 'Gabriel', 'Astrid', 'Hassan', 'Chloe',
+  'Rohan', 'Katarina', 'Dominic', 'Zeynep', 'Nathanael', 'Keiko', 'Mikhail', 'Wanjala', 'Omondi', 'Kamau',
+  'Njoroge', 'Maina', 'Mwangi', 'Kariuki', 'Ochieng', 'Onyango', 'Onyinye', 'Mutua', 'Musyoka', 'Wanjiru',
+  'Akinyi', 'Adhiambo', 'Zola', 'Chimamanda', 'Folake', 'Funke', 'Yetunde', 'Blessing', 'Mercy', 'Faith',
+  'Chiamaka', 'Ngozi', 'Ama', 'Akosua', 'Efua', 'Halima', 'Zainab', 'Aisha', 'Mariam', 'Thabo',
+  'Sipho', 'Kehinde', 'Bakari', 'Faraji', 'Dayo', 'Temitope', 'Tunde', 'Sekou', 'Ousmane', 'Nkurunziza',
+  'Kagame', 'Ndlovu', 'Dlamini', 'Khumalo', 'Nkosi', 'Mbeki', 'Zuma', 'El-Masry', 'Benali', 'Kouassi',
   'Adrian', 'Beatriz', 'Caleb', 'Daria', 'Ethan', 'Fiona', 'George', 'Helena', 'Ian', 'Julia',
-  'Kofi', 'Laura', 'Milad', 'Nora', 'Oscar', 'Paola', 'Quentin', 'Rachel', 'Samuel', 'Tatiana',
-  'Umar', 'Valerie', 'Winston', 'Ximena', 'Youssef', 'Zara', 'Adam', 'Bianca', 'Christian', 'Diana'
+  'Laura', 'Milad', 'Nora', 'Oscar', 'Paola', 'Quentin', 'Rachel', 'Samuel', 'Tatiana', 'Umar',
+  'Valerie', 'Winston', 'Ximena', 'Youssef', 'Zara', 'Adam', 'Bianca', 'Christian', 'Diana', 'Ezekiel'
 ]
 
 const LAST_NAMES = [
+  'Adebayo', 'Mutua', 'Okafor', 'Mwangi', 'Kamau', 'Osei', 'Mensah', 'Diallo',
+  'Traore', 'Sow', 'Touré', 'Diop', 'Ndiaye', 'Cissé', 'Keita', 'Kouassi', 'Koné', 'Banza',
+  'Mukendi', 'Nkurunziza', 'Kagame', 'Musyoka', 'Wanjala', 'Otieno', 'Onyango', 'Odhiambo', 'Okello', 'Ochieng',
+  'Kariuki', 'Ndlovu', 'Dlamini', 'Khumalo', 'Nkosi', 'Mbeki', 'Zuma', 'Botha', 'El-Masry', 'Benali',
   'FX', 'Rostova', 'Chen', 'Sterling', 'Al-Mansoor', 'Volkov', 'Jenkins', 'Takahashi', 'Mendez', 'Schmidt',
-  'Rossi', 'Sharma', 'Novak', 'Silva', 'O\'Connor', 'Kravitz', 'Hassan', 'Laurent', 'Mutua', 'Pendelton',
-  'Zhou', 'Garcia', 'Petrov', 'Gallagher', 'Tanaka', 'Al-Zahra', 'Lindqvist', 'Adebayo', 'Rodriguez', 'Krum',
-  'Hayes', 'Patel', 'Nielsen', 'Miller', 'Park', 'Okafor', 'Moretti', 'Martin', 'Santos', 'Eriksen',
-  'Mahmoud', 'Zhang', 'Gupta', 'Kovac', 'Wright', 'Yilmaz', 'Dubois', 'Sato', 'Romanov', 'Vargas'
+  'Rossi', 'Sharma', 'Novak', 'Silva', 'O\'Connor', 'Kravitz', 'Hassan', 'Laurent', 'Pendelton', 'Zhou',
+  'Garcia', 'Petrov', 'Gallagher', 'Tanaka', 'Al-Zahra', 'Lindqvist', 'Rodriguez', 'Krum', 'Hayes', 'Patel',
+  'Nielsen', 'Miller', 'Park', 'Moretti', 'Martin', 'Santos', 'Eriksen', 'Mahmoud', 'Zhang', 'Gupta',
+  'Kovac', 'Wright', 'Yilmaz', 'Dubois', 'Sato', 'Romanov', 'Vargas', 'Al-Ahmadi', 'Vanderbilt', 'Goldman'
 ]
 
 const SPECIALTIES = [
+  'Kenya FX & Synthetic Indices', 'Nairobi FX Scalping', 'Lagos SMC Order Blocks', 'Johannesburg Gold Swings', 'Accra Trend Algos',
   'EUR/USD & Scalping', 'Gold & Commodities', 'Crypto & Indices', 'Volatility Indices', 'FX Trends & Algos',
   'NASDAQ Breakouts', 'Low Drawdown', 'JPY Crosses', 'Crude Oil & Metals', 'Euro Crosses',
   'SMC Order Blocks', 'Quant Arbitrage', 'High Leverage Growth', 'Pure Price Action', 'London Breakouts',
@@ -78,6 +89,11 @@ const SPECIALTIES = [
 ]
 
 const BIOS = [
+  'Top elite professional Master Trader from Nairobi, Kenya specializing in high-accuracy M-Pesa automated synthetic indices and forex scalping.',
+  'Nairobi-based professional forex trader with 8+ years experience specializing in high-accuracy M-Pesa scalping.',
+  'Lagos SMC order block trader consistently delivering high monthly returns on XAU/USD & Volatility Indices.',
+  'Johannesburg Gold & Mining equities specialist with conservative risk management.',
+  'Accra-based quantitative trader utilizing automated algorithms for EUR/USD and GBP/USD.',
   'Professional forex trader with 8+ years experience specializing in high-accuracy scalping.',
   'Gold & Commodities specialist. Consistent daily returns with strict risk management.',
   'Cryptocurrency and Global Index momentum trader. Low drawdown and high profitability.',
@@ -92,16 +108,22 @@ const BIOS = [
   'Quantitative trader utilizing statistical arbitrage across Major Forex pairs.',
   'Aggressive growth strategy targeting high risk-reward setups on Crypto & Volatility 25.',
   'Price Action & Market Structure specialist. Zero martingale, pure risk management.',
-  'London Session breakout trading on GBP pairs and FTSE 100.',
-  'Macroeconomic news trader and Interest Rate Differential specialist.',
-  'Middle East & Gulf Market Specialist trading Crude Oil and Gold spot markets.',
-  'Paris-based institutional trader focusing on EUR/USD micro-scalps.',
-  'Top Master Trader specializing in automated synthetic indices mirror trading.',
-  'Wall Street veteran applying algorithmic VWAP strategies to S&P 500 and Dow Jones.'
+  'London Session breakout trading on GBP pairs and FTSE 100.'
 ]
 
-// Initial Handcrafted Top Traders
+// Handcrafted Top Featured Master Traders
 const INITIAL_HANDCRAFTED: MasterTrader[] = [
+  {
+    id: 'mt-pipmaster',
+    name: 'PipMaster',
+    risk: 'Low',
+    bio: 'Top elite professional Master Trader from Nairobi, Kenya specializing in high-accuracy M-Pesa automated synthetic indices and forex scalping.',
+    winRate: 98.5,
+    totalProfit: 90780,
+    copiers: 1045,
+    avatar: 'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=150&auto=format&fit=crop&q=80',
+    specialty: 'Kenya FX & Synthetic Indices'
+  },
   { id: 'mt-1', name: 'Sylvia FX', risk: 'Low', bio: 'Professional forex trader with 8+ years experience specializing in EUR/USD and GBP/USD scalping.', winRate: 98.4, totalProfit: 90450, copiers: 590, avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80', specialty: 'EUR/USD & Scalping' },
   { id: 'mt-2', name: 'Elena Rostova', risk: 'Medium', bio: 'Gold & Commodities specialist. Consistent daily returns with strict risk management.', winRate: 88.7, totalProfit: 24101, copiers: 86, avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80', specialty: 'Gold & Commodities' },
   { id: 'mt-3', name: 'Marcus Chen', risk: 'Low', bio: 'Cryptocurrency and Global Index momentum trader. Low drawdown and high profitability.', winRate: 95.1, totalProfit: 52900, copiers: 220, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80', specialty: 'Crypto & Indices' },
@@ -109,22 +131,22 @@ const INITIAL_HANDCRAFTED: MasterTrader[] = [
   { id: 'mt-5', name: 'Amina Al-Mansoor', risk: 'Medium', bio: 'FX Trend Follower & Volatility Specialist. 6+ years of verified high-win-rate algorithm trading.', winRate: 92.5, totalProfit: 68400, copiers: 310, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', specialty: 'FX Trends & Algos' },
 ]
 
-// Generate Exactly 179 Master Traders
-const generateAllTraders = (): MasterTrader[] => {
+// Generate Exactly 540 Master Traders with Unique Profiles
+const generateAllTraders540 = (): MasterTrader[] => {
   const list: MasterTrader[] = [...INITIAL_HANDCRAFTED]
 
-  for (let i = 6; i <= 179; i++) {
-    const fn = FIRST_NAMES[(i * 2) % FIRST_NAMES.length]
-    const ln = LAST_NAMES[(i * 5) % LAST_NAMES.length]
+  for (let i = 7; i <= 540; i++) {
+    const fn = FIRST_NAMES[(i * 3 + (i % 7)) % FIRST_NAMES.length]
+    const ln = LAST_NAMES[(i * 5 + (i % 11)) % LAST_NAMES.length]
     const name = `${fn} ${ln}`
 
     const risk: 'Low' | 'Medium' | 'High' = i % 5 === 0 ? 'High' : (i % 2 === 0 ? 'Low' : 'Medium')
-    const bio = BIOS[(i * 3) % BIOS.length]
-    const winRate = Number((83.0 + ((i * 17) % 160) / 10).toFixed(1))
-    const totalProfit = 14000 + ((i * 2190) % 240000)
-    const copiers = 35 + ((i * 41) % 1350)
+    const bio = BIOS[(i * 4 + (i % 9)) % BIOS.length]
+    const winRate = Number((82.0 + ((i * 19) % 170) / 10).toFixed(1)) // 82.0% to 99.0%
+    const totalProfit = 11000 + ((i * 2431) % 285000) // $11,000 to $296,000
+    const copiers = 30 + ((i * 47) % 1500) // 30 to 1,530 copiers
     const avatar = AVATAR_POOL[i % AVATAR_POOL.length]
-    const specialty = SPECIALTIES[(i * 3) % SPECIALTIES.length]
+    const specialty = SPECIALTIES[(i * 3 + (i % 13)) % SPECIALTIES.length]
 
     list.push({
       id: `mt-${i}`,
@@ -142,7 +164,7 @@ const generateAllTraders = (): MasterTrader[] => {
   return list
 }
 
-const MASTER_TRADERS_179: MasterTrader[] = generateAllTraders()
+const MASTER_TRADERS_540: MasterTrader[] = generateAllTraders540()
 
 export default function CopyTradingHub({ userBalance, onAllocateBalance, showNotice }: CopyTradingHubProps) {
   const [selectedTrader, setSelectedTrader] = useState<MasterTrader | null>(null)
@@ -154,7 +176,7 @@ export default function CopyTradingHub({ userBalance, onAllocateBalance, showNot
   const [activeSubscriptions, setActiveSubscriptions] = useState<ActiveCopySubscription[]>([])
   const [successModal, setSuccessModal] = useState<{ traderName: string; amount: number } | null>(null)
 
-  const filteredTraders = MASTER_TRADERS_179.filter(trader => {
+  const filteredTraders = MASTER_TRADERS_540.filter(trader => {
     const matchesSearch = trader.name.toLowerCase().includes(search.toLowerCase()) ||
                           trader.bio.toLowerCase().includes(search.toLowerCase()) ||
                           trader.specialty.toLowerCase().includes(search.toLowerCase())
@@ -291,7 +313,7 @@ export default function CopyTradingHub({ userBalance, onAllocateBalance, showNot
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Star size={20} color="#ffd700" fill="#ffd700" />
-          <span>Top Master Traders ({MASTER_TRADERS_179.length} Available)</span>
+          <span>Top Master Traders ({MASTER_TRADERS_540.length} Available)</span>
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
