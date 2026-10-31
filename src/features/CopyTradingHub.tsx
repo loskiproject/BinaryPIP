@@ -27,24 +27,6 @@ interface CopyTradingHubProps {
   showNotice: (msg: string) => void
 }
 
-const AVATAR_POOL = [
-  'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150&auto=format&fit=crop&q=80',
-]
-
 const FIRST_NAMES = [
   'Kwame', 'Olumide', 'Gideon', 'Tariq', 'Kofi', 'Babatunde', 'Chiwetel', 'Tendai', 'Jabari', 'Chidubem',
   'Sylvia', 'Elena', 'Marcus', 'Victor', 'Amina', 'Dmitri', 'Sarah', 'Kenji', 'Carlos', 'Hannah',
@@ -131,25 +113,76 @@ const INITIAL_HANDCRAFTED: MasterTrader[] = [
   { id: 'mt-5', name: 'Amina Al-Mansoor', risk: 'Medium', bio: 'FX Trend Follower & Volatility Specialist. 6+ years of verified high-win-rate algorithm trading.', winRate: 92.5, totalProfit: 68400, copiers: 310, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', specialty: 'FX Trends & Algos' },
 ]
 
-// Generate Exactly 540 Master Traders with Unique Profiles
+// Generate 100% Unique Profile Photo Avatars across all 540 Traders
+const getUniqueAvatar = (index: number, name: string): string => {
+  // Handcrafted portraits
+  const unsplashPhotos = [
+    'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150&auto=format&fit=crop&q=80',
+  ]
+
+  if (index <= 15) {
+    return unsplashPhotos[index % unsplashPhotos.length]
+  }
+
+  // Next 180 use RandomUser male & female photo IDs (men/1.jpg to men/90.jpg, women/1.jpg to women/90.jpg)
+  if (index <= 195) {
+    const isMale = index % 2 === 0
+    const photoNum = Math.floor((index - 15) / 2) % 90 + 1
+    return `https://randomuser.me/api/portraits/${isMale ? 'men' : 'women'}/${photoNum}.jpg`
+  }
+
+  // Next 200 use UI-Avatars with unique initials & custom neon backgrounds
+  if (index <= 395) {
+    const bgColors = ['071326', '00e676', '00b0ff', 'ff1744', 'ffb300', '7c4dff', '00e5ff', '29b6f6', 'ab47bc', '26a69a', 'ef5350', '66bb6a']
+    const bg = bgColors[index % bgColors.length]
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${bg}&color=ffffff&size=150&bold=true&font-size=0.42`
+  }
+
+  // Remaining 145 use DiceBear custom avataaars API seed
+  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name + index)}`
+}
+
+// Generate Exactly 540 Master Traders with 100% Unique Names AND 100% Unique Avatars, Sorted Alphabetically A to Z
 const generateAllTraders540 = (): MasterTrader[] => {
   const list: MasterTrader[] = [...INITIAL_HANDCRAFTED]
+  const usedNames = new Set<string>(INITIAL_HANDCRAFTED.map(t => t.name.toLowerCase()))
 
-  for (let i = 7; i <= 540; i++) {
-    const fn = FIRST_NAMES[(i * 3 + (i % 7)) % FIRST_NAMES.length]
-    const ln = LAST_NAMES[(i * 5 + (i % 11)) % LAST_NAMES.length]
-    const name = `${fn} ${ln}`
+  let idx = 7
+  while (list.length < 540) {
+    const fn = FIRST_NAMES[(idx * 3 + (idx % 7)) % FIRST_NAMES.length]
+    const ln = LAST_NAMES[(idx * 5 + (idx % 11)) % LAST_NAMES.length]
+    let name = `${fn} ${ln}`
 
-    const risk: 'Low' | 'Medium' | 'High' = i % 5 === 0 ? 'High' : (i % 2 === 0 ? 'Low' : 'Medium')
-    const bio = BIOS[(i * 4 + (i % 9)) % BIOS.length]
-    const winRate = Number((82.0 + ((i * 19) % 170) / 10).toFixed(1)) // 82.0% to 99.0%
-    const totalProfit = 11000 + ((i * 2431) % 285000) // $11,000 to $296,000
-    const copiers = 30 + ((i * 47) % 1500) // 30 to 1,530 copiers
-    const avatar = AVATAR_POOL[i % AVATAR_POOL.length]
-    const specialty = SPECIALTIES[(i * 3 + (i % 13)) % SPECIALTIES.length]
+    // Ensure 100% unique trader name
+    if (usedNames.has(name.toLowerCase())) {
+      name = `${fn} ${ln} ${idx}`
+    }
+    usedNames.add(name.toLowerCase())
+
+    const risk: 'Low' | 'Medium' | 'High' = idx % 5 === 0 ? 'High' : (idx % 2 === 0 ? 'Low' : 'Medium')
+    const bio = BIOS[(idx * 4 + (idx % 9)) % BIOS.length]
+    const winRate = Number((82.0 + ((idx * 19) % 170) / 10).toFixed(1)) // 82.0% to 99.0%
+    const totalProfit = 11000 + ((idx * 2431) % 285000) // $11,000 to $296,000
+    const copiers = 30 + ((idx * 47) % 1500) // 30 to 1,530 copiers
+    const avatar = getUniqueAvatar(idx, name)
+    const specialty = SPECIALTIES[(idx * 3 + (idx % 13)) % SPECIALTIES.length]
 
     list.push({
-      id: `mt-${i}`,
+      id: `mt-${idx}`,
       name,
       risk,
       bio,
@@ -159,9 +192,11 @@ const generateAllTraders540 = (): MasterTrader[] => {
       avatar,
       specialty,
     })
+    idx++
   }
 
-  return list
+  // Sort alphabetically A to Z by trader name
+  return list.sort((a, b) => a.name.localeCompare(b.name))
 }
 
 const MASTER_TRADERS_540: MasterTrader[] = generateAllTraders540()
@@ -313,7 +348,7 @@ export default function CopyTradingHub({ userBalance, onAllocateBalance, showNot
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Star size={20} color="#ffd700" fill="#ffd700" />
-          <span>Top Master Traders ({MASTER_TRADERS_540.length} Available)</span>
+          <span>Top Master Traders ({MASTER_TRADERS_540.length} Available · A to Z)</span>
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
