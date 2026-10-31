@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Users, Star, Search, CheckCircle2, X, Shield, ArrowUpRight, Sparkles, Filter } from 'lucide-react'
+import { Users, Star, Search, CheckCircle2, X, Shield, Sparkles } from 'lucide-react'
 
 export interface MasterTrader {
   id: string
@@ -27,59 +27,122 @@ interface CopyTradingHubProps {
   showNotice: (msg: string) => void
 }
 
-// 50 Master Traders Dataset
-const MASTER_TRADERS: MasterTrader[] = [
+const AVATAR_POOL = [
+  'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=150&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=150&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150&auto=format&fit=crop&q=80',
+]
+
+const FIRST_NAMES = [
+  'Sylvia', 'Elena', 'Marcus', 'Victor', 'Amina', 'Dmitri', 'Sarah', 'Kenji', 'Carlos', 'Hannah',
+  'Lucas', 'Priya', 'Alexander', 'Isabella', 'David', 'Zoe', 'Tariq', 'Chloë', 'Gideon', 'Arthur',
+  'Mei-Ling', 'Mateo', 'Nadia', 'Liam', 'Yuki', 'Fatima', 'Sven', 'Olumide', 'Camila', 'Viktor',
+  'Benjamin', 'Aarav', 'Freja', 'Jackson', 'Kwang-Sun', 'Amara', 'Dante', 'Sophie', 'Gabriel',
+  'Astrid', 'Hassan', 'Chloe', 'Rohan', 'Katarina', 'Dominic', 'Zeynep', 'Nathanael', 'Keiko', 'Mikhail',
+  'Adrian', 'Beatriz', 'Caleb', 'Daria', 'Ethan', 'Fiona', 'George', 'Helena', 'Ian', 'Julia',
+  'Kofi', 'Laura', 'Milad', 'Nora', 'Oscar', 'Paola', 'Quentin', 'Rachel', 'Samuel', 'Tatiana',
+  'Umar', 'Valerie', 'Winston', 'Ximena', 'Youssef', 'Zara', 'Adam', 'Bianca', 'Christian', 'Diana'
+]
+
+const LAST_NAMES = [
+  'FX', 'Rostova', 'Chen', 'Sterling', 'Al-Mansoor', 'Volkov', 'Jenkins', 'Takahashi', 'Mendez', 'Schmidt',
+  'Rossi', 'Sharma', 'Novak', 'Silva', 'O\'Connor', 'Kravitz', 'Hassan', 'Laurent', 'Mutua', 'Pendelton',
+  'Zhou', 'Garcia', 'Petrov', 'Gallagher', 'Tanaka', 'Al-Zahra', 'Lindqvist', 'Adebayo', 'Rodriguez', 'Krum',
+  'Hayes', 'Patel', 'Nielsen', 'Miller', 'Park', 'Okafor', 'Moretti', 'Martin', 'Santos', 'Eriksen',
+  'Mahmoud', 'Zhang', 'Gupta', 'Kovac', 'Wright', 'Yilmaz', 'Dubois', 'Sato', 'Romanov', 'Vargas'
+]
+
+const SPECIALTIES = [
+  'EUR/USD & Scalping', 'Gold & Commodities', 'Crypto & Indices', 'Volatility Indices', 'FX Trends & Algos',
+  'NASDAQ Breakouts', 'Low Drawdown', 'JPY Crosses', 'Crude Oil & Metals', 'Euro Crosses',
+  'SMC Order Blocks', 'Quant Arbitrage', 'High Leverage Growth', 'Pure Price Action', 'London Breakouts',
+  'Macro Fundamentals', 'Oil & Spot Gold', 'Micro Scalping', 'Synthetic Multipliers', 'US Equity Indices',
+  'FX Correlations', 'Crypto Scalper', 'CHF Safe Haven', 'GBP/JPY Dragon', 'Automated Bot',
+  'Halal Swap-Free', 'Exotic FX Pairs', 'Volatility 50', 'Emerging FX', 'Crash/Boom Spikes',
+  'Fibo Retracements', 'DXY Correlations', 'Global Indices', 'Hedging Strategies', 'FOMC News FX',
+  'Vol 10 Grid Bot', 'Multi-Asset Focus', 'Crypto Breakouts', 'Steady Growth', 'Intraday FX',
+  'DAX 40 Trends', 'Spot Gold Masters', 'Asian Indices', 'Range Breakouts', 'Crude Oil Swings',
+  'Sydney FX Session', 'Emerging FX', 'Wealth Management', 'Ichimoku Cloud', 'Jump Indices Algo'
+]
+
+const BIOS = [
+  'Professional forex trader with 8+ years experience specializing in high-accuracy scalping.',
+  'Gold & Commodities specialist. Consistent daily returns with strict risk management.',
+  'Cryptocurrency and Global Index momentum trader. Low drawdown and high profitability.',
+  'Institutional swing trader focusing on High-Yield Synthetic Indices and Volatility 100.',
+  'FX Trend Follower & Volatility Specialist. Verified algorithm trader with 90%+ win rate.',
+  'High-frequency breakout trader on NASDAQ & Crash/Boom Synthetic Index markets.',
+  'Conservatively managed portfolio with strict 1% risk per trade rule. Ideal for passive income.',
+  'Asian Session specialist trading JPY crosses and Asian Indices with verified accuracy.',
+  'Commodities and Oil Futures scalper. High-volume intraday profits with tight stop losses.',
+  'European Central Bank news trader and EUR/GBP Range trader.',
+  'Smart Money Concepts (SMC) institutional order block trader on XAU/USD.',
+  'Quantitative trader utilizing statistical arbitrage across Major Forex pairs.',
+  'Aggressive growth strategy targeting high risk-reward setups on Crypto & Volatility 25.',
+  'Price Action & Market Structure specialist. Zero martingale, pure risk management.',
+  'London Session breakout trading on GBP pairs and FTSE 100.',
+  'Macroeconomic news trader and Interest Rate Differential specialist.',
+  'Middle East & Gulf Market Specialist trading Crude Oil and Gold spot markets.',
+  'Paris-based institutional trader focusing on EUR/USD micro-scalps.',
+  'Top Master Trader specializing in automated synthetic indices mirror trading.',
+  'Wall Street veteran applying algorithmic VWAP strategies to S&P 500 and Dow Jones.'
+]
+
+// Initial Handcrafted Top Traders
+const INITIAL_HANDCRAFTED: MasterTrader[] = [
   { id: 'mt-1', name: 'Sylvia FX', risk: 'Low', bio: 'Professional forex trader with 8+ years experience specializing in EUR/USD and GBP/USD scalping.', winRate: 98.4, totalProfit: 90450, copiers: 590, avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80', specialty: 'EUR/USD & Scalping' },
   { id: 'mt-2', name: 'Elena Rostova', risk: 'Medium', bio: 'Gold & Commodities specialist. Consistent daily returns with strict risk management.', winRate: 88.7, totalProfit: 24101, copiers: 86, avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80', specialty: 'Gold & Commodities' },
   { id: 'mt-3', name: 'Marcus Chen', risk: 'Low', bio: 'Cryptocurrency and Global Index momentum trader. Low drawdown and high profitability.', winRate: 95.1, totalProfit: 52900, copiers: 220, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80', specialty: 'Crypto & Indices' },
   { id: 'mt-4', name: 'Victor Sterling', risk: 'Low', bio: 'Institutional swing trader focusing on High-Yield Synthetic Indices and Volatility 100.', winRate: 96.2, totalProfit: 142000, copiers: 840, avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80', specialty: 'Volatility Indices' },
   { id: 'mt-5', name: 'Amina Al-Mansoor', risk: 'Medium', bio: 'FX Trend Follower & Volatility Specialist. 6+ years of verified high-win-rate algorithm trading.', winRate: 92.5, totalProfit: 68400, copiers: 310, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', specialty: 'FX Trends & Algos' },
-  { id: 'mt-6', name: 'Dmitri Volkov', risk: 'High', bio: 'High-frequency breakout trader on NASDAQ & Crash/Boom Synthetic Index markets.', winRate: 89.1, totalProfit: 185000, copiers: 920, avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80', specialty: 'NASDAQ Breakouts' },
-  { id: 'mt-7', name: 'Sarah Jenkins', risk: 'Low', bio: 'Conservatively managed portfolio with strict 1% risk per trade rule. Ideal for passive income.', winRate: 97.8, totalProfit: 78900, copiers: 450, avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80', specialty: 'Low Drawdown' },
-  { id: 'mt-8', name: 'Kenji Takahashi', risk: 'Low', bio: 'Asian Session specialist trading JPY crosses and Asian Indices with 94%+ win accuracy.', winRate: 94.6, totalProfit: 61200, copiers: 280, avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80', specialty: 'JPY Crosses' },
-  { id: 'mt-9', name: 'Carlos Mendez', risk: 'Medium', bio: 'Commodities and Oil Futures scalper. High-volume intraday profits with tight stop losses.', winRate: 91.3, totalProfit: 43800, copiers: 195, avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80', specialty: 'Crude Oil & Metals' },
-  { id: 'mt-10', name: 'Hannah Schmidt', risk: 'Low', bio: 'European Central Bank news trader and EUR/GBP Range trader.', winRate: 96.9, totalProfit: 89000, copiers: 512, avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80', specialty: 'Euro Crosses' },
-  { id: 'mt-11', name: 'Lucas Rossi', risk: 'Medium', bio: 'Smart Money Concepts (SMC) institutional order block trader on XAU/USD and Volatility 75.', winRate: 93.4, totalProfit: 112000, copiers: 630, avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80', specialty: 'SMC Order Blocks' },
-  { id: 'mt-12', name: 'Priya Sharma', risk: 'Low', bio: 'Quantitative trader utilizing statistical arbitrage across Major Forex pairs.', winRate: 98.1, totalProfit: 95400, copiers: 480, avatar: 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=150&auto=format&fit=crop&q=80', specialty: 'Quant Arbitrage' },
-  { id: 'mt-13', name: 'Alexander Novak', risk: 'High', bio: 'Aggressive growth strategy targeting high risk-reward setups on Crypto & Volatility 25 (1s).', winRate: 87.9, totalProfit: 210000, copiers: 1100, avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80', specialty: 'High Leverage Growth' },
-  { id: 'mt-14', name: 'Isabella Silva', risk: 'Low', bio: 'Price Action & Market Structure specialist. Zero martingale, pure risk management.', winRate: 96.5, totalProfit: 54100, copiers: 320, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', specialty: 'Pure Price Action' },
-  { id: 'mt-15', name: 'David O\'Connor', risk: 'Medium', bio: 'London Session breakout trading on GBP pairs and FTSE 100.', winRate: 90.8, totalProfit: 38900, copiers: 175, avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150&auto=format&fit=crop&q=80', specialty: 'London Breakouts' },
-  { id: 'mt-16', name: 'Zoe Kravitz', risk: 'Low', bio: 'Macroeconomic news trader and Interest Rate Differential specialist.', winRate: 95.8, totalProfit: 81200, copiers: 410, avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=80', specialty: 'Macro Fundamentals' },
-  { id: 'mt-17', name: 'Tariq Hassan', risk: 'Medium', bio: 'Middle East & Gulf Market Specialist trading Crude Oil and Gold spot markets.', winRate: 92.1, totalProfit: 73500, copiers: 295, avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80', specialty: 'Oil & Spot Gold' },
-  { id: 'mt-18', name: 'Chloë Laurent', risk: 'Low', bio: 'Paris-based institutional trader focusing on EUR/USD micro-scalps.', winRate: 97.2, totalProfit: 66800, copiers: 360, avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80', specialty: 'Micro Scalping' },
-  { id: 'mt-19', name: 'Gideon Mutua', risk: 'Low', bio: 'Top African Master Trader specializing in M-Pesa automated synthetic indices mirror trading.', winRate: 98.9, totalProfit: 156000, copiers: 980, avatar: 'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=150&auto=format&fit=crop&q=80', specialty: 'Synthetic Multipliers' },
-  { id: 'mt-20', name: 'Arthur Pendelton', risk: 'Medium', bio: 'Wall Street veteran applying algorithmic VWAP strategies to S&P 500 and Dow Jones.', winRate: 93.9, totalProfit: 189000, copiers: 870, avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80', specialty: 'US Equity Indices' },
-  { id: 'mt-21', name: 'Mei-Ling Zhou', risk: 'Low', bio: 'Hong Kong FX quantitative analyst trading AUD/USD and NZD/USD currency correlations.', winRate: 96.1, totalProfit: 58400, copiers: 260, avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80', specialty: 'FX Correlations' },
-  { id: 'mt-22', name: 'Mateo Garcia', risk: 'High', bio: 'Crypto momentum scalper targeting BTC & ETH 100x setups.', winRate: 88.4, totalProfit: 165000, copiers: 790, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80', specialty: 'Crypto Scalper' },
-  { id: 'mt-23', name: 'Nadia Petrov', risk: 'Low', bio: 'Low volatility swing trader focusing on USD/CHF and EUR/CHF stability.', winRate: 97.5, totalProfit: 47800, copiers: 210, avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80', specialty: 'CHF Safe Haven' },
-  { id: 'mt-24', name: 'Liam Gallagher', risk: 'Medium', bio: 'UK High Beta Forex pairs and GBP/JPY Volatility specialist.', winRate: 91.8, totalProfit: 83200, copiers: 420, avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80', specialty: 'GBP/JPY Dragon' },
-  { id: 'mt-25', name: 'Yuki Tanaka', risk: 'Low', bio: 'Tokyo session FX robot developer with 12 months verified positive growth.', winRate: 96.7, totalProfit: 71900, copiers: 390, avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80', specialty: 'Automated Bot' },
-  { id: 'mt-26', name: 'Fatima Al-Zahra', risk: 'Low', bio: 'Islamic Sharia-compliant swap-free Master Trader specializing in Gold & Silver.', winRate: 98.2, totalProfit: 104000, copiers: 610, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', specialty: 'Halal Swap-Free' },
-  { id: 'mt-27', name: 'Sven Lindqvist', risk: 'Medium', bio: 'Nordic Markets and EUR/SEK trend reversal specialist.', winRate: 92.8, totalProfit: 39500, copiers: 160, avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80', specialty: 'Exotic FX Pairs' },
-  { id: 'mt-28', name: 'Olumide Adebayo', risk: 'Low', bio: 'Leading African Synthetic Index trader with emphasis on Volatility 50 and Jump Indices.', winRate: 97.1, totalProfit: 128000, copiers: 750, avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80', specialty: 'Volatility 50' },
-  { id: 'mt-29', name: 'Camila Rodriguez', risk: 'Medium', bio: 'Latin American Forex & Commodities trend trader.', winRate: 91.0, totalProfit: 46200, copiers: 230, avatar: 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=150&auto=format&fit=crop&q=80', specialty: 'Emerging FX' },
-  { id: 'mt-30', name: 'Viktor Krum', risk: 'High', bio: 'High leverage scalping on Crash 500 and Boom 1000 spike detection.', winRate: 89.6, totalProfit: 198000, copiers: 1050, avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150&auto=format&fit=crop&q=80', specialty: 'Crash/Boom Spikes' },
-  { id: 'mt-31', name: 'Elena Gomez', risk: 'Low', bio: 'Daily pivot points and Fibonacci Retracement master trader.', winRate: 96.4, totalProfit: 62500, copiers: 340, avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80', specialty: 'Fibo Retracements' },
-  { id: 'mt-32', name: 'Benjamin Hayes', risk: 'Low', bio: 'US Dollar Index (DXY) correlation trader covering EUR, GBP, and Gold.', winRate: 95.3, totalProfit: 87400, copiers: 460, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80', specialty: 'DXY Correlations' },
-  { id: 'mt-33', name: 'Aarav Patel', risk: 'Medium', bio: 'Nifty & Global Indices momentum trader with strict capital reservation rules.', winRate: 93.1, totalProfit: 51200, copiers: 280, avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80', specialty: 'Global Indices' },
-  { id: 'mt-34', name: 'Freja Nielsen', risk: 'Low', bio: 'Copenhagen-based risk-free hedging specialist across major currencies.', winRate: 98.6, totalProfit: 74100, copiers: 380, avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80', specialty: 'Hedging Strategies' },
-  { id: 'mt-35', name: 'Jackson Miller', risk: 'Medium', bio: 'US Session NFP and FOMC news event scalper.', winRate: 91.5, totalProfit: 93800, copiers: 520, avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80', specialty: 'FOMC News FX' },
-  { id: 'mt-36', name: 'Kwang-Sun Park', risk: 'Low', bio: 'Seoul Tech Algos & Automated Grid trading on Volatility 10 (1s).', winRate: 97.4, totalProfit: 108000, copiers: 670, avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80', specialty: 'Vol 10 Grid Bot' },
-  { id: 'mt-37', name: 'Amara Okafor', risk: 'Low', bio: 'Multi-Asset Master Trader with 500+ satisfied copiers across Africa and Europe.', winRate: 96.8, totalProfit: 119000, copiers: 710, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', specialty: 'Multi-Asset Focus' },
-  { id: 'mt-38', name: 'Dante Moretti', risk: 'High', bio: 'Aggressive crypto altcoin breakouts and leverage trading.', winRate: 88.9, totalProfit: 172000, copiers: 830, avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80', specialty: 'Crypto Breakouts' },
-  { id: 'mt-39', name: 'Sophie Martin', risk: 'Low', bio: 'Swiss private bank trained portfolio manager targeting steady 15% monthly growth.', winRate: 98.3, totalProfit: 135000, copiers: 890, avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80', specialty: 'Steady Growth' },
-  { id: 'mt-40', name: 'Gabriel Santos', risk: 'Medium', bio: 'Brazilian FX scalper focusing on USD/BRL and EUR/USD volatility.', winRate: 92.3, totalProfit: 48900, copiers: 240, avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150&auto=format&fit=crop&q=80', specialty: 'Intraday FX' },
-  { id: 'mt-41', name: 'Astrid Eriksen', risk: 'Low', bio: 'Algorithmic trend trader on German DAX 40 and European equities.', winRate: 96.3, totalProfit: 82100, copiers: 430, avatar: 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?w=150&auto=format&fit=crop&q=80', specialty: 'DAX 40 Trends' },
-  { id: 'mt-42', name: 'Hassan Mahmoud', risk: 'Low', bio: 'Dubai Gold Exchange specialist with verified 97%+ win rate on XAU/USD.', winRate: 97.9, totalProfit: 145000, copiers: 910, avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80', specialty: 'Spot Gold Masters' },
-  { id: 'mt-43', name: 'Chloe Zhang', risk: 'Medium', bio: 'Singapore Asian session momentum trader on Nikkei 225 & Hang Seng.', winRate: 93.6, totalProfit: 67300, copiers: 350, avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80', specialty: 'Asian Indices' },
-  { id: 'mt-44', name: 'Rohan Gupta', risk: 'Low', bio: 'Algorithmic risk manager trading Range Breakout Indices.', winRate: 97.6, totalProfit: 88900, copiers: 490, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80', specialty: 'Range Breakouts' },
-  { id: 'mt-45', name: 'Katarina Kovac', risk: 'Medium', bio: 'Central European FX and Crude Oil swing trader.', winRate: 92.0, totalProfit: 53400, copiers: 270, avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80', specialty: 'Crude Oil Swings' },
-  { id: 'mt-46', name: 'Dominic Wright', risk: 'Low', bio: 'Sydney FX session specialist trading AUD/USD & AUD/JPY.', winRate: 96.6, totalProfit: 76200, copiers: 370, avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80', specialty: 'Sydney FX Session' },
-  { id: 'mt-47', name: 'Zeynep Yilmaz', risk: 'Medium', bio: 'Emerging market currency trader with strict risk limits.', winRate: 91.7, totalProfit: 41800, copiers: 190, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', specialty: 'Emerging FX' },
-  { id: 'mt-48', name: 'Nathanael Dubois', risk: 'Low', bio: 'Geneva wealth manager offering low-risk automated portfolio mirroring.', winRate: 98.7, totalProfit: 168000, copiers: 960, avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80', specialty: 'Wealth Management' },
-  { id: 'mt-49', name: 'Keiko Sato', risk: 'Low', bio: 'Ichimoku Kinko Hyo cloud strategy specialist on JPY pairs.', winRate: 96.0, totalProfit: 63900, copiers: 330, avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80', specialty: 'Ichimoku Cloud' },
-  { id: 'mt-50', name: 'Mikhail Romanov', risk: 'High', bio: 'High yield algorithmic scalper for Jump 100 Index.', winRate: 89.9, totalProfit: 205000, copiers: 1150, avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80', specialty: 'Jump Indices Algo' },
 ]
+
+// Generate Exactly 179 Master Traders
+const generateAllTraders = (): MasterTrader[] => {
+  const list: MasterTrader[] = [...INITIAL_HANDCRAFTED]
+
+  for (let i = 6; i <= 179; i++) {
+    const fn = FIRST_NAMES[(i * 2) % FIRST_NAMES.length]
+    const ln = LAST_NAMES[(i * 5) % LAST_NAMES.length]
+    const name = `${fn} ${ln}`
+
+    const risk: 'Low' | 'Medium' | 'High' = i % 5 === 0 ? 'High' : (i % 2 === 0 ? 'Low' : 'Medium')
+    const bio = BIOS[(i * 3) % BIOS.length]
+    const winRate = Number((83.0 + ((i * 17) % 160) / 10).toFixed(1))
+    const totalProfit = 14000 + ((i * 2190) % 240000)
+    const copiers = 35 + ((i * 41) % 1350)
+    const avatar = AVATAR_POOL[i % AVATAR_POOL.length]
+    const specialty = SPECIALTIES[(i * 3) % SPECIALTIES.length]
+
+    list.push({
+      id: `mt-${i}`,
+      name,
+      risk,
+      bio,
+      winRate,
+      totalProfit,
+      copiers,
+      avatar,
+      specialty,
+    })
+  }
+
+  return list
+}
+
+const MASTER_TRADERS_179: MasterTrader[] = generateAllTraders()
 
 export default function CopyTradingHub({ userBalance, onAllocateBalance, showNotice }: CopyTradingHubProps) {
   const [selectedTrader, setSelectedTrader] = useState<MasterTrader | null>(null)
@@ -91,7 +154,7 @@ export default function CopyTradingHub({ userBalance, onAllocateBalance, showNot
   const [activeSubscriptions, setActiveSubscriptions] = useState<ActiveCopySubscription[]>([])
   const [successModal, setSuccessModal] = useState<{ traderName: string; amount: number } | null>(null)
 
-  const filteredTraders = MASTER_TRADERS.filter(trader => {
+  const filteredTraders = MASTER_TRADERS_179.filter(trader => {
     const matchesSearch = trader.name.toLowerCase().includes(search.toLowerCase()) ||
                           trader.bio.toLowerCase().includes(search.toLowerCase()) ||
                           trader.specialty.toLowerCase().includes(search.toLowerCase())
@@ -228,7 +291,7 @@ export default function CopyTradingHub({ userBalance, onAllocateBalance, showNot
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Star size={20} color="#ffd700" fill="#ffd700" />
-          <span>Top Master Traders (50 Available)</span>
+          <span>Top Master Traders ({MASTER_TRADERS_179.length} Available)</span>
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
