@@ -2675,8 +2675,6 @@ export default function App() {
     showNotice('Profile photo updated.')
   }
 
-  const handleVerificationDocument = async (file?: File) => {
-    if (!file) return
   const compressImageFile = (file: File, maxWidth = 800, quality = 0.65): Promise<string> => {
     return new Promise((resolve) => {
       if (!file.type.startsWith('image/')) {
@@ -2713,6 +2711,11 @@ export default function App() {
       reader.onerror = () => resolve('')
       reader.readAsDataURL(file)
     })
+  }
+
+  const handleVerificationDocument = async (file?: File) => {
+    if (!file) return
+    await handleKycFileUpload(file)
   }
 
   // Handle KYC Document Upload
