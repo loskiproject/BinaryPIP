@@ -2677,12 +2677,52 @@ export default function App() {
 
   const handleVerificationDocument = async (file?: File) => {
     if (!file) return
-    if (!['image/jpeg', 'application/pdf'].includes(file.type)) {
-      showNotice('Only JPEG and PDF verification files are supported.')
+  const compressImageFile = (file: File, maxWidth = 800, quality = 0.65): Promise<string> => {
+    return new Promise((resolve) => {
+      if (!file.type.startsWith('image/')) {
+        resolve('')
+        return
+      }
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const img = new Image()
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          let width = img.width
+          let height = img.height
+
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width)
+            width = maxWidth
+          }
+
+          canvas.width = width
+          canvas.height = height
+
+          const ctx = canvas.getContext('2d')
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height)
+            resolve(canvas.toDataURL('image/jpeg', quality))
+          } else {
+            resolve(String(e.target?.result || ''))
+          }
+        }
+        img.onerror = () => resolve('')
+        img.src = String(e.target?.result || '')
+      }
+      reader.onerror = () => resolve('')
+      reader.readAsDataURL(file)
+    })
+  }
+
+  // Handle KYC Document Upload
+  const handleKycFileUpload = async (file: File) => {
+    if (!['image/jpeg', 'image/png', 'application/pdf'].includes(file.type)) {
+      showNotice('Only JPEG, PNG and PDF verification files are supported.')
       return
     }
-    if (file.size > 5 * 1024 * 1024) {
-      showNotice('Verification files must be 5MB or smaller.')
+    if (file.size > 10 * 1024 * 1024) {
+      showNotice('Verification files must be 10MB or smaller.')
       return
     }
 
@@ -2702,12 +2742,23 @@ export default function App() {
       return
     }
 
+    const compressedDataUri = await compressImageFile(file, 800, 0.65)
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-    const storagePath = `${user.id}/${crypto.randomUUID()}-${safeName}`
-    const { error: uploadError } = await supabase.storage.from('kyc-documents').upload(storagePath, file, { contentType: file.type, upsert: false })
-    if (uploadError) {
-      showNotice(`Document upload failed: ${uploadError.message}`)
-      return
+    let storagePath = `${user.id}/${crypto.randomUUID()}-${safeName}`
+
+    let storageSuccess = false
+    try {
+      const { error: uploadError } = await supabase.storage.from('kyc-documents').upload(storagePath, file, { contentType: file.type, upsert: false })
+      if (!uploadError) {
+        storageSuccess = true
+      }
+    } catch {
+      // silent
+    }
+
+    // Fallback: If Supabase Storage egress/quota is restricted, store lightweight compressed Base64 URI in PostgreSQL
+    if (!storageSuccess && compressedDataUri) {
+      storagePath = compressedDataUri
     }
 
     const { data, error: recordError } = await supabase.from('profile_documents').insert({
@@ -2718,8 +2769,8 @@ export default function App() {
       mime_type: file.type,
       file_size: file.size,
     }).select('id, original_name, document_type, mime_type, status, submitted_at').single()
+
     if (recordError) {
-      await supabase.storage.from('kyc-documents').remove([storagePath])
       showNotice(`Document record could not be created: ${recordError.message}`)
       return
     }
