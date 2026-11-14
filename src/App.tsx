@@ -1631,9 +1631,10 @@ export default function App() {
 
       const { data: transactionsData } = await client
         .from('transactions')
-        .select('*')
+        .select('id, type, amount, total_amount, method, gateway_network, reference_id, reference_code, details, status, created_at')
         .or(`user_id.eq.${targetUserId}${user?.id && user.id !== targetUserId ? `,user_id.eq.${user.id}` : ''}`)
         .order('created_at', { ascending: false })
+        .range(0, 49)
 
       if (mounted && Array.isArray(transactionsData)) {
         const remoteFunding = transactionsData
@@ -5849,6 +5850,7 @@ export default function App() {
               userId={user?.id || getValidUserId()}
               supabaseUrl={supabaseUrl}
               supabaseKey={supabaseKey}
+              accountType={accountType}
               onAllocateBalance={(amt) => {
                 const nextBal = Math.max(0, activeBalance - amt)
                 if (accountType === 'demo') {
@@ -5861,6 +5863,8 @@ export default function App() {
                 }
               }}
               showNotice={showNotice}
+              onOpenDeposit={() => setActiveView('wallet')}
+              onSwitchAccount={() => handleAccountSelectChange('demo')}
             />
           )}
           {activeView === 'tiers' && renderCryptoAllocationLevels()}

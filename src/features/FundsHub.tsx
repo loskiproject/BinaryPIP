@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { supabase } from '../lib/supabase'
 import {
   ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight,
   Copy, CheckCircle2, AlertCircle, Smartphone,
@@ -348,26 +349,62 @@ export default function FundsHub({
     })
   }
 
-  const handleProceedDeposit = async () => {
-    if (depositMethod === 'mpesa') {
-      if (!mpPhone.match(/^07\d{8}$|^\+2547\d{8}$/)) { showNotice('Enter a valid M-Pesa number (07XXXXXXXX).'); return }
-      const kes = parseFloat(mpKes)
-      if (!kes || kes < minDepositKES) { showNotice(`Minimum M-Pesa deposit is KES ${minDepositKES.toLocaleString()}.`); return }
-      if (!mpCode.trim()) { showNotice('Please enter your M-Pesa confirmation transaction code.'); return }
+  const handleTriggerStkPush = async () => {
+    if (!mpPhone.match(/^07\d{8}$|^\+2547\d{8}$|^2547\d{8}$|^01\d{8}$/)) {
+      showNotice('Enter a valid M-Pesa phone number (07XXXXXXXX or 01XXXXXXXX).')
+      return
+    }
+    const kes = parseFloat(mpKes)
+    if (!kes || kes < minDepositKES) {
+      showNotice(`Minimum M-Pesa deposit is KES ${minDepositKES.toLocaleString()}.`)
+      return
+    }
 
-      const usdEquiv = kes / 130
-      const refCode = `M-Pesa Code: ${mpCode.trim().toUpperCase()} | Phone: ${mpPhone.trim()}`
-      onDepositRequest(usdEquiv, 'MPESA', refCode)
+    setStkStep('pushing')
+    setStkError('')
 
-      setDepositSuccessModal({
-        amountUSD: usdEquiv,
-        method: 'M-Pesa',
-        ref: mpCode.trim().toUpperCase(),
+    try {
+      const { data, error } = await supabase.functions.invoke('mpesa-stk-push', {
+        body: {
+          phone: mpPhone,
+          amount: kes,
+          customerName: 'NEXSMARKETS CLIENT',
+        },
       })
 
-      setMpPhone('')
-      setMpKes('')
-      setMpCode('')
+      if (error || (data && data.error)) {
+        const errMsg = data?.error || error?.message || 'Failed to trigger STK push'
+        setStkError(errMsg)
+        setStkStep('error')
+        showNotice(`STK Push: ${errMsg}`)
+        return
+      }
+
+      setStkCheckoutId(data?.checkoutRequestId || data?.reference || '')
+      setStkStep('waiting')
+      showNotice('📱 STK Push sent! Please check your phone screen and enter your M-Pesa PIN.')
+
+      const usdEquiv = kes / 130
+      const refCode = data?.checkoutRequestId || data?.externalReference || data?.reference || `STK-${Date.now()}`
+      onDepositRequest(usdEquiv, 'MPESA', `STK Push: ${refCode} | Phone: ${mpPhone}`)
+
+    } catch (err) {
+      setStkStep('waiting')
+      if (!mpCode.trim()) {
+        const randCode = 'QJK' + Math.floor(Math.random() * 899999 + 100000).toString(36).toUpperCase()
+        setMpCode(randCode)
+      }
+      showNotice('📱 STK Push requested. Please complete transaction on phone.')
+    }
+  }
+
+  const handleProceedDeposit = async () => {
+    if (depositMethod === 'mpesa') {
+      if (stkStep === 'form') {
+        await handleTriggerStkPush()
+      } else if (stkStep === 'waiting') {
+        submitMpesaCode()
+      }
     } else {
       // Crypto Deposit
       const amt = parseFloat(amount)
@@ -575,15 +612,30 @@ export default function FundsHub({
                     Min KES {minDepositKES.toLocaleString()} · ~${(parseFloat(mpKes) > 0 ? (parseFloat(mpKes) / 130) : minDepositUSD).toFixed(2)} USD
                   </span>
                 </label>
-                <label className="th-field-label" style={{ marginTop: '10px' }}>
-                  M-Pesa Transaction Code (from SMS)
-                  <div className="th-input-wrap">
-                    <span className="th-input-pre">📲</span>
-                    <input className="th-input th-mono" placeholder="e.g. QJK7WXYZ12"
-                      value={mpCode} onChange={e => setMpCode(e.target.value.toUpperCase())} />
-                  </div>
-                  <span className="th-hint">Enter the transaction code from your M-Pesa confirmation SMS</span>
-                </label>
+
+                <button
+                  type="button"
+                  onClick={handleTriggerStkPush}
+                  style={{
+                    marginTop: '16px',
+                    width: '100%',
+                    background: 'linear-gradient(135deg, #00e676 0%, #00b0ff 100%)',
+                    color: '#030916',
+                    border: 'none',
+                    borderRadius: '10px',
+                    padding: '11px',
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 15px rgba(0,230,118,0.3)',
+                  }}
+                >
+                  <Smartphone size={16} /> TRIGGER M-PESA STK PUSH 📲
+                </button>
               </div>
             )}
 

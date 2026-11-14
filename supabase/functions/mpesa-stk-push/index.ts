@@ -1,16 +1,27 @@
 /**
- * NEXSMARKETS — M-Pesa STK Push via PayHero
- * https://docs.payhero.co.ke
+ * NEXSMARKETS — M-Pesa STK Push Gateway Edge Function
+ * Supports UpesiPay API & PayHero API
  *
- * Required Supabase secrets (Dashboard → Edge Functions → Secrets):
- *   PAYHERO_BASIC_AUTH_TOKEN  — Full Basic token from PayHero dashboard (e.g. "Basic WjQ3...")
- *   PAYHERO_CHANNEL_ID        — Numeric channel ID from PayHero → Payment Channels
- *   PAYHERO_CALLBACK_URL      — Public URL PayHero will POST results to
- *                               e.g. https://gnuxadlnzyyvkobdnkaq.supabase.co/functions/v1/mpesa-callback
- *   APP_ORIGIN                — Your Vercel frontend URL e.g. https://cryptcoin.vercel.app
+ * Configurable Supabase Secrets (Dashboard → Edge Functions → Secrets):
+ *
+ * ── UPESIPAY GATEWAY CREDENTIALS ──
+ *   UPESIPAY_API_KEY      — Your API Username or Token e.g. "S4xI-GnBs6cZGIyvIw8g"
+ *   UPESIPAY_APP_KEY      — Your Merchant ID e.g. "XE386"
+ *   UPESIPAY_BASE_URL     — (Optional) Default: https://api.upesipay.com/v1
+ *   UPESIPAY_CALLBACK_URL — Public webhook URL for M-Pesa callbacks
+ *                           e.g. https://<project-ref>.supabase.co/functions/v1/mpesa-callback
+ *
+ * ── PAYHERO GATEWAY CREDENTIALS (FALLBACK) ──
+ *   PAYHERO_BASIC_AUTH_TOKEN  — Full Basic token from PayHero dashboard
+ *   PAYHERO_CHANNEL_ID        — Numeric channel ID from PayHero
+ *   PAYHERO_CALLBACK_URL      — Webhook callback URL
+ *
+ * ── COMMON ──
+ *   APP_ORIGIN                — Your frontend origin URL
  */
 
-const PAYHERO_BASE = 'https://backend.payhero.co.ke/api/v2'
+const DEFAULT_UPESIPAY_BASE = 'https://api.upesipay.com/v1'
+const DEFAULT_PAYHERO_BASE  = 'https://backend.payhero.co.ke/api/v2'
 
 const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
@@ -25,7 +36,7 @@ function respond(body: unknown, status = 200, origin = '*') {
   })
 }
 
-/** Normalise phone: 07XXXXXXXX → 2547XXXXXXXX */
+/** Normalise phone: 07XXXXXXXX or 01XXXXXXXX or +254... → 2547XXXXXXXX */
 function normalisePhone(phone: string): string {
   const clean = phone.replace(/\s+/g, '').replace(/^(\+254|254)/, '0')
   if (clean.startsWith('07') || clean.startsWith('01')) {
@@ -49,7 +60,7 @@ Deno.serve(async (req) => {
       ? origin
       : appUrl
 
-  // CORS preflight
+  // CORS preflight handling
   if (req.method === 'OPTIONS') {
     return new Response('ok', {
       headers: { ...corsHeaders, 'Access-Control-Allow-Origin': allowed },
@@ -60,44 +71,15 @@ Deno.serve(async (req) => {
     return respond({ error: 'Method not allowed.' }, 405, allowed)
   }
 
-  // Read credentials from Supabase secrets
-  const basicToken  = Deno.env.get('PAYHERO_BASIC_AUTH_TOKEN')
-  const channelId   = Deno.env.get('PAYHERO_CHANNEL_ID')
-  const callbackUrl = Deno.env.get('PAYHERO_CALLBACK_URL')
-
-  if (!basicToken) {
-    return respond(
-      { error: 'PAYHERO_BASIC_AUTH_TOKEN not configured. Add it to Supabase secrets.' },
-      503,
-      allowed
-    )
-  }
-
-  if (!channelId) {
-    return respond(
-      { error: 'PAYHERO_CHANNEL_ID not configured. Add it to Supabase secrets.' },
-      503,
-      allowed
-    )
-  }
-
-  if (!callbackUrl) {
-    return respond(
-      { error: 'PAYHERO_CALLBACK_URL not configured. Add it to Supabase secrets.' },
-      503,
-      allowed
-    )
-  }
-
-  // Parse request body
-  let body: { phone: string; amount: number; customerName?: string }
+  // Parse request payload
+  let body: { phone: string; amount: number; customerName?: string; reference?: string }
   try {
     body = await req.json()
   } catch {
     return respond({ error: 'Invalid JSON body.' }, 400, allowed)
   }
 
-  const { phone, amount, customerName = 'NEXSMARKETS CLIENT' } = body
+  const { phone, amount, customerName = 'NEXSMARKETS CLIENT', reference: userRef } = body
 
   if (!phone || !amount) {
     return respond({ error: 'phone and amount are required.' }, 400, allowed)
@@ -116,52 +98,118 @@ Deno.serve(async (req) => {
     )
   }
 
-  const externalReference = generateRef()
+  const externalReference = userRef || generateRef()
 
-  try {
-    const res = await fetch(`${PAYHERO_BASE}/payments`, {
-      method: 'POST',
-      headers: {
-        'Authorization': basicToken,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+  // 1. Check for UpesiPay Gateway Credentials
+  const upesiApiKey      = Deno.env.get('UPESIPAY_API_KEY')
+  const upesiAppKey      = Deno.env.get('UPESIPAY_APP_KEY')
+  const upesiBaseUrl     = Deno.env.get('UPESIPAY_BASE_URL') || DEFAULT_UPESIPAY_BASE
+  const upesiCallbackUrl = Deno.env.get('UPESIPAY_CALLBACK_URL') || Deno.env.get('PAYHERO_CALLBACK_URL')
+
+  // 2. Check for PayHero Credentials (Fallback)
+  const payheroToken     = Deno.env.get('PAYHERO_BASIC_AUTH_TOKEN')
+  const payheroChannelId = Deno.env.get('PAYHERO_CHANNEL_ID')
+  const payheroCallback  = Deno.env.get('PAYHERO_CALLBACK_URL')
+
+  // If UpesiPay credentials exist, use UpesiPay Gateway
+  if (upesiApiKey) {
+    try {
+      const upesiEndpoint = `${upesiBaseUrl.replace(/\/$/, '')}/stkpush`
+
+      const payload: Record<string, unknown> = {
+        api_username: upesiApiKey,
+        api_key: upesiApiKey,
+        merchant_id: upesiAppKey || 'XE386',
         amount: Math.ceil(amount),
+        phone: normalisedPhone,
         phone_number: normalisedPhone,
-        channel_id: Number(channelId),
-        provider: 'm-pesa',
-        external_reference: externalReference,
+        reference: externalReference,
+        account_reference: externalReference,
+        transaction_desc: `Deposit KES ${amount} to Real Account`,
+        description: `Deposit KES ${amount}`,
+        callback_url: upesiCallbackUrl || `${appUrl}/api/mpesa-callback`,
         customer_name: customerName,
-        callback_url: callbackUrl,
-      }),
-    })
+      }
 
-    type PayHeroResponse = {
-      success?: boolean
-      status?: string
-      reference?: string
-      CheckoutRequestID?: string
-      message?: string
-      error?: string
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Authorization': upesiApiKey.startsWith('Bearer ') ? upesiApiKey : `Bearer ${upesiApiKey}`,
+        'X-API-KEY': upesiApiKey,
+        'X-MERCHANT-ID': upesiAppKey || 'XE386',
+      }
+
+      const res = await fetch(upesiEndpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      })
+
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok || (data.success === false && data.status !== 'PENDING' && data.status !== 'SUCCESS')) {
+        const errorMsg = data.message || data.error || data.detail || `UpesiPay API returned error (${res.status})`
+        return respond({ error: errorMsg, gateway: 'UpesiPay' }, res.ok ? 400 : res.status, allowed)
+      }
+
+      return respond({
+        success: true,
+        gateway: 'UpesiPay',
+        message: 'STK Push sent! Please check your phone and enter your M-Pesa PIN.',
+        reference: data.reference || data.transaction_id || externalReference,
+        checkoutRequestId: data.CheckoutRequestID || data.checkout_id || data.transaction_id || externalReference,
+        externalReference,
+      }, 200, allowed)
+
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown network error'
+      return respond({ error: `UpesiPay STK Push failed: ${message}` }, 500, allowed)
     }
-
-    const data = await res.json() as PayHeroResponse
-
-    if (!res.ok || !data.success) {
-      const msg = data.message ?? data.error ?? `PayHero error: ${res.status}`
-      return respond({ error: msg }, res.ok ? 400 : res.status, allowed)
-    }
-
-    return respond({
-      success: true,
-      message: 'STK Push sent. Please check your phone and enter your M-Pesa PIN.',
-      reference: data.reference,
-      checkoutRequestId: data.CheckoutRequestID,
-      externalReference,
-    }, 201, allowed)
-
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    return respond({ error: `STK Push failed: ${message}` }, 500, allowed)
   }
+
+  // Fallback to PayHero if configured
+  if (payheroToken && payheroChannelId && payheroCallback) {
+    try {
+      const res = await fetch(`${DEFAULT_PAYHERO_BASE}/payments`, {
+        method: 'POST',
+        headers: {
+          'Authorization': payheroToken,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: Math.ceil(amount),
+          phone_number: normalisedPhone,
+          channel_id: Number(payheroChannelId),
+          provider: 'm-pesa',
+          external_reference: externalReference,
+          customer_name: customerName,
+          callback_url: payheroCallback,
+        }),
+      })
+
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok || !data.success) {
+        const msg = data.message ?? data.error ?? `PayHero error: ${res.status}`
+        return respond({ error: msg, gateway: 'PayHero' }, res.ok ? 400 : res.status, allowed)
+      }
+
+      return respond({
+        success: true,
+        gateway: 'PayHero',
+        message: 'STK Push sent. Please check your phone and enter your M-Pesa PIN.',
+        reference: data.reference,
+        checkoutRequestId: data.CheckoutRequestID,
+        externalReference,
+      }, 201, allowed)
+
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      return respond({ error: `PayHero STK Push failed: ${message}` }, 500, allowed)
+    }
+  }
+
+  // If no credentials configured
+  return respond({
+    error: 'M-Pesa Gateway credentials not configured. Please add UPESIPAY_API_KEY in Supabase secrets.',
+  }, 503, allowed)
 })

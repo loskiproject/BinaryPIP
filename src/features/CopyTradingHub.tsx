@@ -1,5 +1,8 @@
 import React, { useState } from 'react'
-import { Users, Star, Search, CheckCircle2, X, Shield, Sparkles, TrendingUp } from 'lucide-react'
+import { Users, Star, Search, CheckCircle2, Shield } from 'lucide-react'
+import { useCopyTrading } from './useCopyTrading'
+import MyActiveTraders from './MyActiveTraders'
+import CopyTraderModal from './CopyTraderModal'
 
 export interface MasterTrader {
   id: string
@@ -13,22 +16,16 @@ export interface MasterTrader {
   specialty: string
 }
 
-export interface ActiveCopySubscription {
-  traderId: string
-  traderName: string
-  amount: number
-  profitShare: number
-  estimatedReturn: number
-  startedAt: string
-}
-
 interface CopyTradingHubProps {
   userBalance: number
   userId?: string
   supabaseUrl?: string
   supabaseKey?: string
+  accountType?: 'real' | 'demo' | 'live'
   onAllocateBalance: (amount: number) => void
   showNotice: (msg: string) => void
+  onOpenDeposit?: () => void
+  onSwitchAccount?: () => void
 }
 
 const FIRST_NAMES = [
@@ -199,59 +196,39 @@ const generateAllTraders540 = (): MasterTrader[] => {
 
 const MASTER_TRADERS_540: MasterTrader[] = generateAllTraders540()
 
-export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supabaseKey, onAllocateBalance, showNotice }: CopyTradingHubProps) {
+export default function CopyTradingHub({
+  userBalance,
+  userId,
+  supabaseUrl,
+  supabaseKey,
+  accountType = 'demo',
+  onAllocateBalance,
+  showNotice,
+  onOpenDeposit,
+  onSwitchAccount,
+}: CopyTradingHubProps) {
   const [selectedTrader, setSelectedTrader] = useState<MasterTrader | null>(null)
-  const [allocationAmount, setAllocationAmount] = useState('100')
-  const [profitShare, setProfitShare] = useState('10')
   const [search, setSearch] = useState('')
   const [riskFilter, setRiskFilter] = useState<'All' | 'Low' | 'Medium' | 'High'>('All')
 
-  const [activeSubscriptions, setActiveSubscriptions] = useState<ActiveCopySubscription[]>([])
+  // Real-time copy trading subscriptions hook
+  const {
+    subscriptions,
+    loading: subsLoading,
+    startCopySubscription,
+    pauseSubscription,
+    resumeSubscription,
+    stopSubscription,
+  } = useCopyTrading({
+    userId,
+    supabaseUrl,
+    supabaseKey,
+    accountType,
+    onAllocateBalance,
+    showNotice,
+  })
+
   const [successModal, setSuccessModal] = useState<{ traderName: string; amount: number; estimatedReturn: number } | null>(null)
-
-  // Fetch persistent copy trading subscriptions from Supabase PostgreSQL database
-  React.useEffect(() => {
-    const fetchDbSubscriptions = async () => {
-      if (!supabaseUrl || !supabaseKey || !userId) {
-        try {
-          const localStr = localStorage.getItem(`binarypip_copy_subs_${userId || 'guest'}`)
-          if (localStr) setActiveSubscriptions(JSON.parse(localStr))
-        } catch {
-          // silent
-        }
-        return
-      }
-
-      try {
-        const res = await fetch(`${supabaseUrl}/rest/v1/user_copy_subscriptions?user_id=eq.${userId}&status=eq.active&select=*`, {
-          headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` },
-        })
-        if (res.ok) {
-          const rows = await res.json()
-          if (Array.isArray(rows)) {
-            const dbSubs: ActiveCopySubscription[] = rows.map((r: any) => ({
-              traderId: String(r.trader_id),
-              traderName: String(r.trader_name),
-              amount: Number(r.amount),
-              profitShare: Number(r.profit_share || 10),
-              estimatedReturn: Number(r.estimated_return || (Number(r.amount) * 1.85)),
-              startedAt: new Date(r.started_at || r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            }))
-            setActiveSubscriptions(dbSubs)
-            try {
-              localStorage.setItem(`binarypip_copy_subs_${userId}`, JSON.stringify(dbSubs))
-            } catch {
-              // silent
-            }
-          }
-        }
-      } catch {
-        // silent
-      }
-    }
-
-    void fetchDbSubscriptions()
-  }, [userId, supabaseUrl, supabaseKey])
 
   const filteredTraders = MASTER_TRADERS_540.filter(trader => {
     const matchesSearch = trader.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -261,131 +238,43 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
     return matchesSearch && matchesRisk
   })
 
-  // Dynamic Estimated Return Profit Calculation
-  const currentAllocAmt = parseFloat(allocationAmount) || 0
-  const winRateFactor = selectedTrader ? selectedTrader.winRate / 100 : 0.95
-  const riskMultiplier = selectedTrader ? (selectedTrader.risk === 'Low' ? 1.85 : selectedTrader.risk === 'Medium' ? 2.10 : 2.45) : 1.85
-  const estimatedReturnVal = (currentAllocAmt * winRateFactor * riskMultiplier)
-  const estimatedReturnFormatted = estimatedReturnVal.toFixed(2)
+  const handleConfirmModal = async (allocatedAmount: number, copyRatio: number, stopLossLimit: number | null) => {
+    if (!selectedTrader) return false
 
-  const handleStartCopying = () => {
-    if (!selectedTrader) return
-    const amt = parseFloat(allocationAmount)
-    if (!amt || isNaN(amt) || amt < 10) {
-      showNotice('Minimum capital allocation to copy trade is $10.00 USD.')
-      return
-    }
-    if (amt > userBalance) {
-      showNotice(`Insufficient total balance ($${userBalance.toFixed(2)} USD available). Lower your allocation amount or deposit funds.`)
-      return
+    const traderSnapshot = {
+      id: selectedTrader.id,
+      name: selectedTrader.name,
+      avatar: selectedTrader.avatar,
+      risk_level: selectedTrader.risk,
+      win_rate: selectedTrader.winRate,
+      specialty: selectedTrader.specialty,
     }
 
-    // Deduct allocation from user total balance
-    onAllocateBalance(amt)
+    const ok = await startCopySubscription(traderSnapshot, allocatedAmount, copyRatio, stopLossLimit)
 
-    const estimatedReturn = parseFloat(estimatedReturnFormatted)
+    if (ok) {
+      const winRateFactor = selectedTrader.winRate / 100
+      const riskMultiplier = selectedTrader.risk === 'Low' ? 1.85 : selectedTrader.risk === 'Medium' ? 2.10 : 2.45
+      const estReturn = allocatedAmount * winRateFactor * riskMultiplier * copyRatio
 
-    // Record subscription
-    const newSub: ActiveCopySubscription = {
-      traderId: selectedTrader.id,
-      traderName: selectedTrader.name,
-      amount: amt,
-      profitShare: parseFloat(profitShare) || 10,
-      estimatedReturn,
-      startedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      setSuccessModal({
+        traderName: selectedTrader.name,
+        amount: allocatedAmount,
+        estimatedReturn: estReturn,
+      })
+      setSelectedTrader(null)
+      return true
     }
-
-    const updated = [newSub, ...activeSubscriptions.filter(s => s.traderId !== newSub.traderId)]
-    setActiveSubscriptions(updated)
-
-    try {
-      localStorage.setItem(`binarypip_copy_subs_${userId || 'guest'}`, JSON.stringify(updated))
-    } catch {
-      // silent
-    }
-
-    // Save permanently to Supabase Database
-    if (supabaseUrl && supabaseKey && userId) {
-      try {
-        void fetch(`${supabaseUrl}/rest/v1/user_copy_subscriptions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`,
-            'Prefer': 'resolution=merge-duplicates',
-          },
-          body: JSON.stringify({
-            user_id: userId,
-            trader_id: selectedTrader.id,
-            trader_name: selectedTrader.name,
-            amount: amt,
-            profit_share: parseFloat(profitShare) || 10,
-            estimated_return: estimatedReturn,
-            status: 'active',
-            started_at: new Date().toISOString(),
-          }),
-        })
-      } catch {
-        // silent
-      }
-    }
-
-    const traderName = selectedTrader.name
-    setSelectedTrader(null)
-
-    // Show Confirmation Pop-Up Banner
-    setSuccessModal({
-      traderName,
-      amount: amt,
-      estimatedReturn,
-    })
+    return false
   }
 
-  const handleStopCopying = (sub: ActiveCopySubscription) => {
-    // Refund allocated balance back to main balance
-    onAllocateBalance(-sub.amount)
-    const updated = activeSubscriptions.filter(s => s.traderId !== sub.traderId)
-    setActiveSubscriptions(updated)
-
-    try {
-      localStorage.setItem(`binarypip_copy_subs_${userId || 'guest'}`, JSON.stringify(updated))
-    } catch {
-      // silent
-    }
-
-    // Update status to 'stopped' in Supabase PostgreSQL Database
-    if (supabaseUrl && supabaseKey && userId) {
-      try {
-        void fetch(`${supabaseUrl}/rest/v1/user_copy_subscriptions?user_id=eq.${userId}&trader_id=eq.${sub.traderId}&status=eq.active`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`,
-            'Prefer': 'return=minimal',
-          },
-          body: JSON.stringify({
-            status: 'stopped',
-            stopped_at: new Date().toISOString(),
-          }),
-        })
-      } catch {
-        // silent
-      }
-    }
-
-    showNotice(`Stopped copying ${sub.traderName}. $${sub.amount.toFixed(2)} capital returned to your balance.`)
-  }
+  const normAccountType = accountType === 'live' || accountType === 'real' ? 'real' : 'demo'
 
   return (
     <div style={{ width: '100%', maxWidth: '1000px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
       {/* ── HEADER BANNER ─────────────────────────────────────────────────── */}
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(7, 19, 38, 0.95) 0%, rgba(3, 9, 22, 0.98) 100%)',
-        border: '1px solid rgba(0, 230, 118, 0.25)',
-        boxShadow: '0 12px 35px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 230, 118, 0.1)',
+      <div className="cth-header-banner" style={{
         borderRadius: '20px',
         padding: '28px 24px',
         display: 'flex',
@@ -393,86 +282,39 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
         gap: '6px',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Users size={26} color="#00e676" />
-          <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#ffffff', margin: 0, letterSpacing: '-0.3px' }}>
+          <Users size={26} color="#10b981" />
+          <h1 className="cth-title" style={{ fontSize: '24px', fontWeight: 900, margin: 0, letterSpacing: '-0.3px' }}>
             Copy Trading Hub
           </h1>
         </div>
-        <p style={{ fontSize: '13.5px', color: '#a0aec0', margin: 0, lineHeight: 1.5 }}>
+        <p className="cth-sub" style={{ fontSize: '13.5px', margin: 0, lineHeight: 1.5 }}>
           Automatically mirror trades from top-performing professional master traders into your account in real time.
         </p>
       </div>
 
-      {/* ── ACTIVE COPY SUBSCRIPTIONS BANNER (IF ANY) ────────────────────── */}
-      {activeSubscriptions.length > 0 && (
-        <div style={{
-          background: 'rgba(0, 230, 118, 0.08)',
-          border: '1px solid rgba(0, 230, 118, 0.35)',
-          borderRadius: '16px',
-          padding: '20px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#00e676', fontWeight: 800, fontSize: '14px' }}>
-              <Sparkles size={18} />
-              <span>Active Copying Mirror ({activeSubscriptions.length})</span>
-            </div>
-            <span style={{ fontSize: '12px', color: '#a0aec0' }}>Checking balance for real-time profits made</span>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
-            {activeSubscriptions.map(sub => (
-              <div key={sub.traderId} style={{
-                background: '#071326',
-                border: '1px solid rgba(0, 230, 118, 0.3)',
-                borderRadius: '12px',
-                padding: '14px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}>
-                <div>
-                  <strong style={{ color: '#ffffff', fontSize: '14px', display: 'block' }}>{sub.traderName}</strong>
-                  <span style={{ fontSize: '12px', color: '#00e676', fontWeight: 700 }}>Allocated: ${sub.amount.toFixed(2)} USD</span>
-                  <span style={{ fontSize: '11px', color: '#00e5ff', display: 'block', marginTop: '1px', fontWeight: 700 }}>Projected Return: +${sub.estimatedReturn.toFixed(2)} USD</span>
-                  <span style={{ fontSize: '10px', color: '#a0aec0', display: 'block', marginTop: '2px' }}>Started at {sub.startedAt}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleStopCopying(sub)}
-                  style={{
-                    background: 'rgba(255, 23, 68, 0.15)',
-                    border: '1px solid rgba(255, 23, 68, 0.4)',
-                    color: '#ff1744',
-                    borderRadius: '8px',
-                    padding: '6px 12px',
-                    fontSize: '12px',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Stop &amp; Release
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* ── MY ACTIVE TRADERS DASHBOARD SECTION ────────────────────────────── */}
+      <div id="my-active-traders">
+        <MyActiveTraders
+          subscriptions={subscriptions}
+          accountType={accountType}
+          userBalance={userBalance}
+          onPause={pauseSubscription}
+          onResume={resumeSubscription}
+          onStop={stopSubscription}
+          loading={subsLoading}
+        />
+      </div>
 
       {/* ── SEARCH & RISK FILTER ROW ─────────────────────────────────────── */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Star size={20} color="#ffd700" fill="#ffd700" />
+        <div className="cth-section-heading" style={{ fontSize: '18px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Star size={20} color="#f59e0b" fill="#f59e0b" />
           <span>Top Master Traders ({MASTER_TRADERS_540.length} Available · A to Z)</span>
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
           {/* Search Box */}
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
+          <div className="cth-search-box" style={{
             borderRadius: '12px',
             padding: '8px 14px',
             display: 'flex',
@@ -480,16 +322,16 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
             gap: '8px',
             width: '220px',
           }}>
-            <Search size={15} color="#a0aec0" />
+            <Search size={15} color="#94a3b8" />
             <input
               type="text"
               placeholder="Search trader or strategy..."
               value={search}
               onChange={e => setSearch(e.target.value)}
+              className="cth-search-input"
               style={{
                 background: 'transparent',
                 border: 'none',
-                color: '#ffffff',
                 fontSize: '13px',
                 outline: 'none',
                 width: '100%',
@@ -498,16 +340,14 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
           </div>
 
           {/* Risk Filters */}
-          <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '3px' }}>
+          <div style={{ display: 'flex', borderRadius: '12px', padding: '3px' }}>
             {(['All', 'Low', 'Medium', 'High'] as const).map(rf => (
               <button
                 key={rf}
                 type="button"
                 onClick={() => setRiskFilter(rf)}
+                className={riskFilter === rf ? 'cth-filter-btn-active' : 'cth-filter-btn'}
                 style={{
-                  background: riskFilter === rf ? 'rgba(0, 230, 118, 0.2)' : 'transparent',
-                  color: riskFilter === rf ? '#00e676' : '#a0aec0',
-                  border: riskFilter === rf ? '1px solid rgba(0, 230, 118, 0.4)' : 'none',
                   borderRadius: '9px',
                   padding: '6px 12px',
                   fontSize: '12px',
@@ -526,16 +366,18 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
       {/* ── MASTER TRADERS GRID (CARDS) ─────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: '18px' }}>
         {filteredTraders.map(trader => {
-          const isCopied = activeSubscriptions.some(s => s.traderId === trader.id)
-          const riskColor = trader.risk === 'Low' ? '#00e676' : trader.risk === 'Medium' ? '#ffb300' : '#ff1744'
+          const isCopied = subscriptions.some(s => {
+            const sType = s.account_type === 'live' ? 'real' : s.account_type
+            return s.master_trader_id === trader.id && sType === normAccountType && s.status !== 'stopped'
+          })
+          const riskColor = trader.risk === 'Low' ? '#10b981' : trader.risk === 'Medium' ? '#f59e0b' : '#ef4444'
 
           return (
             <div
               key={trader.id}
+              className="cth-trader-card"
               style={{
-                background: '#071326',
-                border: isCopied ? '1.5px solid #00e676' : '1px solid rgba(255, 255, 255, 0.08)',
-                boxShadow: isCopied ? '0 0 20px rgba(0, 230, 118, 0.25)' : '0 10px 25px rgba(0, 0, 0, 0.5)',
+                border: isCopied ? '1.5px solid #10b981' : undefined,
                 borderRadius: '18px',
                 padding: '22px 20px',
                 display: 'flex',
@@ -560,7 +402,7 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
                   }}
                 />
                 <div>
-                  <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#ffffff', margin: 0, letterSpacing: '-0.2px' }}>
+                  <h3 className="cth-trader-name" style={{ fontSize: '17px', fontWeight: 900, margin: 0, letterSpacing: '-0.2px' }}>
                     {trader.name}
                   </h3>
                   <div style={{ fontSize: '12px', fontWeight: 800, color: riskColor, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -571,14 +413,12 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
               </div>
 
               {/* Bio */}
-              <p style={{ fontSize: '12.5px', color: '#a0aec0', lineHeight: 1.45, margin: 0, minHeight: '36px' }}>
+              <p className="cth-trader-bio" style={{ fontSize: '12.5px', lineHeight: 1.45, margin: 0, minHeight: '36px' }}>
                 {trader.bio}
               </p>
 
               {/* Stats Box */}
-              <div style={{
-                background: 'rgba(3, 20, 42, 0.85)',
-                border: '1px solid rgba(255, 255, 255, 0.06)',
+              <div className="cth-stats-box" style={{
                 borderRadius: '12px',
                 padding: '12px 14px',
                 display: 'grid',
@@ -587,44 +427,52 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
                 gap: '4px',
               }}>
                 <div>
-                  <span style={{ fontSize: '10px', fontWeight: 800, color: '#718096', textTransform: 'uppercase' }}>WIN RATE</span>
-                  <strong style={{ fontSize: '15px', fontWeight: 900, color: '#00e676', display: 'block', marginTop: '2px' }}>
+                  <span className="cth-stat-label" style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase' }}>WIN RATE</span>
+                  <strong style={{ fontSize: '15px', fontWeight: 900, color: '#10b981', display: 'block', marginTop: '2px' }}>
                     {trader.winRate}%
                   </strong>
                 </div>
                 <div>
-                  <span style={{ fontSize: '10px', fontWeight: 800, color: '#718096', textTransform: 'uppercase' }}>TOTAL PROFIT</span>
-                  <strong style={{ fontSize: '15px', fontWeight: 900, color: '#ffffff', display: 'block', marginTop: '2px' }}>
+                  <span className="cth-stat-label" style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase' }}>TOTAL PROFIT</span>
+                  <strong className="cth-stat-value" style={{ fontSize: '15px', fontWeight: 900, display: 'block', marginTop: '2px' }}>
                     ${trader.totalProfit.toLocaleString()}
                   </strong>
                 </div>
                 <div>
-                  <span style={{ fontSize: '10px', fontWeight: 800, color: '#718096', textTransform: 'uppercase' }}>COPIERS</span>
-                  <strong style={{ fontSize: '15px', fontWeight: 900, color: '#00e676', display: 'block', marginTop: '2px' }}>
+                  <span className="cth-stat-label" style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase' }}>COPIERS</span>
+                  <strong style={{ fontSize: '15px', fontWeight: 900, color: '#10b981', display: 'block', marginTop: '2px' }}>
                     {trader.copiers}
                   </strong>
                 </div>
               </div>
 
-              {/* Red-to-Yellow Gradient Copy Trader Button (Matches User Screenshot) */}
+              {/* Copy Trader Button */}
               <button
                 type="button"
-                onClick={() => setSelectedTrader(trader)}
+                onClick={() => {
+                  if (isCopied) {
+                    const el = document.getElementById('my-active-traders')
+                    if (el) el.scrollIntoView({ behavior: 'smooth' })
+                    showNotice(`You are currently copying ${trader.name}. Manage subscription above!`)
+                  } else {
+                    setSelectedTrader(trader)
+                  }
+                }}
                 style={{
                   width: '100%',
                   background: isCopied
-                    ? 'linear-gradient(135deg, #00e676 0%, #00b0ff 100%)'
-                    : 'linear-gradient(135deg, #ff1744 0%, #ffea00 100%)',
-                  color: '#030916',
-                  border: 'none',
+                    ? 'rgba(16, 185, 129, 0.15)'
+                    : 'linear-gradient(90deg, #ff512f, #f09819)',
+                  color: isCopied ? '#10b981' : '#ffffff',
+                  border: isCopied ? '1px solid #10b981' : 'none',
                   borderRadius: '12px',
                   padding: '13px',
                   fontSize: '14px',
                   fontWeight: 900,
                   cursor: 'pointer',
                   boxShadow: isCopied
-                    ? '0 6px 20px rgba(0, 230, 118, 0.4)'
-                    : '0 6px 20px rgba(255, 23, 68, 0.4)',
+                    ? '0 0 15px rgba(16, 185, 129, 0.2)'
+                    : '0 6px 20px rgba(255, 81, 47, 0.35)',
                   transition: 'transform 0.15s ease, boxShadow 0.15s ease',
                   display: 'flex',
                   alignItems: 'center',
@@ -634,8 +482,8 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
               >
                 {isCopied ? (
                   <>
-                    <CheckCircle2 size={16} color="#030916" />
-                    <span>Copying ({trader.name})</span>
+                    <CheckCircle2 size={16} color="#10b981" />
+                    <span>✓ Active (Manage)</span>
                   </>
                 ) : (
                   <span>Copy Trader</span>
@@ -646,196 +494,26 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
         })}
       </div>
 
-      {/* ── ALLOCATION MODAL (MATCHES USER SCREENSHOT 2) ────────────────── */}
+      {/* ── COPY TRADER CONFIGURATION MODAL ──────────────────────────────── */}
       {selectedTrader && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 99999,
-          background: 'rgba(3, 9, 22, 0.88)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '16px',
-        }} onClick={() => setSelectedTrader(null)}>
-          <div style={{
-            background: '#071326',
-            border: '1px solid rgba(0, 230, 118, 0.35)',
-            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.9), 0 0 30px rgba(0, 230, 118, 0.2)',
-            borderRadius: '20px',
-            padding: '32px 26px 24px',
-            maxWidth: '410px',
-            width: '100%',
-            textAlign: 'center',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '18px',
-            position: 'relative',
-          }} onClick={e => e.stopPropagation()}>
-            <button
-              type="button"
-              onClick={() => setSelectedTrader(null)}
-              style={{
-                position: 'absolute',
-                top: '16px',
-                right: '16px',
-                background: 'rgba(255, 255, 255, 0.08)',
-                border: 'none',
-                color: '#a0aec0',
-                borderRadius: '50%',
-                width: '32px',
-                height: '32px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-              }}
-            >
-              <X size={16} />
-            </button>
-
-            {/* Modal Title */}
-            <div>
-              <h2 style={{ fontSize: '22px', fontWeight: 900, color: '#ffffff', margin: 0 }}>
-                Copy {selectedTrader.name}
-              </h2>
-              <p style={{ fontSize: '13px', color: '#a0aec0', margin: '6px 0 0', lineHeight: 1.4 }}>
-                Set your capital allocation and profit share to start copying trades automatically.
-              </p>
-            </div>
-
-            {/* Form Fields */}
-            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '16px', textAlign: 'left' }}>
-              <div>
-                <label style={{ fontSize: '11px', fontWeight: 800, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>
-                  ALLOCATION AMOUNT ($) [MIN $10.00]
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="number"
-                    min="10"
-                    step="1"
-                    value={allocationAmount}
-                    onChange={e => setAllocationAmount(e.target.value)}
-                    style={{
-                      width: '100%',
-                      background: 'rgba(3, 20, 42, 0.85)',
-                      border: '1px solid rgba(255, 255, 255, 0.15)',
-                      borderRadius: '12px',
-                      padding: '13px 14px',
-                      fontSize: '16px',
-                      fontWeight: 700,
-                      color: '#ffffff',
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-                <span style={{ fontSize: '11px', color: '#00e676', marginTop: '4px', display: 'block' }}>
-                  Available Balance: ${userBalance.toFixed(2)} USD
-                </span>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '11px', fontWeight: 800, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>
-                  PROFIT SHARE PERCENTAGE (%)
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="50"
-                  value={profitShare}
-                  onChange={e => setProfitShare(e.target.value)}
-                  style={{
-                    width: '100%',
-                    background: 'rgba(3, 20, 42, 0.85)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    borderRadius: '12px',
-                    padding: '13px 14px',
-                    fontSize: '16px',
-                    fontWeight: 700,
-                    color: '#ffffff',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              {/* DYNAMIC ESTIMATED RETURN PROFIT CARD */}
-              <div style={{
-                background: 'rgba(0, 230, 118, 0.08)',
-                border: '1px solid rgba(0, 230, 118, 0.35)',
-                borderRadius: '12px',
-                padding: '12px 14px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '4px',
-              }}>
-                <span style={{ fontSize: '10px', fontWeight: 800, color: '#a0aec0', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <TrendingUp size={12} color="#00e676" /> ESTIMATED RETURN PROFIT
-                </span>
-                <strong style={{ fontSize: '20px', fontWeight: 900, color: '#00e676', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-                  +${estimatedReturnFormatted} USD
-                </strong>
-                <span style={{ fontSize: '11px', color: '#a0aec0' }}>
-                  Based on {selectedTrader.winRate}% Win Probability ({selectedTrader.risk} Risk Profile)
-                </span>
-              </div>
-            </div>
-
-            {/* Modal Buttons */}
-            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
-              <button
-                type="button"
-                onClick={handleStartCopying}
-                style={{
-                  width: '100%',
-                  background: 'linear-gradient(135deg, #ff1744 0%, #ffea00 100%)',
-                  color: '#030916',
-                  border: 'none',
-                  borderRadius: '12px',
-                  padding: '14px',
-                  fontSize: '15px',
-                  fontWeight: 900,
-                  cursor: 'pointer',
-                  boxShadow: '0 8px 22px rgba(255, 23, 68, 0.4)',
-                }}
-              >
-                Confirm &amp; Start Copying
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSelectedTrader(null)}
-                style={{
-                  width: '100%',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  color: '#ffffff',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  borderRadius: '12px',
-                  padding: '12px',
-                  fontSize: '14px',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+        <CopyTraderModal
+          trader={selectedTrader}
+          userBalance={userBalance}
+          accountType={accountType}
+          onClose={() => setSelectedTrader(null)}
+          onConfirm={handleConfirmModal}
+          showNotice={showNotice}
+          onOpenDeposit={onOpenDeposit}
+          onSwitchAccount={onSwitchAccount}
+        />
       )}
 
       {/* ── CONFIRMATION POP-UP BANNER MODAL ─────────────────────────────── */}
       {successModal && (
-        <div style={{
+        <div className="cth-modal-backdrop" style={{
           position: 'fixed',
           inset: 0,
           zIndex: 99999,
-          background: 'rgba(3, 9, 22, 0.88)',
           backdropFilter: 'blur(10px)',
           WebkitBackdropFilter: 'blur(10px)',
           display: 'flex',
@@ -843,10 +521,7 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
           justifyContent: 'center',
           padding: '16px',
         }} onClick={() => setSuccessModal(null)}>
-          <div style={{
-            background: '#071326',
-            border: '1px solid rgba(0, 230, 118, 0.4)',
-            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 35px rgba(0, 230, 118, 0.25)',
+          <div className="cth-modal-container" style={{
             borderRadius: '24px',
             padding: '36px 28px 28px',
             maxWidth: '440px',
@@ -864,29 +539,27 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
               width: '68px',
               height: '68px',
               borderRadius: '50%',
-              background: 'rgba(0, 230, 118, 0.15)',
-              border: '2px solid #00e676',
+              background: 'rgba(16, 185, 129, 0.15)',
+              border: '2px solid #10b981',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#00e676',
-              boxShadow: '0 0 24px rgba(0, 230, 118, 0.35)',
+              color: '#10b981',
+              boxShadow: '0 0 24px rgba(16, 185, 129, 0.35)',
             }}>
-              <CheckCircle2 size={36} color="#00e676" />
+              <CheckCircle2 size={36} color="#10b981" />
             </div>
 
             <div>
-              <span style={{ fontSize: '11px', fontWeight: 800, color: '#00e676', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: '#10b981', textTransform: 'uppercase', letterSpacing: '1px' }}>
                 COPY TRADING ACTIVATED
               </span>
-              <h2 style={{ fontSize: '22px', fontWeight: 900, color: '#ffffff', margin: '6px 0 0' }}>
+              <h2 className="cth-modal-title" style={{ fontSize: '22px', fontWeight: 900, margin: '6px 0 0' }}>
                 Copy Trading Started!
               </h2>
             </div>
 
-            <div style={{
-              background: 'rgba(3, 20, 42, 0.75)',
-              border: '1px solid rgba(0, 230, 118, 0.3)',
+            <div className="cth-metrics-box" style={{
               borderRadius: '14px',
               padding: '16px 18px',
               textAlign: 'left',
@@ -895,7 +568,7 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
               <div style={{
                 fontSize: '13px',
                 fontWeight: 700,
-                color: '#00e676',
+                color: '#10b981',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
@@ -903,20 +576,19 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
               }}>
                 📈 Live Trade Mirroring Active ({successModal.traderName})
               </div>
-              <p style={{
+              <p className="cth-modal-text" style={{
                 fontSize: '12.5px',
-                color: '#e2e8f0',
                 lineHeight: 1.6,
                 margin: 0,
               }}>
-                Your capital allocation of <strong style={{ color: '#00e676' }}>${successModal.amount.toFixed(2)} USD</strong> has been reserved to automatically mirror trades executed by <strong>{successModal.traderName}</strong>.
+                Your capital allocation of <strong style={{ color: '#10b981' }}>${successModal.amount.toFixed(2)} USD</strong> has been reserved to automatically mirror trades executed by <strong>{successModal.traderName}</strong>.
               </p>
               <div style={{
                 marginTop: '10px',
                 paddingTop: '10px',
                 borderTop: '1px solid rgba(255,255,255,0.08)',
                 fontSize: '13px',
-                color: '#00e676',
+                color: '#10b981',
                 fontWeight: 800,
                 display: 'flex',
                 alignItems: 'center',
@@ -927,7 +599,7 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
               <div style={{
                 marginTop: '6px',
                 fontSize: '11.5px',
-                color: '#ffd700',
+                color: '#f59e0b',
                 fontWeight: 700,
               }}>
                 💡 Tip: Check your balance regularly to monitor profits made!
@@ -939,7 +611,7 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
               onClick={() => setSuccessModal(null)}
               style={{
                 width: '100%',
-                background: 'linear-gradient(135deg, #00e676 0%, #00b0ff 100%)',
+                background: 'linear-gradient(135deg, #10b981 0%, #00b0ff 100%)',
                 color: '#030916',
                 border: 'none',
                 borderRadius: '12px',
@@ -947,10 +619,10 @@ export default function CopyTradingHub({ userBalance, userId, supabaseUrl, supab
                 fontSize: '14px',
                 fontWeight: 900,
                 cursor: 'pointer',
-                boxShadow: '0 8px 24px rgba(0, 230, 118, 0.35)',
+                boxShadow: '0 8px 24px rgba(16, 185, 129, 0.35)',
               }}
             >
-              Got It, Check Balance!
+              Got It, Check Active Traders!
             </button>
           </div>
         </div>
