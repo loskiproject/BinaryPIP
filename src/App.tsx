@@ -1616,22 +1616,22 @@ export default function App() {
       // 2. Target Specific Columns + Pagination Limit: Trades History (Limit 30)
       const { data: tradesData } = await client
         .from('trades')
-        .select('id, symbol, direction, lots, open_price, close_price, profit_loss, closed_at, created_at, status')
+        .select('id, symbol, direction, amount, entry_price, exit_price, profit_loss, closed_at, created_at, status')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(30)
 
       if (mounted && Array.isArray(tradesData) && tradesData.length > 0) {
         const closed = tradesData
-          .filter(t => t.status !== 'OPEN')
+          .filter(t => String(t.status).toLowerCase() !== 'open')
           .map(t => ({
             id: t.id,
             symbol: t.symbol,
-            type: t.direction as 'BUY' | 'SELL',
-            lots: Number(t.lots),
-            openPrice: Number(t.open_price),
-            closePrice: Number(t.close_price || t.open_price),
-            pnl: Number(t.profit_loss),
+            type: (t.direction ? String(t.direction).toUpperCase() : 'BUY') as 'BUY' | 'SELL',
+            lots: Number(t.amount || 1),
+            openPrice: Number(t.entry_price || 0),
+            closePrice: Number(t.exit_price || t.entry_price || 0),
+            pnl: Number(t.profit_loss || 0),
             closedAt: new Date(t.closed_at || t.created_at).toISOString().replace('T', ' ').substring(0, 19),
           }))
         if (closed.length > 0) {
@@ -1662,7 +1662,7 @@ export default function App() {
       // 3. Target Specific Columns + Pagination Limit: Transactions History (Limit 20 per page)
       const { data: transactionsData } = await client
         .from('transactions')
-        .select('id, type, amount, total_amount, method, gateway_network, reference_id, reference_code, details, status, created_at')
+        .select('id, type, amount, asset, method, reference_id, details, status, created_at')
         .or(`user_id.eq.${targetUserId}${user?.id && user.id !== targetUserId ? `,user_id.eq.${user.id}` : ''}`)
         .order('created_at', { ascending: false })
         .range(0, 19)
@@ -1674,9 +1674,9 @@ export default function App() {
             id: String(transaction.id),
             type: transaction.type,
             amount: Number(transaction.amount),
-            creditedAmount: Number(transaction.total_amount ?? transaction.amount),
-            network: String(transaction.method || transaction.gateway_network || transaction.details?.gateway_network || 'Other'),
-            reference: transaction.reference_id || transaction.reference_code || transaction.details?.reference_code || undefined,
+            creditedAmount: Number(transaction.amount),
+            network: String(transaction.method || transaction.details?.gateway_network || 'Other'),
+            reference: transaction.reference_id || transaction.details?.reference_code || undefined,
             status: ['approved', 'pending', 'rejected', 'flagged', 'completed'].includes(transaction.status) ? transaction.status : 'pending',
             createdAt: String(transaction.created_at || new Date().toISOString()),
           }))
@@ -4765,7 +4765,11 @@ export default function App() {
               refreshZoom()
               tickChart.update('none')
             }
-            window.setInterval(publishBalance, 1000)
+            window.setInterval(() => {
+              if (typeof (window as any).publishAccountData === 'function') {
+                (window as any).publishAccountData()
+              }
+            }, 1000)
             parent.postMessage({ type: 'EXSTRADE_TERMINAL_READY' }, location.origin)
           })()
         `
