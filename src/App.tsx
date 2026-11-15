@@ -4765,9 +4765,9 @@ export default function App() {
               refreshZoom()
               tickChart.update('none')
             }
-            window.setInterval(() => {
-              if (typeof (window as any).publishAccountData === 'function') {
-                (window as any).publishAccountData()
+            window.setInterval(function() {
+              if (typeof window.publishAccountData === 'function') {
+                window.publishAccountData()
               }
             }, 1000)
             parent.postMessage({ type: 'EXSTRADE_TERMINAL_READY' }, location.origin)
