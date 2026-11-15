@@ -1774,7 +1774,7 @@ export default function App() {
       if (debounceTimer) clearTimeout(debounceTimer)
       void client.removeChannel(channel)
     }
-  }, [user])
+  }, [user?.id, user?.email])
 
   // Deposit Addresses
   const [adminAddresses, setAdminAddresses] = useState<DepositAddress[]>(defaultAdminAddresses)
