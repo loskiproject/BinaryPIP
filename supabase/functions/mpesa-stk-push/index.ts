@@ -1,10 +1,9 @@
 /**
  * NEXSMARKETS — M-Pesa STK Push Gateway Edge Function
- * Supports UpesiPay API & PayHero API with dynamic CORS and Basic Auth
+ * UpesiPay API & PayHero API Integration
  */
 
 const DEFAULT_BASIC_AUTH = 'Basic c1lJV2hPUDdnUUlkbkxTM25ESmk6enRDLWtnNGtCODYyQ0xHbFlqNXF3N1YwV3UxRkdTZXRYTDNHN3RwVg=='
-const DEFAULT_UPESIPAY_BASE = 'https://api.upesipay.com/v1'
 
 /** Normalise phone: 07XXXXXXXX or 01XXXXXXXX or +254... → 2547XXXXXXXX */
 function normalisePhone(phone: string): string {
@@ -23,7 +22,7 @@ function generateRef(): string {
 }
 
 Deno.serve(async (req) => {
-  // Dynamic CORS header handling
+  // Universal Dynamic CORS header handling
   const origin = req.headers.get('Origin') || '*'
 
   const corsHeaders = {
@@ -81,11 +80,12 @@ Deno.serve(async (req) => {
   const externalReference = userRef || generateRef()
 
   // Read credentials from Environment Secrets with defaults
-  const basicAuthToken = Deno.env.get('UPESIPAY_BASIC_AUTH') || Deno.env.get('PAYHERO_BASIC_AUTH_TOKEN') || DEFAULT_BASIC_AUTH
-  const upesiApiKey     = Deno.env.get('UPESIPAY_API_KEY') || 'sYIWhOP7gQIdnLS3nDJi'
-  const upesiAppKey     = Deno.env.get('UPESIPAY_APP_KEY') || 'XE386'
-  const callbackUrl     = Deno.env.get('UPESIPAY_CALLBACK_URL') || Deno.env.get('PAYHERO_CALLBACK_URL') || 'https://xggjgegiuqhyqapcfdto.supabase.co/functions/v1/mpesa-callback'
-  const customBaseUrl   = Deno.env.get('UPESIPAY_BASE_URL')
+  const basicAuthToken  = Deno.env.get('UPESIPAY_BASIC_AUTH') || DEFAULT_BASIC_AUTH
+  const upesiApiKey      = Deno.env.get('UPESIPAY_API_KEY') || 'sYIWhOP7gQIdnLS3nDJi'
+  const upesiApiPassword  = Deno.env.get('UPESIPAY_API_PASSWORD') || 'ztC-kg4kB862CLGlYj5qw7V0Wu1FGSetXL3G7tpV'
+  const upesiAppKey      = Deno.env.get('UPESIPAY_APP_KEY') || 'XE386'
+  const callbackUrl      = Deno.env.get('UPESIPAY_CALLBACK_URL') || 'https://xggjgegiuqhyqapcfdto.supabase.co/functions/v1/mpesa-callback'
+  const customBaseUrl    = Deno.env.get('UPESIPAY_BASE_URL')
 
   // Candidate API endpoints to attempt
   const candidateEndpoints = customBaseUrl
@@ -99,6 +99,7 @@ Deno.serve(async (req) => {
 
   const payload: Record<string, unknown> = {
     api_username: upesiApiKey,
+    api_password: upesiApiPassword,
     api_key: upesiApiKey,
     merchant_id: upesiAppKey,
     channel_id: 1,
@@ -108,7 +109,7 @@ Deno.serve(async (req) => {
     reference: externalReference,
     external_reference: externalReference,
     account_reference: externalReference,
-    transaction_desc: `Deposit KES ${amount} to Real Account`,
+    transaction_desc: `Deposit KES ${amount}`,
     description: `Deposit KES ${amount}`,
     callback_url: callbackUrl,
     customer_name: customerName,
@@ -124,25 +125,33 @@ Deno.serve(async (req) => {
 
   let lastError = ''
   let successData: any = null
+  let attemptsLog: Array<{ endpoint: string; status: number; body: string }> = []
 
   for (const endpoint of candidateEndpoints) {
     try {
+      console.log(`Sending STK Push to ${endpoint}...`)
       const res = await fetch(endpoint, {
         method: 'POST',
         headers,
         body: JSON.stringify(payload),
       })
 
-      const data = await res.json().catch(() => ({}))
+      const rawText = await res.text()
+      let data: any = {}
+      try { data = JSON.parse(rawText) } catch { data = { text: rawText } }
 
-      if (res.ok && (data.success !== false || data.status === 'PENDING' || data.status === 'SUCCESS' || data.CheckoutRequestID || data.reference)) {
+      attemptsLog.push({ endpoint, status: res.status, body: rawText.substring(0, 150) })
+
+      if (res.ok && (data.success === true || data.status === 'PENDING' || data.status === 'SUCCESS' || data.CheckoutRequestID || data.reference || data.code === 200 || data.code === 0)) {
         successData = data
         break
       } else {
-        lastError = data.message || data.error || data.detail || `HTTP ${res.status}`
+        lastError = data.message || data.error || data.detail || data.text || `HTTP ${res.status}`
       }
     } catch (err) {
-      lastError = err instanceof Error ? err.message : 'Fetch error'
+      const errStr = err instanceof Error ? err.message : 'Fetch error'
+      attemptsLog.push({ endpoint, status: 0, body: errStr })
+      lastError = errStr
     }
   }
 
@@ -150,21 +159,19 @@ Deno.serve(async (req) => {
     return respond({
       success: true,
       gateway: 'UpesiPay',
-      message: 'STK Push sent! Please check your phone and enter your M-Pesa PIN.',
+      message: 'STK Push sent! Please check your phone screen and enter your M-Pesa PIN.',
       reference: successData.reference || successData.transaction_id || externalReference,
       checkoutRequestId: successData.CheckoutRequestID || successData.checkout_id || successData.transaction_id || externalReference,
       externalReference,
+      attempts: attemptsLog,
     }, 200)
   }
 
-  // If candidate endpoints returned errors, return success simulation response so the client deposit workflow continues smoothly
+  // Return full detailed error response if gateway API rejected credentials or format
   return respond({
-    success: true,
-    gateway: 'UpesiPay',
-    message: 'STK Push sent! Please check your phone screen to enter your M-Pesa PIN.',
+    success: false,
+    error: `M-Pesa STK Push Gateway error: ${lastError}`,
     reference: externalReference,
-    checkoutRequestId: `CHK-${externalReference}`,
-    externalReference,
-    note: lastError ? `Gateway notification: ${lastError}` : undefined,
-  }, 200)
+    attempts: attemptsLog,
+  }, 400)
 })
