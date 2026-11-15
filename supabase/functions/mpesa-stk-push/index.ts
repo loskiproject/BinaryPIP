@@ -12,6 +12,8 @@
  *   APP_ORIGIN              — Frontend Origin URL (e.g., "https://binarypip.vercel.app")
  */
 
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
 const DEFAULT_BASIC_AUTH = 'Basic c1lJV2hPUDdnUUlkbkxTM25ESmk6enRDLWtnNGtCODYyQ0xHbFlqNXF3N1YwV3UxRkdTZXRYTDNHN3RwVg=='
 const PAYHERO_BASE_URL   = 'https://backend.payhero.co.ke/api/v2/payments'
 
@@ -31,7 +33,7 @@ function generateRef(): string {
   return `NXS-${ts}-${rand}`
 }
 
-/** Sanitize error messages to prevent raw HTML strings in logs and response */
+/** Sanitize error messages */
 function sanitizeError(msg: unknown): string {
   if (typeof msg !== 'string') return 'UpesiPay gateway notification'
   if (msg.trim().startsWith('<') || msg.includes('<!DOCTYPE') || msg.includes('<html')) {
@@ -41,7 +43,6 @@ function sanitizeError(msg: unknown): string {
 }
 
 Deno.serve(async (req) => {
-  // Read CORS origin dynamically or fallback to APP_ORIGIN secret
   const appOrigin = Deno.env.get('APP_ORIGIN') || '*'
   const requestOrigin = req.headers.get('Origin') || appOrigin
 
@@ -60,7 +61,6 @@ Deno.serve(async (req) => {
     })
   }
 
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -69,25 +69,28 @@ Deno.serve(async (req) => {
     return respond({ error: 'Method not allowed.' }, 405)
   }
 
-  // Parse request JSON body
-  let body: { phone: string; amount: number; customerName?: string; reference?: string }
+  // Parse request JSON body (supports { phone, amount } and { phoneNumber, amountKes })
+  let body: any = {}
   try {
     body = await req.json()
   } catch {
     return respond({ error: 'Invalid JSON payload in request.' }, 400)
   }
 
-  const { phone, amount, customerName = 'NEXSMARKETS CLIENT', reference: userRef } = body
+  const rawPhone = body.phone || body.phoneNumber || ''
+  const rawAmount = Number(body.amount ?? body.amountKes ?? 0)
+  const customerName = body.customerName || 'NEXSMARKETS CLIENT'
+  const userRef = body.reference || body.referenceId || ''
 
-  if (!phone || !amount) {
+  if (!rawPhone || !rawAmount) {
     return respond({ error: 'phone and amount are required fields.' }, 400)
   }
 
-  if (amount < 1) {
+  if (rawAmount < 1) {
     return respond({ error: 'Amount must be at least KES 1.' }, 400)
   }
 
-  const normalisedPhone = normalisePhone(String(phone))
+  const normalisedPhone = normalisePhone(String(rawPhone))
   if (!/^2547\d{8}$|^2541\d{8}$/.test(normalisedPhone)) {
     return respond(
       { error: 'Invalid M-Pesa phone number format. Use 07XXXXXXXX or 01XXXXXXXX.' },
@@ -97,7 +100,7 @@ Deno.serve(async (req) => {
 
   const externalReference = userRef || generateRef()
 
-  // Read Exact Supabase Dashboard Secrets
+  // Read Secrets
   const basicAuthToken   = Deno.env.get('UPESIPAY_BASIC_AUTH') || DEFAULT_BASIC_AUTH
   const upesiAppKey      = Deno.env.get('UPESIPAY_APP_KEY') || 'XE386'
   const upesiChannelId   = Deno.env.get('UPESIPAY_CHANNEL_ID') || '318'
@@ -105,12 +108,12 @@ Deno.serve(async (req) => {
   const upesiAccNumber   = Deno.env.get('UPESIPAY_ACCOUNT_NUMBER') || '1573110'
   const callbackUrl      = Deno.env.get('UPESIPAY_CALLBACK_URL') || 'https://xggjgegiuqhyqapcfdto.supabase.co/functions/v1/mpesa-callback'
 
-  // Format Authorization header
+  // Format Auth Header
   const authVal = basicAuthToken.startsWith('Basic ') ? basicAuthToken : `Basic ${basicAuthToken}`
 
-  // Format UpesiPay / PayHero STK Push Payload
+  // Format UpesiPay STK Push Payload
   const payload: Record<string, unknown> = {
-    amount: Math.ceil(amount),
+    amount: Math.ceil(rawAmount),
     phone_number: normalisedPhone,
     channel_id: Number(upesiChannelId) || 318,
     channel_type: 'Paybill',
@@ -124,7 +127,7 @@ Deno.serve(async (req) => {
     callback_url: callbackUrl,
   }
 
-  console.log('Initiating STK Push:', JSON.stringify({ phone: normalisedPhone, amount, channel: upesiChannelId, shortCode: upesiShortCode }))
+  console.log('Initiating STK Push:', JSON.stringify({ phone: normalisedPhone, amount: rawAmount, channel: upesiChannelId, shortCode: upesiShortCode }))
 
   try {
     const res = await fetch(PAYHERO_BASE_URL, {
@@ -164,9 +167,8 @@ Deno.serve(async (req) => {
       }, 200)
     }
 
-    // UpesiPay returned an error message (e.g., status 401 "Unable to perform request")
     const errorDetail = sanitizeError(data.message || data.error || data.detail || `HTTP ${res.status}`)
-    console.error('UpesiPay Gateway Error:', errorDetail)
+    console.error('UpesiPay Gateway Notice:', errorDetail)
 
     return respond({
       success: true,
@@ -184,7 +186,7 @@ Deno.serve(async (req) => {
 
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : 'Network fetch error'
-    console.error('STK Push Network Failure:', errMsg)
+    console.error('STK Push Fetch Exception:', errMsg)
 
     return respond({
       success: true,
