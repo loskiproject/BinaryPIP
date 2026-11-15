@@ -2217,40 +2217,24 @@ export default function App() {
     const userEmail = user?.email || `user_${targetUserId.substring(0, 8)}@binarypip.com`
 
     try {
-      // 1. Ensure Profile exists without duplication
-      const { data: existingProf } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', targetUserId)
-        .maybeSingle()
+      // 1. Ensure Profile with ON CONFLICT DO NOTHING (Zero 409 Conflict errors)
+      await supabase.from('profiles').upsert({
+        id: targetUserId,
+        email: userEmail,
+        full_name: userName,
+        role: 'client',
+        account_status: 'active',
+        kyc_status: 'unverified',
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'id', ignoreDuplicates: true })
 
-      if (!existingProf) {
-        await supabase.from('profiles').insert({
-          id: targetUserId,
-          email: userEmail,
-          full_name: userName,
-          role: 'client',
-          account_status: 'active',
-          kyc_status: 'unverified',
-          updated_at: new Date().toISOString(),
-        })
-      }
-
-      // 2. Ensure Wallet exists without 409 Conflict
-      const { data: existingWallet } = await supabase
-        .from('wallets')
-        .select('id')
-        .eq('user_id', targetUserId)
-        .maybeSingle()
-
-      if (!existingWallet) {
-        await supabase.from('wallets').insert({
-          user_id: targetUserId,
-          live_balance: liveBalance,
-          demo_balance: demoBalance,
-          updated_at: new Date().toISOString(),
-        })
-      }
+      // 2. Ensure Wallet with ON CONFLICT DO NOTHING (Zero 409 Conflict errors)
+      await supabase.from('wallets').upsert({
+        user_id: targetUserId,
+        live_balance: liveBalance,
+        demo_balance: demoBalance,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id', ignoreDuplicates: true })
     } catch {
       // silent
     }
