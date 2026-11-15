@@ -184,6 +184,7 @@ Deno.serve(async (req) => {
       shortCode: upesiShortCode,
       accountNumber: upesiAccNumber,
       gatewayNotice: errorDetail,
+      rawUpesiResponse: data,
     }, 200)
 
   } catch (err) {
