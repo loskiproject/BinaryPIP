@@ -1,0 +1,333 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UpesiPay - Developer APIs Documentation</title>
+    <link rel="stylesheet" href="/static/css/docs.css">
+    <link rel="manifest" href="/static/site.webmanifest">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="theme-color" content="#3b82f6">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <!-- Left Section: Menu Icon, Logo, Logo Name -->
+            <div class="navbar-left">
+                <!-- Mobile Menu Button -->
+                <button class="mobile-menu-btn" aria-label="Toggle menu">
+                    <span class="hamburger"></span>
+                </button>
+
+                <!-- Logo and Brand -->
+                <a href="/" class="nav-logo">
+                    <img src="/static/images/logo2.png" alt="UpesiPay Logo" class="logo-icon" style="height: 2.2rem; width: auto; vertical-align: middle;" />
+                </a>
+            </div>
+
+            <!-- Right Section: Dark/Light Mode Switcher -->
+            <div class="navbar-right">
+                <button class="theme-btn" id="themeToggle" aria-label="Toggle dark mode">
+                    <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Mobile Sidebar -->
+    <aside class="mobile-sidebar" id="mobileSidebar">
+        <!-- Sidebar Header -->
+        <div class="sidebar-header">
+            <h2 class="sidebar-header-title">Navigation</h2>
+            <button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Close sidebar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <div class="sidebar-content">
+            <!-- API Credentials Section -->
+            <div class="sidebar-section">
+                <h3 class="sidebar-section-title"><i class="fas fa-key"></i> API Credentials</h3>
+                <div class="sidebar-form">
+                    <div class="form-group">
+                        <label for="api-username">API Username <span style="color: var(--text-secondary); font-weight: 400;">(20 chars)</span></label>
+                        <input type="text" id="api-username" placeholder="Enter your 20-character API username" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="api-password">API Password <span style="color: var(--text-secondary); font-weight: 400;">(40 chars)</span></label>
+                        <input type="password" id="api-password" placeholder="Enter your 40-character API password" class="form-input">
+                    </div>
+                    
+                    <!-- Auth Token Display Section -->
+                    <div class="form-group" id="bearer-token-section" style="display: none;">
+                        <label for="bearer-token">Auth Token</label>
+                        <div class="bearer-token-container">
+                            <input type="text" id="bearer-token" readonly class="form-input" placeholder="Basic auth token will appear here">
+                            <button class="bearer-token-copy-btn" id="bearer-token-copy-btn" title="Copy token">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                                </svg>
+                            </button>
+                        </div>
+                        <small class="sidebar-note" style="margin-top: 8px;">Generated automatically. Use this token in your API requests.</small>
+                    </div>
+                    
+                    <p class="sidebar-note">Your credentials are stored locally and used to generate Basic Auth token for API testing</p>
+                </div>
+            </div>
+
+            <!-- Getting Started Section -->
+            <div class="sidebar-section">
+                <button class="sidebar-dropdown-btn btn-bright-blue"><i class="fas fa-book"></i> Getting Started</button>
+                <div class="sidebar-dropdown">
+                    <a href="/docs/introduction" class="sidebar-link">Introduction</a>
+                    <a href="/docs/creating-account" class="sidebar-link">Creating Account</a>
+                    <a href="/docs/authorization" class="sidebar-link">Authorization</a>
+                </div>
+            </div>
+
+            <!-- Payment Channels Section -->
+            <div class="sidebar-section">
+                <button class="sidebar-dropdown-btn btn-bright-blue"><i class="fas fa-credit-card"></i> Payment Channels</button>
+                <div class="sidebar-dropdown">
+                    <a href="/docs/get-payment-channels" class="sidebar-link">Get Payment Channels</a>
+                    <a href="/docs/register-payment-channel" class="sidebar-link">Register Payment Channel</a>
+                    <a href="/docs/get-up-bank-paybills" class="sidebar-link">get UP Bank paybills</a>
+                </div>
+            </div>
+
+            <!-- Payments Section -->
+            <div class="sidebar-section">
+                <button class="sidebar-dropdown-btn btn-bright-blue"><i class="fas fa-money-bill"></i> Payments</button>
+                <div class="sidebar-dropdown">
+                    <a href="/docs/post-initiate-mpesa-stk-push-request" class="sidebar-link">Initiate MPESA STK Push</a>
+                    <a href="/docs/merchant-link" class="sidebar-link">Merchant Link</a>
+                    <a href="/docs/upesipay-paylink" class="sidebar-link">UpesiPay PayLink</a>
+                    <a href="/docs/payment-callback" class="sidebar-link">Payment Callback</a>
+                </div>
+            </div>
+
+            <!-- Wallets Section -->
+            <div class="sidebar-section">
+                <button class="sidebar-dropdown-btn btn-bright-blue"><i class="fas fa-wallet"></i> Wallets</button>
+                <div class="sidebar-dropdown">
+                    <a href="/docs/get-wallet-balances" class="sidebar-link">Get Wallet Balances</a>
+                    <a href="/docs/post-disbursement-wallet-top-up" class="sidebar-link">Disbursement Wallet Top Up</a>
+                    <a href="/docs/post-service-wallet-top-up" class="sidebar-link">Service Wallet Top Up</a>
+                    <a href="/docs/post-wallet-withdraw-to-mobile" class="sidebar-link">Wallet Withdraw to Mobile</a>
+                </div>
+            </div>
+
+            <!-- Transactions Section -->
+            <div class="sidebar-section">
+                <button class="sidebar-dropdown-btn btn-bright-blue"><i class="fas fa-history"></i> Transactions</button>
+                <div class="sidebar-dropdown">
+                    <a href="/docs/get-transaction-status" class="sidebar-link">Get Transaction Status</a>
+                    <a href="/docs/get-account-transactions" class="sidebar-link">Get Account Transactions</a>
+                </div>
+            </div>
+
+            <!-- Pricing Section -->
+            <div class="sidebar-section">
+                <button class="sidebar-dropdown-btn btn-bright-blue"><i class="fas fa-dollar-sign"></i> Pricing</button>
+                <div class="sidebar-dropdown">
+                    <a href="/docs/get-transaction-fees" class="sidebar-link">Get Transaction Fees</a>
+                </div>
+            </div>
+
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-container">
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="hero-content">
+                <h1 class="hero-title">UpesiPay Developer</h1>
+                <p class="hero-subtitle">Build seamless payment experiences with our powerful, easy-to-use APIs.</p>
+                <div class="hero-actions">
+                    <button class="btn btn-primary" onclick="document.getElementById('getting-started').scrollIntoView({behavior: 'smooth'})">Start Building</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Getting Started Section -->
+        <section id="getting-started" class="docs-section">
+            <div class="section-container">
+                <h2 class="section-title">Getting Started</h2>
+                
+                <div class="card-grid">
+                    <!-- Introduction Card -->
+                    <div class="card">
+                        <h3>Introduction</h3>
+                        <p>Welcome to UpesiPay Developer APIs - Your comprehensive guide to payment integration</p>
+                        <a href="/docs/introduction" class="card-link">Read more →</a>
+                    </div>
+
+                    <!-- Creating Account Card -->
+                    <div class="card">
+                        <h3>Creating Account</h3>
+                        <p>How to create your UpesiPay account and get started with API access.</p>
+                        <a href="/docs/creating-account" class="card-link">Read more →</a>
+                    </div>
+
+                    <!-- Authorization Card -->
+                    <div class="card">
+                        <h3>Authorization</h3>
+                        <p>How to authenticate with UpesiPay APIs using API keys and tokens.</p>
+                        <a href="/docs/authorization" class="card-link">Read more →</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- API Reference Section -->
+        <section id="api-reference" class="docs-section">
+            <div class="section-container">
+                <h2 class="section-title">API Documentation</h2>
+                
+                <!-- Payment Channels -->
+                <div class="api-section">
+                    <h3 class="api-section-title">Payment Channels</h3>
+                    <div class="api-endpoints">
+                        <div class="endpoint-card">
+                            <h4 class="endpoint-title">Get Payment Channels</h4>
+                            <p class="endpoint-description">Retrieve all your payment channels</p>
+                            <a href="/docs/get-payment-channels" class="card-link">Full documentation →</a>
+                        </div>
+
+                        <div class="endpoint-card">
+                            <h4 class="endpoint-title">Register Payment Channel</h4>
+                            <p class="endpoint-description">Register a new payment channel (paybill, till, or bank)</p>
+                            <a href="/docs/register-payment-channel" class="card-link">Full documentation →</a>
+                        </div>
+
+                        <div class="endpoint-card">
+                            <h4 class="endpoint-title">get UP Bank paybills</h4>
+                            <p class="endpoint-description">Fetch all registered bank paybills for your reference</p>
+                            <a href="/docs/get-up-bank-paybills" class="card-link">Full documentation →</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payments -->
+                <div class="api-section">
+                    <h3 class="api-section-title">Payments</h3>
+                    <div class="api-endpoints">
+                        <div class="endpoint-card">
+                            <h4 class="endpoint-title">Initiate MPESA STK Push</h4>
+                            <p class="endpoint-description">Initiate an MPESA STK Push request to a customer's phone</p>
+                            <a href="/docs/post-initiate-mpesa-stk-push-request" class="card-link">Full documentation →</a>
+                        </div>
+
+                        <div class="endpoint-card">
+                            <h4 class="endpoint-title">Merchant Link</h4>
+                            <p class="endpoint-description">Create and share your unique Merchant Link for payment collection</p>
+                            <a href="/docs/merchant-link" class="card-link">Full documentation →</a>
+                        </div>
+
+                        <div class="endpoint-card">
+                            <h4 class="endpoint-title">Upesipay PayLink</h4>
+                            <p class="endpoint-description">Learn how to use and customize your unique UpesiPay PayLink</p>
+                            <a href="/docs/upesipay-paylink" class="card-link">Full documentation →</a>
+                        </div>
+
+                        <div class="endpoint-card">
+                            <h4 class="endpoint-title">Payment Callback</h4>
+                            <p class="endpoint-description">Structure of the callback response received after a payment is processed</p>
+                            <a href="/docs/payment-callback" class="card-link">Full documentation →</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Wallets -->
+                <div class="api-section">
+                    <h3 class="api-section-title">Wallets</h3>
+                    <div class="api-endpoints">
+                        <div class="endpoint-card">
+                            <h4 class="endpoint-title">Get Wallet Balances</h4>
+                            <p class="endpoint-description">Retrieve both payment collection and service wallet balances</p>
+                            <a href="/docs/get-wallet-balances" class="card-link">Full documentation →</a>
+                        </div>
+
+                        <div class="endpoint-card">
+                            <h4 class="endpoint-title">Disbursement Wallet Top Up</h4>
+                            <p class="endpoint-description">Fund your disbursement wallet with a 5% fee applied before the net amount is credited.</p>
+                            <a href="/docs/post-disbursement-wallet-top-up" class="card-link">Full documentation →</a>
+                        </div>
+
+                        <div class="endpoint-card">
+                            <h4 class="endpoint-title">Service Wallet Top Up</h4>
+                            <p class="endpoint-description">Top up your service wallet. Get an MPESA prompt to complete the request</p>
+                            <a href="/docs/post-service-wallet-top-up" class="card-link">Full documentation →</a>
+                        </div>
+
+                        <div class="endpoint-card">
+                            <h4 class="endpoint-title">Wallet Withdraw to Mobile</h4>
+                            <p class="endpoint-description">Withdraw funds from your wallet to MPESA or Airtel Money</p>
+                            <a href="/docs/post-wallet-withdraw-to-mobile" class="card-link">Full documentation →</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transactions -->
+                <div class="api-section">
+                    <h3 class="api-section-title">Transactions</h3>
+                    <div class="api-endpoints">
+                        <div class="endpoint-card">
+                            <h4 class="endpoint-title">Get Transaction Status</h4>
+                            <p class="endpoint-description">Fetch the status of any payment transaction</p>
+                            <a href="/docs/get-transaction-status" class="card-link">Full documentation →</a>
+                        </div>
+
+                        <div class="endpoint-card">
+                            <h4 class="endpoint-title">Get Account Transactions</h4>
+                            <p class="endpoint-description">Retrieve all account transactions with pagination support</p>
+                            <a href="/docs/get-account-transactions" class="card-link">Full documentation →</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pricing Section -->
+        <section id="pricing" class="docs-section">
+            <div class="section-container">
+                <h2 class="section-title">Pricing</h2>
+                
+                <div class="guides-grid">
+                    <div class="guide-card">
+                        <h3>Get Transaction Fees</h3>
+                        <p>Get pricing for MPESA to Bank, Paybill, or Till number.</p>
+                        <a href="/docs/get-transaction-fees" class="btn btn-outline">View Guide</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="/static/js/docs.js"></script>
+</body>
+</html>

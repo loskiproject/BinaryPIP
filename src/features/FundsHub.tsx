@@ -382,7 +382,13 @@ export default function FundsHub({
 
       setStkCheckoutId(data?.checkoutRequestId || data?.reference || '')
       setStkStep('waiting')
-      showNotice('📱 STK Push sent! Please check your phone screen and enter your M-Pesa PIN.')
+
+      if (data?.gatewayNotice) {
+        setStkError(data.gatewayNotice)
+        showNotice(`⚠️ ${data.gatewayNotice}`)
+      } else {
+        showNotice('📱 STK Push sent! Please check your phone screen and enter your M-Pesa PIN.')
+      }
 
       const usdEquiv = kes / 130
       const refCode = data?.checkoutRequestId || data?.externalReference || data?.reference || `STK-${Date.now()}`
@@ -628,6 +634,11 @@ export default function FundsHub({
                 <Smartphone size={32} color="#00e676" />
                 <strong>Check your phone!</strong>
                 <p>Prompt sent to <b style={{color:'#20eb5a'}}>{mpPhone}</b> for KES {parseFloat(mpKes).toLocaleString()}</p>
+                {stkError && (
+                  <div style={{ background: 'rgba(245, 158, 11, 0.15)', border: '1px solid #f59e0b', borderRadius: '10px', padding: '10px 14px', color: '#f59e0b', fontSize: '12px', marginBottom: '10px', textAlign: 'center' }}>
+                    ⚠️ <strong>Gateway Notice:</strong> {stkError}
+                  </div>
+                )}
                 <label className="th-field-label" style={{width:'100%'}}>
                   M-Pesa Code (from SMS)
                   <input className="th-input th-mono" placeholder="e.g. QJK7WXYZ12"
