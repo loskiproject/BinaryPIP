@@ -368,7 +368,7 @@ export default function FundsHub({
         body: {
           phone: mpPhone,
           amount: kes,
-          customerName: 'NEXSMARKETS CLIENT',
+          customerName: 'BINARYPIP CLIENT',
         },
       })
 
