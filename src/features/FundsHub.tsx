@@ -612,30 +612,6 @@ export default function FundsHub({
                     Min KES {minDepositKES.toLocaleString()} · ~${(parseFloat(mpKes) > 0 ? (parseFloat(mpKes) / 130) : minDepositUSD).toFixed(2)} USD
                   </span>
                 </label>
-
-                <button
-                  type="button"
-                  onClick={handleTriggerStkPush}
-                  style={{
-                    marginTop: '16px',
-                    width: '100%',
-                    background: 'linear-gradient(135deg, #00e676 0%, #00b0ff 100%)',
-                    color: '#030916',
-                    border: 'none',
-                    borderRadius: '10px',
-                    padding: '11px',
-                    fontSize: '13px',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    boxShadow: '0 4px 15px rgba(0,230,118,0.3)',
-                  }}
-                >
-                  <Smartphone size={16} /> TRIGGER M-PESA STK PUSH 📲
-                </button>
               </div>
             )}
 
@@ -824,10 +800,36 @@ export default function FundsHub({
         </div>
       )}
 
-      {/* ── PROCEED BUTTON (Deposit) ─────────────────────────────────────── */}
+      {/* ── PROCEED / TRIGGER STK PUSH BUTTON (Deposit) ────────────────────── */}
       {tab === 'deposit' && stkStep === 'form' && (
-        <button className="th-proceed-btn th-proceed-full" onClick={handleProceedDeposit}>
-          <Zap size={16} /> PROCEED TO DEPOSIT
+        <button
+          className="th-proceed-btn th-proceed-full"
+          onClick={handleProceedDeposit}
+          style={depositMethod === 'mpesa' ? {
+            background: 'linear-gradient(135deg, #00e676 0%, #00b0ff 100%)',
+            color: '#030916',
+            boxShadow: '0 6px 20px rgba(0, 230, 118, 0.4)',
+          } : undefined}
+        >
+          {depositMethod === 'mpesa' ? (
+            <>
+              <Smartphone size={18} /> TRIGGER M-PESA STK PUSH 📲
+            </>
+          ) : (
+            <>
+              <Zap size={16} /> PROCEED TO DEPOSIT
+            </>
+          )}
+        </button>
+      )}
+
+      {tab === 'deposit' && stkStep === 'pushing' && (
+        <button
+          className="th-proceed-btn th-proceed-full"
+          disabled
+          style={{ opacity: 0.85, cursor: 'not-allowed', background: 'linear-gradient(135deg, #00e676 0%, #00b0ff 100%)', color: '#030916' }}
+        >
+          <RefreshCw size={18} className="th-spinner-icon" /> SENDING STK PUSH TO PHONE…
         </button>
       )}
 
