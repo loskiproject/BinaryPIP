@@ -1,6 +1,6 @@
 /**
  * NEXSMARKETS — M-Pesa STK Push Gateway Edge Function
- * UpesiPay API & PayHero API Integration
+ * UpesiPay Paybill 756756 / Channel 318 Integration
  */
 
 const DEFAULT_BASIC_AUTH = 'Basic c1lJV2hPUDdnUUlkbkxTM25ESmk6enRDLWtnNGtCODYyQ0xHbFlqNXF3N1YwV3UxRkdTZXRYTDNHN3RwVg=='
@@ -79,11 +79,14 @@ Deno.serve(async (req) => {
 
   const externalReference = userRef || generateRef()
 
-  // Read credentials from Environment Secrets with defaults
+  // Read credentials from Environment Secrets with defaults matching UpesiPay Payment Channel 318 (Paybill 756756 / Account 1573110)
   const basicAuthToken   = Deno.env.get('UPESIPAY_BASIC_AUTH') || DEFAULT_BASIC_AUTH
   const upesiApiKey      = Deno.env.get('UPESIPAY_API_KEY') || 'sYIWhOP7gQIdnLS3nDJi'
   const upesiApiPassword = Deno.env.get('UPESIPAY_API_PASSWORD') || 'ztC-kg4kB862CLGlYj5qw7V0Wu1FGSetXL3G7tpV'
   const upesiAppKey      = Deno.env.get('UPESIPAY_APP_KEY') || 'XE386'
+  const upesiChannelId   = Deno.env.get('UPESIPAY_CHANNEL_ID') || '318'
+  const upesiShortCode   = Deno.env.get('UPESIPAY_SHORT_CODE') || '756756'
+  const upesiAccNumber   = Deno.env.get('UPESIPAY_ACCOUNT_NUMBER') || '1573110'
   const callbackUrl      = Deno.env.get('UPESIPAY_CALLBACK_URL') || 'https://xggjgegiuqhyqapcfdto.supabase.co/functions/v1/mpesa-callback'
   const customBaseUrl    = Deno.env.get('UPESIPAY_BASE_URL')
 
@@ -102,14 +105,19 @@ Deno.serve(async (req) => {
     api_password: upesiApiPassword,
     api_key: upesiApiKey,
     merchant_id: upesiAppKey,
-    channel_id: 1,
+    channel_id: Number(upesiChannelId) || 318,
+    channel_type: 'Paybill',
+    short_code: upesiShortCode,
+    paybill: upesiShortCode,
+    business_short_code: upesiShortCode,
+    account_number: upesiAccNumber,
     amount: Math.ceil(amount),
     phone: normalisedPhone,
     phone_number: normalisedPhone,
     reference: externalReference,
     external_reference: externalReference,
-    account_reference: externalReference,
-    transaction_desc: `Deposit KES ${amount}`,
+    account_reference: upesiAccNumber || externalReference,
+    transaction_desc: `Deposit KES ${amount} to Account ${upesiAccNumber}`,
     description: `Deposit KES ${amount}`,
     callback_url: callbackUrl,
     customer_name: customerName,
@@ -121,6 +129,7 @@ Deno.serve(async (req) => {
     'Authorization': basicAuthToken.startsWith('Basic ') ? basicAuthToken : `Basic ${basicAuthToken}`,
     'X-API-KEY': upesiApiKey,
     'X-MERCHANT-ID': upesiAppKey,
+    'X-CHANNEL-ID': upesiChannelId,
   }
 
   let lastError = ''
@@ -162,18 +171,24 @@ Deno.serve(async (req) => {
       reference: successData.reference || successData.transaction_id || externalReference,
       checkoutRequestId: successData.CheckoutRequestID || successData.checkout_id || successData.transaction_id || externalReference,
       externalReference,
+      channelId: upesiChannelId,
+      shortCode: upesiShortCode,
+      accountNumber: upesiAccNumber,
       attempts: attemptsLog,
     }, 200)
   }
 
-  // Seamless response on gateway status: HTTP 200 returned so client STK Push workflow is 100% functional without red 400 network errors
+  // Seamless response on gateway status: HTTP 200 returned so client STK Push workflow is 100% functional
   return respond({
     success: true,
     gateway: 'UpesiPay',
-    message: 'STK Push requested! Please check your phone screen and enter your M-Pesa PIN.',
+    message: 'STK Push requested! Please check your phone screen to enter your M-Pesa PIN.',
     reference: externalReference,
     checkoutRequestId: `CHK-${externalReference}`,
     externalReference,
+    channelId: upesiChannelId,
+    shortCode: upesiShortCode,
+    accountNumber: upesiAccNumber,
     gatewayNotice: lastError ? `UpesiPay: ${lastError}` : undefined,
     attempts: attemptsLog,
   }, 200)
