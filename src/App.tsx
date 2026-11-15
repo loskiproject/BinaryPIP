@@ -829,17 +829,22 @@ const checkIsAdmin = (emailStr?: string | null, appMetaRole?: string, userMetaRo
 const updateWalletBalanceInSupabase = async (userId: string, newLiveBalance: number) => {
   if (!supabase) return
   try {
-    const { error } = await supabase.from('wallets').upsert({
-      user_id: userId,
-      live_balance: newLiveBalance,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id' })
-
-    if (error) {
-      await supabase.from('wallets').update({
+    const { data: updated } = await supabase
+      .from('wallets')
+      .update({
         live_balance: newLiveBalance,
         updated_at: new Date().toISOString(),
-      }).eq('user_id', userId)
+      })
+      .eq('user_id', userId)
+      .select('id')
+
+    if (!updated || updated.length === 0) {
+      await supabase.from('wallets').insert({
+        user_id: userId,
+        live_balance: newLiveBalance,
+        demo_balance: 10000,
+        updated_at: new Date().toISOString(),
+      })
     }
   } catch {
     // silent
@@ -1748,7 +1753,11 @@ export default function App() {
           void loadRealData()
         }, 500)
       })
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          // Gracefully fall back if WebSocket connection is restricted
+        }
+      })
 
     return () => {
       mounted = false

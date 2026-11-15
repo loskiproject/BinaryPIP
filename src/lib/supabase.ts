@@ -14,4 +14,10 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     persistSession: true,
     detectSessionInUrl: true,
   },
+  realtime: {
+    timeout: 15000,
+    params: {
+      eventsPerSecond: 10,
+    },
+  },
 })
