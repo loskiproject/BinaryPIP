@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
   const upesiShortCode   = Deno.env.get('UPESIPAY_SHORT_CODE') || '756756'
   const upesiAccNumber   = Deno.env.get('UPESIPAY_ACCOUNT_NUMBER') || '1573110'
   const callbackUrl      = Deno.env.get('UPESIPAY_CALLBACK_URL') || 'https://xggjgegiuqhyqapcfdto.supabase.co/functions/v1/mpesa-callback'
-  const upesiBaseUrl     = Deno.env.get('UPESIPAY_BASE_URL') || 'https://backend.upesipay.com/api/v2/payments'
+  const upesiBaseUrl     = Deno.env.get('UPESIPAY_BASE_URL') || 'https://backend.payhero.co.ke/api/v2/payments'
 
   // Format Authorization Header
   const authVal = basicAuthToken.startsWith('Basic ') ? basicAuthToken : `Basic ${basicAuthToken}`
