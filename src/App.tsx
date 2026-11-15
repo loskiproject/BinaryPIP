@@ -3678,11 +3678,11 @@ export default function App() {
                 </tr>
               </thead>
               <tbody>
-                {markedPositions.map((pos) => {
+                {markedPositions.map((pos, idx) => {
                   const quote = quotes.find((q) => q.symbol === pos.symbol)
                   const rawPrice = quote ? quote.price : pos.openPrice
                   return (
-                    <tr key={pos.id}>
+                    <tr key={`pos_${pos.id}_${idx}`}>
                       <td><code style={{ color: '#00e5ff', fontWeight: 700 }}>#{pos.id}</code></td>
                       <td><strong>{pos.symbol}</strong></td>
                       <td>
@@ -3752,8 +3752,8 @@ export default function App() {
                 </tr>
               </thead>
               <tbody>
-                {closedTrades.slice(0, 50).map((trade) => (
-                  <tr key={trade.id}>
+                {closedTrades.slice(0, 50).map((trade, idx) => (
+                  <tr key={`closed_trade_${trade.id}_${idx}`}>
                     <td><code>#{trade.id}</code></td>
                     <td><strong>{trade.symbol}</strong></td>
                     <td><span className={trade.type === 'BUY' ? 'ticker-up' : 'ticker-down'} style={{ fontWeight: 800 }}>{trade.type}</span></td>
@@ -3811,7 +3811,7 @@ export default function App() {
               <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', borderRadius: '24px' }}>
                 {[...Array(12)].map((_, i) => (
                   <div
-                    key={i}
+                    key={`profit_bubble_${i}`}
                     className="fhub-bubble"
                     style={{
                       left: `${6 + (i * 8)}%`,
