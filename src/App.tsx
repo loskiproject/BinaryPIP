@@ -1534,34 +1534,63 @@ export default function App() {
   const [minDepositUSD, setMinDepositUSD] = useState(10)
   const [minDepositKES, setMinDepositKES] = useState(1300)
 
-  // Fetch live deposit receiving addresses from Supabase admin_deposit_addresses
+  // Fetch live deposit receiving addresses from Supabase admin_deposit_addresses (with 10-min Client-side Cache)
   useEffect(() => {
     const client = supabase
     if (!client) return
+
+    const cacheKey = 'binarypip_cached_deposit_addrs'
+    const cacheTtlMs = 10 * 60 * 1000 // 10 minutes
+
+    try {
+      const cachedStr = sessionStorage.getItem(cacheKey)
+      if (cachedStr) {
+        const { timestamp, data } = JSON.parse(cachedStr)
+        if (Date.now() - timestamp < cacheTtlMs && Array.isArray(data) && data.length > 0) {
+          setAdminAddresses(data)
+          return
+        }
+      }
+    } catch {
+      // silent
+    }
+
     const fetchAdminDepositAddresses = async () => {
-      const { data } = await client.from('admin_deposit_addresses').select('*').eq('enabled', true)
+      // 1. Target Specific Columns
+      const { data } = await client
+        .from('admin_deposit_addresses')
+        .select('id, network, asset_name, wallet_address, note, enabled')
+        .eq('enabled', true)
+
       if (data && data.length > 0) {
-        setAdminAddresses(data.map((a: { id: string; network: string; asset_name: string; wallet_address: string; note: string; enabled: boolean }) => ({
+        const formatted = data.map((a: { id: string; network: string; asset_name: string; wallet_address: string; note: string; enabled: boolean }) => ({
           id: a.id,
           network: a.network,
           assetName: a.asset_name,
           address: a.wallet_address,
           note: a.note || '',
           enabled: a.enabled,
-        })))
+        }))
+        setAdminAddresses(formatted)
+        try {
+          sessionStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data: formatted }))
+        } catch {
+          // silent
+        }
       }
     }
     void fetchAdminDepositAddresses()
   }, [])
 
-  // Fetch real wallet balances and trade history directly from Supabase
+  // Fetch real wallet balances and trade history directly from Supabase (Optimized Queries & Pagination)
   useEffect(() => {
     const client = supabase
     if (!client || !user) return
     let mounted = true
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
     const loadRealData = async () => {
-      // 1. Fetch real wallet balances from public.wallets
+      // 1. Target Specific Columns: Wallet Balances
       const { data: walletData } = await client
         .from('wallets')
         .select('live_balance, demo_balance')
@@ -1584,12 +1613,13 @@ export default function App() {
         setDemoBalance(10000)
       }
 
-      // 2. Fetch real trades history from public.trades
+      // 2. Target Specific Columns + Pagination Limit: Trades History (Limit 30)
       const { data: tradesData } = await client
         .from('trades')
-        .select('*')
+        .select('id, symbol, direction, lots, open_price, close_price, profit_loss, closed_at, created_at, status')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
+        .limit(30)
 
       if (mounted && Array.isArray(tradesData) && tradesData.length > 0) {
         const closed = tradesData
@@ -1629,12 +1659,13 @@ export default function App() {
         }
       }
 
+      // 3. Target Specific Columns + Pagination Limit: Transactions History (Limit 20 per page)
       const { data: transactionsData } = await client
         .from('transactions')
         .select('id, type, amount, total_amount, method, gateway_network, reference_id, reference_code, details, status, created_at')
         .or(`user_id.eq.${targetUserId}${user?.id && user.id !== targetUserId ? `,user_id.eq.${user.id}` : ''}`)
         .order('created_at', { ascending: false })
-        .range(0, 49)
+        .range(0, 19)
 
       if (mounted && Array.isArray(transactionsData)) {
         const remoteFunding = transactionsData
@@ -1658,7 +1689,8 @@ export default function App() {
           // silent
         }
       }
-      // Fetch user profile trading mode from Supabase for Profit/Loss Allocation
+
+      // 4. Target Specific Columns: Trading Mode
       const { data: profData } = await client
         .from('profiles')
         .select('trading_mode')
@@ -1680,10 +1712,10 @@ export default function App() {
 
     void loadRealData()
 
-    // Supabase Realtime Subscriptions for live Admin edits (silent updates without popup notifications)
+    // 5. Optimized Supabase Realtime Subscriptions with User Filtering (Reduces Egress)
     const targetUserId = getValidUserId()
     const channel = client.channel(`realtime_user_${targetUserId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'wallets' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'wallets', filter: `user_id=eq.${targetUserId}` }, (payload) => {
         if (payload.new && typeof payload.new === 'object') {
           const newBal = Number((payload.new as { live_balance: number }).live_balance)
           if (Number.isFinite(newBal)) {
@@ -1691,7 +1723,7 @@ export default function App() {
           }
         }
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${targetUserId}` }, (payload) => {
         if (payload.new && typeof payload.new === 'object') {
           const profile = payload.new as { kyc_status?: string; account_status?: string; trading_mode?: string }
           if (profile.kyc_status) {
@@ -1710,13 +1742,17 @@ export default function App() {
           }
         }
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
-        void loadRealData()
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${targetUserId}` }, () => {
+        if (debounceTimer) clearTimeout(debounceTimer)
+        debounceTimer = setTimeout(() => {
+          void loadRealData()
+        }, 500)
       })
       .subscribe()
 
     return () => {
       mounted = false
+      if (debounceTimer) clearTimeout(debounceTimer)
       void client.removeChannel(channel)
     }
   }, [user])

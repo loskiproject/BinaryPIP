@@ -58,6 +58,24 @@ export function useCopyTrading({
 
     const storageKey = `binarypip_copy_subs_${userId}_${normAccountType}`
 
+    const cacheKey = `binarypip_cache_copy_subs_${userId}_${normAccountType}`
+    const cacheTtlMs = 5 * 60 * 1000 // 5 minutes cache
+
+    // Client-side Caching check
+    try {
+      const cachedStr = localStorage.getItem(cacheKey)
+      if (cachedStr) {
+        const { timestamp, data } = JSON.parse(cachedStr)
+        if (Date.now() - timestamp < cacheTtlMs && Array.isArray(data)) {
+          setSubscriptions(data)
+          setLoading(false)
+          return
+        }
+      }
+    } catch {
+      // silent
+    }
+
     if (!supabaseUrl || !supabaseKey) {
       try {
         const local = localStorage.getItem(storageKey)
@@ -77,7 +95,9 @@ export function useCopyTrading({
     try {
       setLoading(true)
       const accFilter = normAccountType === 'real' ? 'in.(real,live)' : 'eq.demo'
-      const url = `${supabaseUrl}/rest/v1/copy_subscriptions?follower_id=eq.${userId}&account_type=${accFilter}&status=neq.stopped&select=*`
+      // 1. Target Specific Columns + 2. Pagination Limit
+      const selectCols = 'id,follower_id,master_trader_id,master_trader_snapshot,account_type,allocated_amount,copy_ratio,stop_loss_limit,status,total_copied_profit,created_at'
+      const url = `${supabaseUrl}/rest/v1/copy_subscriptions?follower_id=eq.${userId}&account_type=${accFilter}&status=neq.stopped&select=${selectCols}&order=created_at.desc&limit=30`
 
       const res = await fetch(url, {
         headers: {
@@ -113,6 +133,7 @@ export function useCopyTrading({
           setSubscriptions(formatted)
           try {
             localStorage.setItem(storageKey, JSON.stringify(formatted))
+            localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data: formatted }))
           } catch {
             // silent
           }

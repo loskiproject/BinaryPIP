@@ -704,10 +704,11 @@ export default function AdminDashboard({ currentUser }: Props) {
     }
   }
 
-  // Fetch real audit logs from Supabase
+  // Fetch real audit logs from Supabase (Targeted Columns & Limit 50)
   const fetchAuditLogsFromDatabase = async () => {
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/audit_logs?select=*&order=created_at.desc&limit=100`, {
+      const selectCols = 'id,admin_id,admin_name,action,target_id,target_type,detail,severity,created_at'
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/audit_logs?select=${selectCols}&order=created_at.desc&limit=50`, {
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
       })
       if (!res.ok) return
@@ -742,14 +743,15 @@ export default function AdminDashboard({ currentUser }: Props) {
     }
   }
 
-  // Fetch real KYC document submissions & profiles from Supabase
+  // Fetch real KYC document submissions & profiles from Supabase (Targeted Columns & Limit 50)
   const fetchKycFromDatabase = async () => {
     try {
+      const docCols = 'id,user_id,original_name,document_type,status,submitted_at,storage_path'
       const [docsRes, profilesRes] = await Promise.all([
-        fetch(`${SUPABASE_URL}/rest/v1/profile_documents?select=*&order=submitted_at.desc`, {
+        fetch(`${SUPABASE_URL}/rest/v1/profile_documents?select=${docCols}&order=submitted_at.desc&limit=50`, {
           headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
         }),
-        fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id,full_name,email,kyc_status,document_type,document_number,home_address,created_at`, {
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id,full_name,email,kyc_status,document_type,document_number,home_address,created_at&limit=50`, {
           headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
         }),
       ])
@@ -847,14 +849,15 @@ export default function AdminDashboard({ currentUser }: Props) {
     }
   }
 
-  // Fetch real financial transactions from Supabase
+  // Fetch real financial transactions from Supabase (Targeted Columns & Limit 50)
   const fetchTransactionsFromDatabase = async () => {
     try {
+      const txnCols = 'id,user_id,type,amount,bonus_amount,total_amount,gateway_network,reference_code,status,admin_notes,created_at'
       const [txnsRes, profilesRes] = await Promise.all([
-        fetch(`${SUPABASE_URL}/rest/v1/transactions?select=*&order=created_at.desc`, {
+        fetch(`${SUPABASE_URL}/rest/v1/transactions?select=${txnCols}&order=created_at.desc&limit=50`, {
           headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
         }),
-        fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id,full_name,email`, {
+        fetch(`${SUPABASE_URL}/rest/v1/profiles?select=id,full_name,email&limit=50`, {
           headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
         }),
       ])
@@ -940,10 +943,11 @@ export default function AdminDashboard({ currentUser }: Props) {
     }
   }
 
-  // Fetch real payment gateway receiving addresses from Supabase
+  // Fetch real payment gateway receiving addresses from Supabase (Targeted Columns)
   const fetchGatewayFromDatabase = async () => {
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/admin_deposit_addresses?select=*&order=created_at.asc`, {
+      const gatewayCols = 'id,network,asset_name,wallet_address,note,enabled'
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/admin_deposit_addresses?select=${gatewayCols}&order=created_at.asc`, {
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
       })
       if (!res.ok) return
@@ -963,10 +967,10 @@ export default function AdminDashboard({ currentUser }: Props) {
     }
   }
 
-  // Fetch real platform settings from Supabase
+  // Fetch real platform settings from Supabase (Targeted Columns)
   const fetchSettingsFromDatabase = async () => {
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/system_settings?select=*`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/system_settings?select=key,value,updated_at`, {
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
       })
       if (!res.ok) return
