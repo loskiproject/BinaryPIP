@@ -34,22 +34,21 @@ Deno.serve(async (req) => {
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
 
     // Extract transaction references and payment status
-    // Supports UpesiPay, PayHero, and standard Daraja callback structures
     let isSuccess = false
     let externalRef = ''
     let mpesaReceipt = ''
     let amountPaid = 0
 
     // 1. UpesiPay / Generic Gateway Structure
-    if (payload.status || payload.result_code !== undefined) {
-      const statusStr = String(payload.status || '').toUpperCase()
+    if (payload.status || payload.result_code !== undefined || payload.ResultCode !== undefined) {
+      const statusStr = String(payload.status || payload.ResultDesc || '').toUpperCase()
       const resultCode = Number(payload.result_code ?? payload.ResultCode ?? -1)
 
       if (statusStr === 'SUCCESS' || statusStr === 'COMPLETED' || resultCode === 0) {
         isSuccess = true
       }
 
-      externalRef = payload.reference || payload.external_reference || payload.account_reference || ''
+      externalRef = payload.reference || payload.external_reference || payload.account_reference || payload.CheckoutRequestID || ''
       mpesaReceipt = payload.mpesa_reference || payload.receipt_number || payload.MpesaReceiptNumber || ''
       amountPaid = Number(payload.amount || 0)
     }
@@ -68,17 +67,17 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (isSuccess && externalRef) {
-      // Find matching pending transaction in Supabase
+    if (externalRef) {
+      // 1. Search primary 'transactions' table
       const { data: tx } = await supabaseAdmin
         .from('transactions')
         .select('*')
         .or(`reference_id.eq.${externalRef},details->>external_reference.eq.${externalRef}`)
-        .eq('status', 'pending')
+        .in('status', ['pending', 'PENDING'])
         .maybeSingle()
 
-      if (tx) {
-        // Update transaction status to approved
+      if (tx && isSuccess) {
+        // Mark transaction approved
         await supabaseAdmin
           .from('transactions')
           .update({
@@ -93,7 +92,7 @@ Deno.serve(async (req) => {
           })
           .eq('id', tx.id)
 
-        // Credit user wallet live balance
+        // Credit user's wallet live_balance
         const creditAmountUSD = tx.amount || (amountPaid > 0 ? amountPaid / 130 : 0)
 
         const { data: wallet } = await supabaseAdmin
@@ -106,9 +105,59 @@ Deno.serve(async (req) => {
           const currentBal = Number(wallet.live_balance || 0)
           await supabaseAdmin
             .from('wallets')
-            .update({ live_balance: currentBal + creditAmountUSD })
+            .update({
+              live_balance: currentBal + creditAmountUSD,
+              updated_at: new Date().toISOString()
+            })
             .eq('user_id', tx.user_id)
         }
+      } else if (tx && !isSuccess) {
+        // Mark transaction failed
+        await supabaseAdmin
+          .from('transactions')
+          .update({
+            status: 'rejected',
+            details: {
+              ...tx.details,
+              failure_reason: payload.message || payload.ResultDesc || 'Payment failed or cancelled',
+              completed_at: new Date().toISOString(),
+            },
+          })
+          .eq('id', tx.id)
+      }
+
+      // 2. Also search fallback 'mpesa_transactions' table if exists
+      try {
+        const { data: mpesaTx } = await supabaseAdmin
+          .from('mpesa_transactions')
+          .select('*')
+          .or(`reference.eq.${externalRef},gateway_reference.eq.${externalRef}`)
+          .in('status', ['PENDING', 'pending'])
+          .maybeSingle()
+
+        if (mpesaTx) {
+          if (isSuccess) {
+            await supabaseAdmin
+              .from('mpesa_transactions')
+              .update({
+                status: 'COMPLETED',
+                mpesa_receipt: mpesaReceipt || 'CONFIRMED',
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', mpesaTx.id)
+          } else {
+            await supabaseAdmin
+              .from('mpesa_transactions')
+              .update({
+                status: 'FAILED',
+                failure_reason: payload.message || 'Payment failed or cancelled',
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', mpesaTx.id)
+          }
+        }
+      } catch {
+        // silent
       }
     }
 
