@@ -2217,24 +2217,40 @@ export default function App() {
     const userEmail = user?.email || `user_${targetUserId.substring(0, 8)}@binarypip.com`
 
     try {
-      // 1. Ensure Profile with ON CONFLICT DO NOTHING (Zero 409 Conflict errors)
-      await supabase.from('profiles').upsert({
-        id: targetUserId,
-        email: userEmail,
-        full_name: userName,
-        role: 'client',
-        account_status: 'active',
-        kyc_status: 'unverified',
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'id', ignoreDuplicates: true })
+      // 1. Check if profile exists first (Zero 409 Conflict errors)
+      const { data: existingProf } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', targetUserId)
+        .maybeSingle()
 
-      // 2. Ensure Wallet with ON CONFLICT DO NOTHING (Zero 409 Conflict errors)
-      await supabase.from('wallets').upsert({
-        user_id: targetUserId,
-        live_balance: liveBalance,
-        demo_balance: demoBalance,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id', ignoreDuplicates: true })
+      if (!existingProf) {
+        await supabase.from('profiles').insert({
+          id: targetUserId,
+          email: userEmail,
+          full_name: userName,
+          role: 'client',
+          account_status: 'active',
+          kyc_status: 'unverified',
+          updated_at: new Date().toISOString(),
+        })
+      }
+
+      // 2. Check if wallet exists first (Zero 409 Conflict errors)
+      const { data: existingWallet } = await supabase
+        .from('wallets')
+        .select('id')
+        .eq('user_id', targetUserId)
+        .maybeSingle()
+
+      if (!existingWallet) {
+        await supabase.from('wallets').insert({
+          user_id: targetUserId,
+          live_balance: liveBalance,
+          demo_balance: demoBalance,
+          updated_at: new Date().toISOString(),
+        })
+      }
     } catch {
       // silent
     }
