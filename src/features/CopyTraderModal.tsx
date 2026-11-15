@@ -5,7 +5,7 @@ import type { MasterTrader } from './CopyTradingHub'
 interface CopyTraderModalProps {
   trader: MasterTrader
   userBalance: number
-  accountType: 'real' | 'demo' | 'live'
+  accountType: 'none' | 'real' | 'demo' | 'live'
   onClose: () => void
   onConfirm: (allocatedAmount: number, copyRatio: number, stopLossLimit: number | null) => Promise<boolean> | boolean
   showNotice: (msg: string) => void
@@ -223,7 +223,7 @@ export default function CopyTraderModal({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-              <AlertTriangle size={18} color="#ef4444" style={{ shrink: 0, marginTop: '2px' }} />
+              <AlertTriangle size={18} color="#ef4444" style={{ flexShrink: 0, marginTop: '2px' }} />
               <div>
                 <strong style={{ fontSize: '13px', color: '#ef4444', display: 'block' }}>
                   Insufficient {isDemo ? 'Demo' : 'Real'} Account Balance ($0.00)

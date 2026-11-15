@@ -28,7 +28,7 @@ interface UseCopyTradingOptions {
   userId?: string
   supabaseUrl?: string
   supabaseKey?: string
-  accountType?: 'real' | 'demo' | 'live'
+  accountType?: 'none' | 'real' | 'demo' | 'live'
   onAllocateBalance?: (amount: number) => void
   showNotice?: (msg: string) => void
 }

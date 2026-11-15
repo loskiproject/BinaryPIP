@@ -4,7 +4,7 @@ import type { CopySubscription } from './useCopyTrading'
 
 interface MyActiveTradersProps {
   subscriptions: CopySubscription[]
-  accountType: 'real' | 'demo' | 'live'
+  accountType: 'none' | 'real' | 'demo' | 'live'
   userBalance: number
   onPause: (subscriptionId: string) => void
   onResume: (subscriptionId: string) => void
@@ -26,7 +26,7 @@ export default function MyActiveTraders({
 
   // Filter subscriptions for current account type
   const activeSubs = subscriptions.filter(s => {
-    const sType = s.account_type === 'live' ? 'real' : s.account_type
+    const sType = s.account_type
     return sType === normAccountType && s.status !== 'stopped'
   })
 

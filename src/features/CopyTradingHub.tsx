@@ -21,7 +21,7 @@ interface CopyTradingHubProps {
   userId?: string
   supabaseUrl?: string
   supabaseKey?: string
-  accountType?: 'real' | 'demo' | 'live'
+  accountType?: 'none' | 'real' | 'demo' | 'live'
   onAllocateBalance: (amount: number) => void
   showNotice: (msg: string) => void
   onOpenDeposit?: () => void
@@ -367,7 +367,7 @@ export default function CopyTradingHub({
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: '18px' }}>
         {filteredTraders.map(trader => {
           const isCopied = subscriptions.some(s => {
-            const sType = s.account_type === 'live' ? 'real' : s.account_type
+            const sType = s.account_type
             return s.master_trader_id === trader.id && sType === normAccountType && s.status !== 'stopped'
           })
           const riskColor = trader.risk === 'Low' ? '#10b981' : trader.risk === 'Medium' ? '#f59e0b' : '#ef4444'
