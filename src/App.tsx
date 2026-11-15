@@ -2296,30 +2296,6 @@ export default function App() {
       }
     }
 
-    if (!transactionId && supabaseUrl && supabaseKey) {
-      try {
-        const restRes = await fetch(`${supabaseUrl}/rest/v1/transactions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`,
-            'Prefer': 'return=representation',
-          },
-          body: JSON.stringify(payload),
-        })
-        if (restRes.ok) {
-          const rows = await restRes.json()
-          if (Array.isArray(rows) && rows[0]) {
-            transactionId = String(rows[0].id)
-            createdAt = String(rows[0].created_at)
-          }
-        }
-      } catch {
-        // silent
-      }
-    }
-
     recordFundingHistory({
       id: transactionId,
       createdAt,
@@ -2369,30 +2345,6 @@ export default function App() {
         if (transaction) {
           transactionId = String(transaction.id)
           createdAt = String(transaction.created_at)
-        }
-      } catch {
-        // silent
-      }
-    }
-
-    if (!transactionId && supabaseUrl && supabaseKey) {
-      try {
-        const restRes = await fetch(`${supabaseUrl}/rest/v1/transactions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`,
-            'Prefer': 'return=representation',
-          },
-          body: JSON.stringify(payload),
-        })
-        if (restRes.ok) {
-          const rows = await restRes.json()
-          if (Array.isArray(rows) && rows[0]) {
-            transactionId = String(rows[0].id)
-            createdAt = String(rows[0].created_at)
-          }
         }
       } catch {
         // silent
@@ -2453,30 +2405,6 @@ export default function App() {
         if (transaction) {
           transactionId = String(transaction.id)
           createdAt = String(transaction.created_at)
-        }
-      } catch {
-        // silent
-      }
-    }
-
-    if (!transactionId && supabaseUrl && supabaseKey) {
-      try {
-        const restRes = await fetch(`${supabaseUrl}/rest/v1/transactions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`,
-            'Prefer': 'return=representation',
-          },
-          body: JSON.stringify(payload),
-        })
-        if (restRes.ok) {
-          const rows = await restRes.json()
-          if (Array.isArray(rows) && rows[0]) {
-            transactionId = String(rows[0].id)
-            createdAt = String(rows[0].created_at)
-          }
         }
       } catch {
         // silent
