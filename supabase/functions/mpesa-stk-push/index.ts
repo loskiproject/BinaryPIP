@@ -1,18 +1,18 @@
 /**
- * BINARYPIP — M-Pesa STK Push Gateway Edge Function (UpesiPay API Exclusively)
- * https://upesipay.com
+ * BINARYPIP — M-Pesa STK Push Gateway Edge Function (PayHero / UpesiPay API)
+ * https://backend.payhero.co.ke
  *
- * Environment Secrets (Supabase Dashboard → Edge Functions → Secrets):
- *   UPESIPAY_APP_KEY        — Merchant ID / App Key (e.g., "XE386")
- *   UPESIPAY_BASIC_AUTH     — Full Basic Authorization Token (e.g., "Basic c1lJV2hPUDdn...")
+ * Configured Supabase Secrets (Dashboard → Edge Functions → Secrets):
+ *   UPESIPAY_APP_KEY        — Merchant Account ID (e.g., "12949")
+ *   UPESIPAY_BASIC_AUTH     — Basic Authorization Token (e.g., "Basic a01UbWZFV...")
  *   UPESIPAY_SHORT_CODE     — Paybill / Short Code (e.g., "756756")
  *   UPESIPAY_ACCOUNT_NUMBER — Account Number (e.g., "1573110")
- *   UPESIPAY_CHANNEL_ID     — Channel ID (e.g., "318")
- *   UPESIPAY_CALLBACK_URL   — Webhook Callback URL
+ *   UPESIPAY_CHANNEL_ID     — Channel ID (e.g., "15369")
+ *   UPESIPAY_CALLBACK_URL   — Webhook URL (e.g., "https://xggjgegiuqhyqapcfdto.supabase.co/functions/v1/mpesa-callback")
  *   APP_ORIGIN              — Frontend Origin URL (e.g., "https://binarypip.vercel.app")
  */
 
-const DEFAULT_BASIC_AUTH = 'Basic c1lJV2hPUDdnUUlkbkxTM25ESmk6enRDLWtnNGtCODYyQ0xHbFlqNXF3N1YwV3UxRkdTZXRYTDNHN3RwVg=='
+const DEFAULT_BASIC_AUTH = 'Basic a01UbWZFVW1aOFNHV2RFNmtOVHE6VlBiZzlJMFhBRFlQd2YwNWNQM2Y2ajBMSnltNExwRTJCRXU3RTZZSw=='
 
 /** Normalise Kenyan phone numbers cleanly to 2547XXXXXXXX or 2541XXXXXXXX format */
 function normalisePhone(phone: string): string {
@@ -103,8 +103,8 @@ Deno.serve(async (req) => {
 
   // Read UpesiPay Secrets exclusively
   const basicAuthToken   = Deno.env.get('UPESIPAY_BASIC_AUTH') || DEFAULT_BASIC_AUTH
-  const upesiAppKey      = Deno.env.get('UPESIPAY_APP_KEY') || 'XE386'
-  const upesiChannelId   = Deno.env.get('UPESIPAY_CHANNEL_ID') || '318'
+  const upesiAppKey      = Deno.env.get('UPESIPAY_APP_KEY') || '12949'
+  const upesiChannelId   = Deno.env.get('UPESIPAY_CHANNEL_ID') || '15369'
   const upesiShortCode   = Deno.env.get('UPESIPAY_SHORT_CODE') || '756756'
   const upesiAccNumber   = Deno.env.get('UPESIPAY_ACCOUNT_NUMBER') || '1573110'
   const callbackUrl      = Deno.env.get('UPESIPAY_CALLBACK_URL') || 'https://xggjgegiuqhyqapcfdto.supabase.co/functions/v1/mpesa-callback'
@@ -113,11 +113,11 @@ Deno.serve(async (req) => {
   // Format Authorization Header
   const authVal = basicAuthToken.startsWith('Basic ') ? basicAuthToken : `Basic ${basicAuthToken}`
 
-  // Format Payload for UpesiPay STK Push API
+  // Format Payload for STK Push API
   const payload: Record<string, unknown> = {
     amount: Math.ceil(rawAmount),
     phone_number: normalisedPhone,
-    channel_id: Number(upesiChannelId) || 318,
+    channel_id: Number(upesiChannelId) || 15369,
     channel_type: 'Paybill',
     short_code: upesiShortCode,
     paybill: upesiShortCode,
@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
     callback_url: callbackUrl,
   }
 
-  console.log('Initiating UpesiPay STK Push to:', upesiBaseUrl, JSON.stringify({ phone: normalisedPhone, amount: rawAmount, channel: upesiChannelId, shortCode: upesiShortCode }))
+  console.log('Initiating M-Pesa STK Push to:', upesiBaseUrl, JSON.stringify({ phone: normalisedPhone, amount: rawAmount, channel: upesiChannelId, shortCode: upesiShortCode }))
 
   try {
     const res = await fetch(upesiBaseUrl, {
@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
       data = { raw: rawText }
     }
 
-    console.log(`UpesiPay Response (${res.status}):`, JSON.stringify(data))
+    console.log(`STK Push Response (${res.status}):`, JSON.stringify(data))
 
     if (res.ok && (data.success === true || data.status === 'PENDING' || data.status === 'SUCCESS' || data.CheckoutRequestID || data.reference)) {
       return respond({
@@ -170,7 +170,7 @@ Deno.serve(async (req) => {
     }
 
     const errorDetail = sanitizeError(data.message || data.error || data.detail || `HTTP ${res.status}`)
-    console.error(`UpesiPay Gateway Rejected (${res.status}):`, errorDetail, JSON.stringify(data))
+    console.error(`Gateway Rejected (${res.status}):`, errorDetail, JSON.stringify(data))
 
     return respond({
       success: true,
@@ -189,7 +189,7 @@ Deno.serve(async (req) => {
 
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : 'Network fetch error'
-    console.error('UpesiPay Network Exception:', errMsg)
+    console.error('Network Exception:', errMsg)
 
     return respond({
       success: true,
