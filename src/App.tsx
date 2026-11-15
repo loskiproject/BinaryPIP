@@ -1758,14 +1758,19 @@ export default function App() {
           void loadRealData()
         }, 500)
       })
-      .subscribe((status) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          // Gracefully fall back if WebSocket connection is restricted
-        }
-      })
+    let subscribeTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+      if (mounted) {
+        channel.subscribe((status) => {
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            // Gracefully fall back if WebSocket connection is restricted
+          }
+        })
+      }
+    }, 150)
 
     return () => {
       mounted = false
+      if (subscribeTimer) clearTimeout(subscribeTimer)
       if (debounceTimer) clearTimeout(debounceTimer)
       void client.removeChannel(channel)
     }
