@@ -2207,20 +2207,20 @@ export default function App() {
   }
 
   const ensureProfileAndWalletExistInSupabase = async (targetUserId: string) => {
-    if (!supabaseUrl || !supabaseKey) return
+    if (!supabase || !targetUserId) return
     const userName = user?.fullName || 'Client User'
     const userEmail = user?.email || `user_${targetUserId.substring(0, 8)}@binarypip.com`
 
     try {
-      await fetch(`${supabaseUrl}/rest/v1/profiles`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Prefer': 'resolution=merge-duplicates',
-        },
-        body: JSON.stringify({
+      // 1. Ensure Profile exists without duplication
+      const { data: existingProf } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', targetUserId)
+        .maybeSingle()
+
+      if (!existingProf) {
+        await supabase.from('profiles').insert({
           id: targetUserId,
           email: userEmail,
           full_name: userName,
@@ -2228,24 +2228,24 @@ export default function App() {
           account_status: 'active',
           kyc_status: 'unverified',
           updated_at: new Date().toISOString(),
-        }),
-      })
+        })
+      }
 
-      await fetch(`${supabaseUrl}/rest/v1/wallets`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Prefer': 'resolution=merge-duplicates',
-        },
-        body: JSON.stringify({
+      // 2. Ensure Wallet exists without 409 Conflict
+      const { data: existingWallet } = await supabase
+        .from('wallets')
+        .select('id')
+        .eq('user_id', targetUserId)
+        .maybeSingle()
+
+      if (!existingWallet) {
+        await supabase.from('wallets').insert({
           user_id: targetUserId,
           live_balance: liveBalance,
           demo_balance: demoBalance,
           updated_at: new Date().toISOString(),
-        }),
-      })
+        })
+      }
     } catch {
       // silent
     }
