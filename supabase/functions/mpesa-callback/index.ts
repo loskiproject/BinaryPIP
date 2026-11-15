@@ -1,6 +1,6 @@
 /**
- * BINARYPIP — M-Pesa Callback Webhook Edge Function (UpesiPay API)
- * Receives real-time payment status webhooks from UpesiPay.
+ * BINARYPIP — M-Pesa Callback Webhook Edge Function (PayHero API Exclusively)
+ * Receives real-time payment status webhooks from PayHero / M-Pesa.
  *
  * Callback URL:
  *   https://xggjgegiuqhyqapcfdto.supabase.co/functions/v1/mpesa-callback
@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
 
   try {
     const payload = await req.json().catch(() => ({}))
-    console.log('Received UpesiPay Callback Payload:', JSON.stringify(payload))
+    console.log('Received PayHero Callback Payload:', JSON.stringify(payload))
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
 
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
 
-    // Extract UpesiPay Webhook JSON payload structures
+    // Extract PayHero Webhook JSON payload structures
     let isSuccess = false
     let externalRef = ''
     let mpesaReceipt = ''
@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
     mpesaReceipt = payload.mpesa_reference || payload.receipt_number || responseObj.MpesaReceiptNumber || responseObj.MpesaReference || ''
     amountPaid = Number(payload.amount ?? responseObj.Amount ?? 0)
 
-    console.log('Parsed UpesiPay Callback:', JSON.stringify({ isSuccess, externalRef, mpesaReceipt, amountPaid }))
+    console.log('Parsed PayHero Callback:', JSON.stringify({ isSuccess, externalRef, mpesaReceipt, amountPaid }))
 
     if (externalRef) {
       // 1. Primary Table: 'public.transactions'
@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
       headers: { 'Content-Type': 'application/json' },
     })
   } catch (err) {
-    console.error('UpesiPay Callback error:', err)
+    console.error('PayHero Callback error:', err)
     return new Response(JSON.stringify({ status: 'error', message: String(err) }), { status: 500 })
   }
 })
