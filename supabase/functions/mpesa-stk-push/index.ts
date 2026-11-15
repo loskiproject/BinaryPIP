@@ -1,10 +1,9 @@
 /**
  * NEXSMARKETS — M-Pesa STK Push Gateway Edge Function
- * Clean JSON API Gateway with Multi-Header Auth & HTML Error Sanitization
+ * UpesiPay / PayHero Paybill 756756 / Channel 318 Integration
  */
 
 const DEFAULT_BASIC_AUTH = 'Basic c1lJV2hPUDdnUUlkbkxTM25ESmk6enRDLWtnNGtCODYyQ0xHbFlqNXF3N1YwV3UxRkdTZXRYTDNHN3RwVg=='
-const DEFAULT_RAW_TOKEN  = 'c1lJV2hPUDdnUUlkbkxTM25ESmk6enRDLWtnNGtCODYyQ0xHbFlqNXF3N1YwV3UxRkdTZXRYTDNHN3RwVg=='
 
 /** Normalise phone: 07XXXXXXXX or 01XXXXXXXX or +254... → 2547XXXXXXXX */
 function normalisePhone(phone: string): string {
@@ -22,11 +21,11 @@ function generateRef(): string {
   return `NXS-${ts}-${rand}`
 }
 
-/** Sanitize error messages to prevent raw HTML strings */
+/** Sanitize error messages */
 function sanitizeError(msg: unknown): string {
   if (typeof msg !== 'string') return 'Gateway temporary notice'
   if (msg.trim().startsWith('<') || msg.includes('<!DOCTYPE') || msg.includes('<html')) {
-    return 'UpesiPay API endpoint unreachable or protected by security filter'
+    return 'UpesiPay API endpoint unreachable'
   }
   return msg.length > 200 ? msg.substring(0, 200) + '...' : msg
 }
@@ -99,13 +98,10 @@ Deno.serve(async (req) => {
   const callbackUrl      = Deno.env.get('UPESIPAY_CALLBACK_URL') || 'https://xggjgegiuqhyqapcfdto.supabase.co/functions/v1/mpesa-callback'
   const customBaseUrl    = Deno.env.get('UPESIPAY_BASE_URL')
 
-  // Only attempt strict JSON API backend endpoints (NO HTML website URLs)
+  // Target valid PayHero / UpesiPay API backend
   const apiEndpoints = customBaseUrl
-    ? [`${customBaseUrl.replace(/\/$/, '')}/payments`, customBaseUrl]
-    : [
-        'https://backend.payhero.co.ke/api/v2/payments',
-        'https://backend.upesipay.com/api/v2/payments',
-      ]
+    ? [`${customBaseUrl.replace(/\/$/, '')}/payments`]
+    : ['https://backend.payhero.co.ke/api/v2/payments']
 
   const payload: Record<string, unknown> = {
     api_username: upesiApiKey,
@@ -131,49 +127,38 @@ Deno.serve(async (req) => {
     provider: 'm-pesa',
   }
 
-  // Header authorization variations
-  const authHeaderVariations = [
-    rawBasicAuth.startsWith('Basic ') ? rawBasicAuth : `Basic ${rawBasicAuth}`,
-    DEFAULT_RAW_TOKEN,
-    `Bearer ${upesiApiKey}`,
-  ]
+  const authVal = rawBasicAuth.startsWith('Basic ') ? rawBasicAuth : `Basic ${rawBasicAuth}`
 
   let successData: any = null
   let lastErrorMsg = ''
 
-  endpointLoop: for (const endpoint of apiEndpoints) {
-    for (const authVal of authHeaderVariations) {
-      try {
-        const res = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': authVal,
-            'X-API-KEY': upesiApiKey,
-            'X-MERCHANT-ID': upesiAppKey,
-            'X-CHANNEL-ID': upesiChannelId,
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-          },
-          body: JSON.stringify(payload),
-        })
+  for (const endpoint of apiEndpoints) {
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authVal,
+          'X-API-KEY': upesiApiKey,
+          'X-MERCHANT-ID': upesiAppKey,
+          'X-CHANNEL-ID': upesiChannelId,
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        },
+        body: JSON.stringify(payload),
+      })
 
-        const contentType = res.headers.get('content-type') || ''
-        if (!contentType.includes('application/json')) {
-          lastErrorMsg = `Endpoint returned non-JSON content (${res.status})`
-          continue
-        }
+      const rawText = await res.text()
+      let data: any = {}
+      try { data = JSON.parse(rawText) } catch { data = { text: rawText } }
 
-        const data = await res.json().catch(() => ({}))
-
-        if (res.ok && (data.success === true || data.status === 'PENDING' || data.status === 'SUCCESS' || data.CheckoutRequestID || data.reference || data.code === 200 || data.code === 0)) {
-          successData = data
-          break endpointLoop
-        } else {
-          lastErrorMsg = sanitizeError(data.message || data.error || data.detail || `HTTP ${res.status}`)
-        }
-      } catch (err) {
-        lastErrorMsg = sanitizeError(err instanceof Error ? err.message : 'Network fetch error')
+      if (res.ok && (data.success === true || data.status === 'PENDING' || data.status === 'SUCCESS' || data.CheckoutRequestID || data.reference || data.code === 200 || data.code === 0)) {
+        successData = data
+        break
+      } else {
+        lastErrorMsg = sanitizeError(data.message || data.error || data.detail || `HTTP ${res.status}`)
       }
+    } catch (err) {
+      lastErrorMsg = sanitizeError(err instanceof Error ? err.message : 'Network fetch error')
     }
   }
 
@@ -192,7 +177,7 @@ Deno.serve(async (req) => {
     }, 200)
   }
 
-  // Sanitized fallback response so UI never displays HTML error code
+  // Graceful fallback response showing clear action steps for UpesiPay notice
   return respond({
     success: true,
     isRealStkPush: false,
