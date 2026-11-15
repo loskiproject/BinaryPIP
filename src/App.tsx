@@ -1594,12 +1594,17 @@ export default function App() {
     let mounted = true
     let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
+    const isValidUuidStr = (str?: string): boolean =>
+      typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)
+
+    const validUuid = isValidUuidStr(user.id) ? user.id : getValidUserId()
+
     const loadRealData = async () => {
       // 1. Target Specific Columns: Wallet Balances
       const { data: walletData } = await client
         .from('wallets')
         .select('live_balance, demo_balance')
-        .eq('user_id', user.id)
+        .eq('user_id', validUuid)
         .maybeSingle()
 
       if (mounted && walletData) {
@@ -1622,7 +1627,7 @@ export default function App() {
       const { data: tradesData } = await client
         .from('trades')
         .select('id, symbol, direction, amount, entry_price, exit_price, profit_loss, closed_at, created_at, status')
-        .eq('user_id', user.id)
+        .eq('user_id', validUuid)
         .order('created_at', { ascending: false })
         .limit(30)
 
@@ -1648,7 +1653,7 @@ export default function App() {
         }
       }
 
-      let targetUserId = user?.id || getValidUserId()
+      let targetUserId = validUuid
       if (user?.email) {
         try {
           const { data: dbProf } = await client
@@ -1656,7 +1661,7 @@ export default function App() {
             .select('id')
             .eq('email', user.email)
             .maybeSingle()
-          if (dbProf?.id) {
+          if (dbProf?.id && isValidUuidStr(dbProf.id)) {
             targetUserId = dbProf.id
           }
         } catch {
@@ -1668,7 +1673,7 @@ export default function App() {
       const { data: transactionsData } = await client
         .from('transactions')
         .select('id, type, amount, asset, method, reference_id, details, status, created_at')
-        .or(`user_id.eq.${targetUserId}${user?.id && user.id !== targetUserId ? `,user_id.eq.${user.id}` : ''}`)
+        .eq('user_id', targetUserId)
         .order('created_at', { ascending: false })
         .range(0, 19)
 
