@@ -1,9 +1,9 @@
 /**
- * NEXSMARKETS — M-Pesa Callback Webhook Edge Function
- * Receives payment status updates from UpesiPay / PayHero / M-Pesa.
+ * BINARYPIP — M-Pesa Callback Webhook Edge Function (UpesiPay API)
+ * Receives real-time payment status webhooks from UpesiPay.
  *
- * Configured in UpesiPay/PayHero dashboard or secrets:
- *   UPESIPAY_CALLBACK_URL = https://<your-project-ref>.supabase.co/functions/v1/mpesa-callback
+ * Callback URL:
+ *   https://xggjgegiuqhyqapcfdto.supabase.co/functions/v1/mpesa-callback
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -20,55 +20,41 @@ Deno.serve(async (req) => {
 
   try {
     const payload = await req.json().catch(() => ({}))
-    console.log('Received M-Pesa Callback:', JSON.stringify(payload))
+    console.log('Received UpesiPay Callback Payload:', JSON.stringify(payload))
 
-    // Initialize Supabase Admin client using Service Role Key
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 
     if (!supabaseUrl || !serviceRoleKey) {
-      console.error('Supabase credentials missing in Edge environment.')
+      console.error('Supabase Service Role Key missing in Edge environment.')
       return new Response(JSON.stringify({ status: 'ignored', reason: 'Missing backend keys' }), { status: 200 })
     }
 
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
 
-    // Extract transaction references and payment status
+    // Extract UpesiPay Webhook JSON payload structures
     let isSuccess = false
     let externalRef = ''
     let mpesaReceipt = ''
     let amountPaid = 0
 
-    // 1. UpesiPay / Generic Gateway Structure
-    if (payload.status || payload.result_code !== undefined || payload.ResultCode !== undefined) {
-      const statusStr = String(payload.status || payload.ResultDesc || '').toUpperCase()
-      const resultCode = Number(payload.result_code ?? payload.ResultCode ?? -1)
+    const responseObj = payload.response || payload.Response || payload
 
-      if (statusStr === 'SUCCESS' || statusStr === 'COMPLETED' || resultCode === 0) {
-        isSuccess = true
-      }
+    const statusStr = String(payload.status || responseObj.Status || responseObj.ResultDesc || '').toUpperCase()
+    const resultCode = Number(payload.result_code ?? responseObj.ResultCode ?? payload.ResultCode ?? -1)
 
-      externalRef = payload.reference || payload.external_reference || payload.account_reference || payload.CheckoutRequestID || ''
-      mpesaReceipt = payload.mpesa_reference || payload.receipt_number || payload.MpesaReceiptNumber || ''
-      amountPaid = Number(payload.amount || 0)
+    if (statusStr === 'SUCCESS' || statusStr === 'COMPLETED' || resultCode === 0) {
+      isSuccess = true
     }
-    // 2. Daraja / Safaricom Callback Structure
-    else if (payload.Body?.stkCallback) {
-      const stk = payload.Body.stkCallback
-      if (stk.ResultCode === 0) {
-        isSuccess = true
-      }
-      externalRef = stk.CheckoutRequestID || stk.MerchantRequestID || ''
 
-      const items = stk.CallbackMetadata?.Item || []
-      for (const item of items) {
-        if (item.Name === 'MpesaReceiptNumber') mpesaReceipt = String(item.Value)
-        if (item.Name === 'Amount') amountPaid = Number(item.Value)
-      }
-    }
+    externalRef = payload.reference || payload.external_reference || responseObj.ExternalReference || responseObj.CheckoutRequestID || payload.CheckoutRequestID || ''
+    mpesaReceipt = payload.mpesa_reference || payload.receipt_number || responseObj.MpesaReceiptNumber || responseObj.MpesaReference || ''
+    amountPaid = Number(payload.amount ?? responseObj.Amount ?? 0)
+
+    console.log('Parsed UpesiPay Callback:', JSON.stringify({ isSuccess, externalRef, mpesaReceipt, amountPaid }))
 
     if (externalRef) {
-      // 1. Search primary 'transactions' table
+      // 1. Primary Table: 'public.transactions'
       const { data: tx } = await supabaseAdmin
         .from('transactions')
         .select('*')
@@ -77,7 +63,7 @@ Deno.serve(async (req) => {
         .maybeSingle()
 
       if (tx && isSuccess) {
-        // Mark transaction approved
+        // Update transaction status to approved
         await supabaseAdmin
           .from('transactions')
           .update({
@@ -92,7 +78,7 @@ Deno.serve(async (req) => {
           })
           .eq('id', tx.id)
 
-        // Credit user's wallet live_balance
+        // Credit user wallet live_balance
         const creditAmountUSD = tx.amount || (amountPaid > 0 ? amountPaid / 130 : 0)
 
         const { data: wallet } = await supabaseAdmin
@@ -112,21 +98,21 @@ Deno.serve(async (req) => {
             .eq('user_id', tx.user_id)
         }
       } else if (tx && !isSuccess) {
-        // Mark transaction failed
+        // Update transaction status to rejected
         await supabaseAdmin
           .from('transactions')
           .update({
             status: 'rejected',
             details: {
               ...tx.details,
-              failure_reason: payload.message || payload.ResultDesc || 'Payment failed or cancelled',
+              failure_reason: payload.message || responseObj.ResultDesc || 'Payment failed or cancelled',
               completed_at: new Date().toISOString(),
             },
           })
           .eq('id', tx.id)
       }
 
-      // 2. Also search fallback 'mpesa_transactions' table if exists
+      // 2. Secondary Table: 'public.mpesa_transactions' (if used)
       try {
         const { data: mpesaTx } = await supabaseAdmin
           .from('mpesa_transactions')
@@ -166,7 +152,7 @@ Deno.serve(async (req) => {
       headers: { 'Content-Type': 'application/json' },
     })
   } catch (err) {
-    console.error('Callback error:', err)
+    console.error('UpesiPay Callback error:', err)
     return new Response(JSON.stringify({ status: 'error', message: String(err) }), { status: 500 })
   }
 })
