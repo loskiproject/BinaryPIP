@@ -33,10 +33,13 @@ function generateRef(): string {
 /** Sanitize error messages */
 function sanitizeError(msg: unknown): string {
   if (typeof msg !== 'string') return 'UpesiPay gateway notification'
-  if (msg.trim().startsWith('<') || msg.includes('<!DOCTYPE') || msg.includes('<html')) {
-    return 'UpesiPay API endpoint unreachable or protected by security filter'
+  if (msg.includes('Unable to perform request')) {
+    return 'Unable to perform request. Please top up your UpesiPay Service Wallet float balance.'
   }
-  return msg.length > 250 ? msg.substring(0, 250) + '...' : msg
+  if (msg.trim().startsWith('<') || msg.includes('<!DOCTYPE') || msg.includes('<html') || msg.includes('dns error')) {
+    return 'UpesiPay API endpoint unreachable'
+  }
+  return msg.length > 200 ? msg.substring(0, 200) + '...' : msg
 }
 
 Deno.serve(async (req) => {
@@ -106,13 +109,10 @@ Deno.serve(async (req) => {
   const callbackUrl      = Deno.env.get('UPESIPAY_CALLBACK_URL') || 'https://xggjgegiuqhyqapcfdto.supabase.co/functions/v1/mpesa-callback'
   const customBaseUrl    = Deno.env.get('UPESIPAY_BASE_URL')
 
-  // Target UpesiPay API backend endpoints
+  // Target single valid UpesiPay / PayHero API backend
   const apiEndpoints = customBaseUrl
     ? [`${customBaseUrl.replace(/\/$/, '')}/payments`]
-    : [
-        'https://backend.payhero.co.ke/api/v2/payments',
-        'https://backend.upesipay.com/api/v2/payments',
-      ]
+    : ['https://backend.payhero.co.ke/api/v2/payments']
 
   // Format Auth Header
   const authVal = basicAuthToken.startsWith('Basic ') ? basicAuthToken : `Basic ${basicAuthToken}`
