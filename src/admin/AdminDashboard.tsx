@@ -1482,6 +1482,13 @@ export default function AdminDashboard({ currentUser }: Props) {
   const approveTxn = async (txn: Transaction) => {
     if (!canAccess('canApproveWithdrawals')) { notify('No permission.', 'err'); return }
 
+    // Idempotency check: prevent approving an already approved/completed transaction twice
+    const normStatus = String(txn.status || '').toLowerCase()
+    if (normStatus === 'approved' || normStatus === 'completed') {
+      notify('Transaction is already approved.')
+      return
+    }
+
     const isDeposit = txn.type === 'deposit'
     const totalCredit = txn.amount
 
@@ -1491,7 +1498,7 @@ export default function AdminDashboard({ currentUser }: Props) {
     const nextBal = isDeposit ? (currentBal + totalCredit) : currentBal
 
     // 1. Update local Admin state immediately for instant responsiveness
-    setTransactions(curr => curr.map(t => (t.id === txn.id || (t.userId === txn.userId && t.type === txn.type && t.status === 'pending')) ? { ...t, status: 'approved' } : t))
+    setTransactions(curr => curr.map(t => (t.id === txn.id || (t.userId === txn.userId && t.type === txn.type && String(t.status).toLowerCase() === 'pending')) ? { ...t, status: 'approved' } : t))
     if (targetUser && isDeposit) {
       setUsers(curr => curr.map(u => (u.id === targetUser.id || u.email === targetUser.email) ? { ...u, balance: nextBal } : u))
     }
@@ -1547,18 +1554,20 @@ export default function AdminDashboard({ currentUser }: Props) {
         }
       }
 
-      // 4. Update local transaction queue in localStorage
+      // 4. Update local transaction queue in localStorage and broadcast window message
       try {
         const localStr = localStorage.getItem('binarypip_pending_transactions')
         if (localStr) {
           const queue = JSON.parse(localStr) as Transaction[]
-          const updated = queue.map(t => (t.id === txn.id || (t.userId === txn.userId && t.type === txn.type && t.status === 'pending')) ? { ...t, status: 'approved' } : t)
+          const updated = queue.map(t => (t.id === txn.id || (t.userId === txn.userId && t.type === txn.type && String(t.status).toLowerCase() === 'pending')) ? { ...t, status: 'approved' } : t)
           localStorage.setItem('binarypip_pending_transactions', JSON.stringify(updated))
-          window.dispatchEvent(new Event('storage'))
         }
       } catch {
         // silent
       }
+
+      window.dispatchEvent(new Event('storage'))
+      window.postMessage({ type: 'EXSTRADE_TRANSACTION_SUBMITTED' }, '*')
     } catch {
       // silent
     }
