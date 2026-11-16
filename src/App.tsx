@@ -2220,8 +2220,20 @@ export default function App() {
     return saved
   }
 
+  const getAuthenticatedUserId = (): string | null => {
+    if (user && isValidUuid(user.id)) return user.id
+    try {
+      const activeAuth = JSON.parse(localStorage.getItem('sb-xggjgegiuqhyqapcfdto-auth-token') || 'null')
+      if (activeAuth?.user?.id && isValidUuid(activeAuth.user.id)) return activeAuth.user.id
+    } catch {}
+    return null
+  }
+
   const ensureProfileAndWalletExistInSupabase = async (targetUserId: string) => {
     if (!supabase || !targetUserId) return
+    const authUserId = getAuthenticatedUserId()
+    if (!authUserId) return // Skip remote DB insert for non-Auth guest users to prevent 409 Foreign Key Conflict
+
     const userName = user?.fullName || 'Client User'
     const userEmail = user?.email || `user_${targetUserId.substring(0, 8)}@binarypip.com`
 
@@ -2276,10 +2288,14 @@ export default function App() {
     let createdAt: string | undefined
 
     const activeUserId = getValidUserId()
-    await ensureProfileAndWalletExistInSupabase(activeUserId)
+    const authUserId = getAuthenticatedUserId()
+
+    if (authUserId) {
+      await ensureProfileAndWalletExistInSupabase(authUserId)
+    }
 
     const payload = {
-      user_id: activeUserId,
+      user_id: authUserId || activeUserId,
       type: 'deposit',
       amount: depositAmount,
       asset: 'USD',
@@ -2293,7 +2309,7 @@ export default function App() {
       status: 'pending',
     }
 
-    if (supabase) {
+    if (supabase && authUserId) {
       try {
         const { data: transaction } = await supabase.from('transactions').insert(payload).select('id, created_at').maybeSingle()
         if (transaction) {
