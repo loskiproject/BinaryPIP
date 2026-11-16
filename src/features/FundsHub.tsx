@@ -61,7 +61,7 @@ type StkStep = 'form' | 'pushing' | 'waiting' | 'verify' | 'done' | 'error'
 
 export default function FundsHub({
   wallets, onTransfer, onDepositRequest, onWithdrawalRequest, adminAddresses, showNotice,
-  minDepositUSD = 10, minDepositKES = 100, minWithdrawalUSD = 10,
+  minDepositUSD = 1, minDepositKES = 130, minWithdrawalUSD = 1,
 }: Props) {
   const [tab, setTab] = useState<'deposit' | 'withdraw' | 'transfer'>('deposit')
   const [selectedWallet, setSelectedWallet] = useState<keyof WalletBalances>('main')

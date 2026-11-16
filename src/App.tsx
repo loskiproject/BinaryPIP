@@ -1540,8 +1540,8 @@ export default function App() {
   }, [user])
 
   // Dynamic Minimum Deposit Settings (Admin Configurable via Supabase system_settings)
-  const [minDepositUSD, setMinDepositUSD] = useState(10)
-  const [minDepositKES, setMinDepositKES] = useState(1300)
+  const [minDepositUSD, setMinDepositUSD] = useState(1)
+  const [minDepositKES, setMinDepositKES] = useState(130)
 
   // Fetch live deposit receiving addresses from Supabase admin_deposit_addresses (with 10-min Client-side Cache)
   useEffect(() => {
