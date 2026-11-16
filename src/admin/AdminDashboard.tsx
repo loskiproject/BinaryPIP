@@ -852,7 +852,7 @@ export default function AdminDashboard({ currentUser }: Props) {
   // Fetch real financial transactions from Supabase (Targeted Columns & Limit 50)
   const fetchTransactionsFromDatabase = async () => {
     try {
-      const txnCols = 'id,user_id,type,amount,bonus_amount,total_amount,gateway_network,reference_code,status,admin_notes,created_at'
+      const txnCols = 'id,user_id,type,amount,asset,status,method,reference_id,details,created_at'
       const [txnsRes, profilesRes] = await Promise.all([
         fetch(`${SUPABASE_URL}/rest/v1/transactions?select=${txnCols}&order=created_at.desc&limit=50`, {
           headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
@@ -869,12 +869,11 @@ export default function AdminDashboard({ currentUser }: Props) {
           user_id: string
           type: 'deposit' | 'withdrawal' | 'adjustment'
           amount: number
-          bonus_amount: number
-          total_amount: number
-          gateway_network: string
-          reference_code: string
-          status: 'pending' | 'approved' | 'rejected' | 'flagged'
-          admin_notes: string
+          asset: string
+          status: 'pending' | 'approved' | 'rejected' | 'flagged' | 'completed'
+          method: string
+          reference_id: string
+          details: any
           created_at: string
         }>
 
@@ -891,17 +890,19 @@ export default function AdminDashboard({ currentUser }: Props) {
           dbTxns = rows.map(r => {
             const uProf = profMap[r.user_id]
             const targetU = users.find(u => u.id === r.user_id)
+            const gatewayNet = r.method || r.details?.gateway_network || 'MPESA'
+
             return {
-              id: r.id,
-              userId: r.user_id,
-              userName: uProf?.name || targetU?.name || `User #${r.user_id.substring(0, 8)}`,
-              userEmail: uProf?.email || targetU?.email || `user_${r.user_id.substring(0, 6)}@binarypip.com`,
+              id: String(r.id),
+              userId: String(r.user_id),
+              userName: uProf?.name || targetU?.name || `Client #${String(r.user_id).substring(0, 8)}`,
+              userEmail: uProf?.email || targetU?.email || `user_${String(r.user_id).substring(0, 6)}@binarypip.com`,
               type: r.type,
-              amount: Number(r.total_amount || r.amount),
-              network: r.gateway_network || 'MPESA',
-              status: r.status,
-              createdAt: r.created_at,
-              flagReason: r.admin_notes || undefined,
+              amount: Number(r.amount),
+              network: gatewayNet,
+              status: r.status === 'completed' ? 'approved' : r.status,
+              createdAt: String(r.created_at || new Date().toISOString()),
+              flagReason: r.details?.failure_reason || r.details?.admin_notes || undefined,
             }
           })
         }
