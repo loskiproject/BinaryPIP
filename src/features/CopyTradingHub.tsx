@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Users, Star, Search, CheckCircle2, Shield } from 'lucide-react'
+import { Users, Star, Search, CheckCircle2, Shield, Award, AlertCircle, AlertTriangle, X, Wallet, Sparkles } from 'lucide-react'
 import { useCopyTrading } from './useCopyTrading'
 import MyActiveTraders from './MyActiveTraders'
 import CopyTraderModal from './CopyTraderModal'
@@ -14,6 +14,7 @@ export interface MasterTrader {
   copiers: number
   avatar: string
   specialty: string
+  isVerified: boolean
 }
 
 interface CopyTradingHubProps {
@@ -94,7 +95,7 @@ const BIOS = [
   'London Session breakout trading on GBP pairs and FTSE 100.'
 ]
 
-// Handcrafted Top Featured Master Traders
+// Handcrafted Top Featured Master Traders (PipMaster is verified)
 const INITIAL_HANDCRAFTED: MasterTrader[] = [
   {
     id: 'mt-pipmaster',
@@ -105,13 +106,14 @@ const INITIAL_HANDCRAFTED: MasterTrader[] = [
     totalProfit: 90780,
     copiers: 1045,
     avatar: 'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=150&auto=format&fit=crop&q=80',
-    specialty: 'Kenya FX & Synthetic Indices'
+    specialty: 'Kenya FX & Synthetic Indices',
+    isVerified: true,
   },
-  { id: 'mt-1', name: 'Sylvia FX', risk: 'Low', bio: 'Professional forex trader with 8+ years experience specializing in EUR/USD and GBP/USD scalping.', winRate: 98.4, totalProfit: 90450, copiers: 590, avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80', specialty: 'EUR/USD & Scalping' },
-  { id: 'mt-2', name: 'Elena Rostova', risk: 'Medium', bio: 'Gold & Commodities specialist. Consistent daily returns with strict risk management.', winRate: 88.7, totalProfit: 24101, copiers: 86, avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80', specialty: 'Gold & Commodities' },
-  { id: 'mt-3', name: 'Marcus Chen', risk: 'Low', bio: 'Cryptocurrency and Global Index momentum trader. Low drawdown and high profitability.', winRate: 95.1, totalProfit: 52900, copiers: 220, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80', specialty: 'Crypto & Indices' },
-  { id: 'mt-4', name: 'Victor Sterling', risk: 'Low', bio: 'Institutional swing trader focusing on High-Yield Synthetic Indices and Volatility 100.', winRate: 96.2, totalProfit: 142000, copiers: 840, avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80', specialty: 'Volatility Indices' },
-  { id: 'mt-5', name: 'Amina Al-Mansoor', risk: 'Medium', bio: 'FX Trend Follower & Volatility Specialist. 6+ years of verified high-win-rate algorithm trading.', winRate: 92.5, totalProfit: 68400, copiers: 310, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', specialty: 'FX Trends & Algos' },
+  { id: 'mt-1', name: 'Sylvia FX', risk: 'Low', bio: 'Professional forex trader with 8+ years experience specializing in EUR/USD and GBP/USD scalping.', winRate: 98.4, totalProfit: 90450, copiers: 590, avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80', specialty: 'EUR/USD & Scalping', isVerified: true },
+  { id: 'mt-2', name: 'Elena Rostova', risk: 'Medium', bio: 'Gold & Commodities specialist. Consistent daily returns with strict risk management.', winRate: 88.7, totalProfit: 24101, copiers: 86, avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80', specialty: 'Gold & Commodities', isVerified: true },
+  { id: 'mt-3', name: 'Marcus Chen', risk: 'Low', bio: 'Cryptocurrency and Global Index momentum trader. Low drawdown and high profitability.', winRate: 95.1, totalProfit: 52900, copiers: 220, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80', specialty: 'Crypto & Indices', isVerified: true },
+  { id: 'mt-4', name: 'Victor Sterling', risk: 'Low', bio: 'Institutional swing trader focusing on High-Yield Synthetic Indices and Volatility 100.', winRate: 96.2, totalProfit: 142000, copiers: 840, avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80', specialty: 'Volatility Indices', isVerified: true },
+  { id: 'mt-5', name: 'Amina Al-Mansoor', risk: 'Medium', bio: 'FX Trend Follower & Volatility Specialist. 6+ years of verified high-win-rate algorithm trading.', winRate: 92.5, totalProfit: 68400, copiers: 310, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', specialty: 'FX Trends & Algos', isVerified: true },
 ]
 
 // Generate 100% Unique Profile Photo Avatars across all 540 Traders
@@ -153,10 +155,13 @@ const getUniqueAvatar = (index: number, name: string): string => {
   return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name + index)}`
 }
 
-// Generate Exactly 540 Master Traders with 100% Unique Names AND 100% Unique Avatars, Sorted Alphabetically A to Z
+// Generate Exactly 540 Master Traders (Exacting 70 Traders Verified, including PipMaster)
 const generateAllTraders540 = (): MasterTrader[] => {
   const list: MasterTrader[] = [...INITIAL_HANDCRAFTED]
   const usedNames = new Set<string>(INITIAL_HANDCRAFTED.map(t => t.name.toLowerCase()))
+
+  // 6 initial handcrafted verified traders + 64 generated verified traders = EXACTLY 70 VERIFIED TRADERS
+  let verifiedCounter = INITIAL_HANDCRAFTED.filter(t => t.isVerified).length // 6
 
   let idx = 7
   while (list.length < 540) {
@@ -177,6 +182,13 @@ const generateAllTraders540 = (): MasterTrader[] => {
     const avatar = getUniqueAvatar(idx, name)
     const specialty = SPECIALTIES[(idx * 3 + (idx % 13)) % SPECIALTIES.length]
 
+    // Set exactly 70 verified traders across the 540 list
+    let isVerified = false
+    if (verifiedCounter < 70 && (idx % 8 === 0 || list.length + (70 - verifiedCounter) >= 540)) {
+      isVerified = true
+      verifiedCounter++
+    }
+
     list.push({
       id: `mt-${idx}`,
       name,
@@ -187,6 +199,7 @@ const generateAllTraders540 = (): MasterTrader[] => {
       copiers,
       avatar,
       specialty,
+      isVerified,
     })
     idx++
   }
@@ -210,6 +223,16 @@ export default function CopyTradingHub({
   const [selectedTrader, setSelectedTrader] = useState<MasterTrader | null>(null)
   const [search, setSearch] = useState('')
   const [riskFilter, setRiskFilter] = useState<'All' | 'Low' | 'Medium' | 'High'>('All')
+  const [verificationFilter, setVerificationFilter] = useState<'All' | 'Verified' | 'Unverified'>('All')
+
+  // Master Trader Application Modal State
+  const [showApplyModal, setShowApplyModal] = useState(false)
+  const [applyName, setApplyName] = useState('')
+  const [applyRisk, setApplyRisk] = useState<'Low' | 'Medium' | 'High'>('Low')
+  const [applySpecialty, setApplySpecialty] = useState('Vol 100 & Gold Scalping')
+  const [applyBio, setApplyBio] = useState('')
+  const [isApplying, setIsApplying] = useState(false)
+  const [applySuccessModal, setApplySuccessModal] = useState<boolean>(false)
 
   // Real-time copy trading subscriptions hook
   const {
@@ -230,13 +253,22 @@ export default function CopyTradingHub({
 
   const [successModal, setSuccessModal] = useState<{ traderName: string; amount: number; estimatedReturn: number } | null>(null)
 
+  const normAccountType = accountType === 'live' || accountType === 'real' ? 'real' : 'demo'
+  const isDemo = normAccountType === 'demo'
+
   const filteredTraders = MASTER_TRADERS_540.filter(trader => {
     const matchesSearch = trader.name.toLowerCase().includes(search.toLowerCase()) ||
                           trader.bio.toLowerCase().includes(search.toLowerCase()) ||
                           trader.specialty.toLowerCase().includes(search.toLowerCase())
     const matchesRisk = riskFilter === 'All' || trader.risk === riskFilter
-    return matchesSearch && matchesRisk
+    const matchesVerification = verificationFilter === 'All' ||
+      (verificationFilter === 'Verified' && trader.isVerified) ||
+      (verificationFilter === 'Unverified' && !trader.isVerified)
+
+    return matchesSearch && matchesRisk && matchesVerification
   })
+
+  const verifiedCount = MASTER_TRADERS_540.filter(t => t.isVerified).length // Exactly 70
 
   const handleConfirmModal = async (allocatedAmount: number, copyRatio: number, stopLossLimit: number | null) => {
     if (!selectedTrader) return false
@@ -268,28 +300,89 @@ export default function CopyTradingHub({
     return false
   }
 
-  const normAccountType = accountType === 'live' || accountType === 'real' ? 'real' : 'demo'
+  const handleApplySubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (isDemo) {
+      showNotice('Master Trader Application ($500 fee) requires an active Real Account balance. Please switch to your Real Account.')
+      return
+    }
+
+    if (userBalance < 500) {
+      showNotice('Insufficient Real Account Balance. Minimum $500.00 USD required to apply as a Master Trader.')
+      return
+    }
+
+    if (!applyName.trim()) {
+      showNotice('Please enter your Trader Display Name.')
+      return
+    }
+
+    if (!applyBio.trim()) {
+      showNotice('Please enter your Trading Strategy Bio.')
+      return
+    }
+
+    setIsApplying(true)
+    setTimeout(() => {
+      onAllocateBalance(500) // Deduct $500 USD application & verification fee
+      setIsApplying(false)
+      setShowApplyModal(false)
+      setApplySuccessModal(true)
+      setApplyName('')
+      setApplyBio('')
+    }, 800)
+  }
 
   return (
     <div style={{ width: '100%', maxWidth: '1000px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
-      {/* ── HEADER BANNER ─────────────────────────────────────────────────── */}
+      {/* ── HEADER BANNER WITH APPLY AS COPY TRADER ($500) CTA ────────────── */}
       <div className="cth-header-banner" style={{
         borderRadius: '20px',
         padding: '28px 24px',
         display: 'flex',
-        flexDirection: 'column',
-        gap: '6px',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '16px',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Users size={26} color="#10b981" />
-          <h1 className="cth-title" style={{ fontSize: '24px', fontWeight: 900, margin: 0, letterSpacing: '-0.3px' }}>
-            Copy Trading Hub
-          </h1>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxWidth: '620px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Users size={26} color="#10b981" />
+            <h1 className="cth-title" style={{ fontSize: '24px', fontWeight: 900, margin: 0, letterSpacing: '-0.3px' }}>
+              Copy Trading Hub
+            </h1>
+          </div>
+          <p className="cth-sub" style={{ fontSize: '13.5px', margin: 0, lineHeight: 1.5 }}>
+            Automatically mirror trades from top-performing professional master traders into your account in real time.
+          </p>
         </div>
-        <p className="cth-sub" style={{ fontSize: '13.5px', margin: 0, lineHeight: 1.5 }}>
-          Automatically mirror trades from top-performing professional master traders into your account in real time.
-        </p>
+
+        {/* Apply as Copy Trader ($500) CTA Button */}
+        <button
+          type="button"
+          onClick={() => setShowApplyModal(true)}
+          style={{
+            background: 'linear-gradient(135deg, #10b981 0%, #00e5ff 100%)',
+            color: '#030916',
+            border: 'none',
+            borderRadius: '14px',
+            padding: '12px 20px',
+            fontSize: '14px',
+            fontWeight: 900,
+            cursor: 'pointer',
+            boxShadow: '0 8px 24px rgba(16, 185, 129, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'transform 0.15s ease, boxShadow 0.15s ease',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <Award size={18} color="#030916" />
+          <span>Apply as Master Trader ($500)</span>
+        </button>
       </div>
 
       {/* ── MY ACTIVE TRADERS DASHBOARD SECTION ────────────────────────────── */}
@@ -305,11 +398,11 @@ export default function CopyTradingHub({
         />
       </div>
 
-      {/* ── SEARCH & RISK FILTER ROW ─────────────────────────────────────── */}
+      {/* ── SEARCH & VERIFICATION FILTER CONTROLS ROW ───────────────────── */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
         <div className="cth-section-heading" style={{ fontSize: '18px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Star size={20} color="#f59e0b" fill="#f59e0b" />
-          <span>Top Master Traders ({MASTER_TRADERS_540.length} Available · A to Z)</span>
+          <span>Top Master Traders ({filteredTraders.length} Shown · {verifiedCount} Verified)</span>
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
@@ -320,7 +413,7 @@ export default function CopyTradingHub({
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            width: '220px',
+            width: '200px',
           }}>
             <Search size={15} color="#94a3b8" />
             <input
@@ -339,8 +432,32 @@ export default function CopyTradingHub({
             />
           </div>
 
-          {/* Risk Filters */}
-          <div style={{ display: 'flex', borderRadius: '12px', padding: '3px' }}>
+          {/* Verification Status Filter Group */}
+          <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', padding: '3px' }}>
+            {(['All', 'Verified', 'Unverified'] as const).map(vf => (
+              <button
+                key={vf}
+                type="button"
+                onClick={() => setVerificationFilter(vf)}
+                className={verificationFilter === vf ? 'cth-filter-btn-active' : 'cth-filter-btn'}
+                style={{
+                  borderRadius: '9px',
+                  padding: '6px 10px',
+                  fontSize: '11.5px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  color: verificationFilter === vf ? (vf === 'Verified' ? '#10b981' : undefined) : undefined,
+                }}
+              >
+                {vf === 'Verified' && '✓ '}
+                {vf}
+              </button>
+            ))}
+          </div>
+
+          {/* Risk Level Filter Group */}
+          <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', padding: '3px' }}>
             {(['All', 'Low', 'Medium', 'High'] as const).map(rf => (
               <button
                 key={rf}
@@ -349,8 +466,8 @@ export default function CopyTradingHub({
                 className={riskFilter === rf ? 'cth-filter-btn-active' : 'cth-filter-btn'}
                 style={{
                   borderRadius: '9px',
-                  padding: '6px 12px',
-                  fontSize: '12px',
+                  padding: '6px 10px',
+                  fontSize: '11.5px',
                   fontWeight: 800,
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
@@ -363,7 +480,7 @@ export default function CopyTradingHub({
         </div>
       </div>
 
-      {/* ── MASTER TRADERS GRID (CARDS) ─────────────────────────────────── */}
+      {/* ── MASTER TRADERS GRID (CARDS WITH VERIFICATION BADGES) ────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: '18px' }}>
         {filteredTraders.map(trader => {
           const isCopied = subscriptions.some(s => {
@@ -397,17 +514,59 @@ export default function CopyTradingHub({
                     height: '54px',
                     borderRadius: '50%',
                     objectFit: 'cover',
-                    border: `2px solid ${riskColor}`,
-                    boxShadow: `0 0 12px ${riskColor}40`,
+                    border: `2px solid ${trader.isVerified ? '#10b981' : riskColor}`,
+                    boxShadow: trader.isVerified ? '0 0 14px rgba(16, 185, 129, 0.45)' : `0 0 12px ${riskColor}40`,
                   }}
                 />
                 <div>
-                  <h3 className="cth-trader-name" style={{ fontSize: '17px', fontWeight: 900, margin: 0, letterSpacing: '-0.2px' }}>
-                    {trader.name}
-                  </h3>
-                  <div style={{ fontSize: '12px', fontWeight: 800, color: riskColor, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <h3 className="cth-trader-name" style={{ fontSize: '17px', fontWeight: 900, margin: 0, letterSpacing: '-0.2px' }}>
+                      {trader.name}
+                    </h3>
+
+                    {/* Verification Badge */}
+                    {trader.isVerified ? (
+                      <span
+                        style={{
+                          fontSize: '10.5px',
+                          fontWeight: 800,
+                          color: '#10b981',
+                          background: 'rgba(16, 185, 129, 0.15)',
+                          border: '1px solid rgba(16, 185, 129, 0.35)',
+                          padding: '2px 7px',
+                          borderRadius: '12px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                        }}
+                        title="Verified Master Trader"
+                      >
+                        <Shield size={10} color="#10b981" /> Verified
+                      </span>
+                    ) : (
+                      <span
+                        style={{
+                          fontSize: '10.5px',
+                          fontWeight: 700,
+                          color: '#94a3b8',
+                          background: 'rgba(148, 163, 184, 0.1)',
+                          border: '1px solid rgba(148, 163, 184, 0.2)',
+                          padding: '2px 7px',
+                          borderRadius: '12px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                        }}
+                        title="Unverified Trader"
+                      >
+                        <AlertCircle size={10} color="#94a3b8" /> Unverified
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ fontSize: '12px', fontWeight: 800, color: riskColor, marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <Shield size={12} color={riskColor} />
-                    Risk: {trader.risk}
+                    Risk: {trader.risk} · <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{trader.specialty}</span>
                   </div>
                 </div>
               </div>
@@ -493,6 +652,460 @@ export default function CopyTradingHub({
           )
         })}
       </div>
+
+      {/* ── APPLY AS MASTER TRADER ($500) MODAL DIALOG ──────────────────── */}
+      {showApplyModal && (
+        <div
+          className="cth-modal-backdrop"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+          }}
+          onClick={() => setShowApplyModal(false)}
+        >
+          <div
+            className="cth-modal-container"
+            style={{
+              borderRadius: '24px',
+              padding: '28px 24px 24px',
+              maxWidth: '480px',
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '18px',
+              position: 'relative',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={() => setShowApplyModal(false)}
+              style={{
+                position: 'absolute',
+                top: '18px',
+                right: '18px',
+                background: 'rgba(255, 255, 255, 0.06)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                color: '#94a3b8',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              <X size={16} />
+            </button>
+
+            {/* Modal Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', paddingRight: '36px' }}>
+              <div
+                style={{
+                  width: '52px',
+                  height: '52px',
+                  borderRadius: '16px',
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <Award size={28} color="#10b981" />
+              </div>
+              <div>
+                <h2 className="cth-modal-title" style={{ fontSize: '20px', fontWeight: 900, margin: 0, letterSpacing: '-0.2px' }}>
+                  Apply as Master Trader ($500)
+                </h2>
+                <span className="cth-sub" style={{ fontSize: '12px', marginTop: '2px', display: 'block' }}>
+                  Publish your trading strategy &amp; earn copy fees
+                </span>
+              </div>
+            </div>
+
+            {/* Required Application Fee Box */}
+            <div
+              className="cth-metrics-box"
+              style={{
+                borderRadius: '14px',
+                padding: '14px 16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+                background: 'rgba(15, 23, 42, 0.85)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="cth-stat-label" style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase' }}>APPLICATION &amp; VERIFICATION FEE</span>
+                <strong style={{ fontSize: '16px', fontWeight: 900, color: '#10b981' }}>$500.00 USD</strong>
+              </div>
+              <p className="cth-modal-text" style={{ fontSize: '11.5px', margin: 0, lineHeight: 1.4 }}>
+                Fee is deducted from your active <strong>Real Account balance</strong> upon submission.
+              </p>
+            </div>
+
+            {/* Active Real Account Balance Display */}
+            <div
+              style={{
+                background: isDemo ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                border: `1px solid ${isDemo ? 'rgba(245, 158, 11, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
+                borderRadius: '12px',
+                padding: '10px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Wallet size={16} color={isDemo ? '#f59e0b' : '#10b981'} />
+                <span className="cth-modal-title" style={{ fontSize: '12px', fontWeight: 800 }}>
+                  Active Account: <strong style={{ color: isDemo ? '#f59e0b' : '#10b981' }}>{isDemo ? 'Demo Account' : 'Real Account'}</strong>
+                </span>
+              </div>
+              <span style={{ fontSize: '13px', fontWeight: 900, color: isDemo ? '#f59e0b' : '#10b981' }}>
+                ${userBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+              </span>
+            </div>
+
+            {/* Balance Validation Alert */}
+            {(isDemo || userBalance < 500) && (
+              <div
+                style={{
+                  background: 'rgba(239, 68, 68, 0.12)',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                  borderRadius: '14px',
+                  padding: '14px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                  <AlertTriangle size={18} color="#ef4444" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    <strong style={{ fontSize: '13px', color: '#ef4444', display: 'block' }}>
+                      {isDemo ? 'Real Account Required' : 'Insufficient Real Balance ($' + userBalance.toFixed(2) + ' USD)'}
+                    </strong>
+                    <p className="cth-modal-text" style={{ fontSize: '12px', margin: '3px 0 0', lineHeight: 1.4 }}>
+                      {isDemo
+                        ? 'Master Trader Application requires a Real Account with at least $500.00 USD balance.'
+                        : 'You need at least $500.00 USD in your Real Account to pay the application and verification fee.'}
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px', marginTop: '2px' }}>
+                  {onOpenDeposit && (
+                    <button
+                      type="button"
+                      onClick={() => { setShowApplyModal(false); onOpenDeposit() }}
+                      style={{
+                        flex: 1,
+                        background: '#10b981',
+                        color: '#0b0e14',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '8px',
+                        fontSize: '12px',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Deposit Funds 💳
+                    </button>
+                  )}
+                  {isDemo && onSwitchAccount && (
+                    <button
+                      type="button"
+                      onClick={() => { setShowApplyModal(false); onSwitchAccount() }}
+                      style={{
+                        flex: 1,
+                        background: 'rgba(245, 158, 11, 0.2)',
+                        border: '1px solid #f59e0b',
+                        color: '#f59e0b',
+                        borderRadius: '8px',
+                        padding: '8px',
+                        fontSize: '12px',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Switch to Real Account ⚡
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={handleApplySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* Trader Name */}
+              <div>
+                <label className="cth-stat-label" style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+                  Trader Display Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Trader Pro FX"
+                  value={applyName}
+                  onChange={e => setApplyName(e.target.value)}
+                  disabled={isDemo || userBalance < 500}
+                  className="cth-input"
+                  style={{
+                    width: '100%',
+                    borderRadius: '12px',
+                    padding: '11px 14px',
+                    fontSize: '14px',
+                    fontWeight: 800,
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
+              {/* Risk Level Selector */}
+              <div>
+                <label className="cth-stat-label" style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+                  Risk Profile Category
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
+                  {(['Low', 'Medium', 'High'] as const).map(rk => (
+                    <button
+                      key={rk}
+                      type="button"
+                      disabled={isDemo || userBalance < 500}
+                      onClick={() => setApplyRisk(rk)}
+                      className={applyRisk === rk ? 'cth-filter-btn-active' : 'cth-pill-btn'}
+                      style={{
+                        borderRadius: '8px',
+                        padding: '8px 4px',
+                        fontSize: '12px',
+                        fontWeight: 800,
+                        cursor: (isDemo || userBalance < 500) ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      {rk} Risk
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Trading Specialty */}
+              <div>
+                <label className="cth-stat-label" style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+                  Trading Specialty Focus
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Kenya FX & Volatility 100"
+                  value={applySpecialty}
+                  onChange={e => setApplySpecialty(e.target.value)}
+                  disabled={isDemo || userBalance < 500}
+                  className="cth-input"
+                  style={{
+                    width: '100%',
+                    borderRadius: '12px',
+                    padding: '11px 14px',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
+              {/* Strategy Bio */}
+              <div>
+                <label className="cth-stat-label" style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+                  Trading Strategy Bio &amp; Description
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Describe your trading strategy, risk management, and experience..."
+                  value={applyBio}
+                  onChange={e => setApplyBio(e.target.value)}
+                  disabled={isDemo || userBalance < 500}
+                  className="cth-input"
+                  style={{
+                    width: '100%',
+                    borderRadius: '12px',
+                    padding: '11px 14px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    resize: 'none',
+                    lineHeight: 1.4,
+                  }}
+                />
+              </div>
+
+              {/* Submit Buttons */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
+                <button
+                  type="submit"
+                  disabled={isDemo || userBalance < 500 || isApplying}
+                  style={{
+                    width: '100%',
+                    background: (isDemo || userBalance < 500)
+                      ? 'rgba(148, 163, 184, 0.2)'
+                      : 'linear-gradient(90deg, #10b981, #00e5ff)',
+                    color: (isDemo || userBalance < 500) ? '#64748b' : '#030916',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '14px',
+                    fontSize: '15px',
+                    fontWeight: 900,
+                    cursor: (isDemo || userBalance < 500 || isApplying) ? 'not-allowed' : 'pointer',
+                    boxShadow: (isDemo || userBalance < 500) ? 'none' : '0 8px 24px rgba(16, 185, 129, 0.4)',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {isApplying ? 'Submitting Application...' : 'Submit Application & Pay $500 Fee'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowApplyModal(false)}
+                  className="cth-cancel-btn"
+                  style={{
+                    width: '100%',
+                    borderRadius: '12px',
+                    padding: '11px',
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── APPLICATION SUCCESS CONFIRMATION MODAL ─────────────────────── */}
+      {applySuccessModal && (
+        <div className="cth-modal-backdrop" style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 99999,
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px',
+        }} onClick={() => setApplySuccessModal(false)}>
+          <div className="cth-modal-container" style={{
+            borderRadius: '24px',
+            padding: '36px 28px 28px',
+            maxWidth: '440px',
+            width: '100%',
+            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '20px',
+            position: 'relative',
+          }} onClick={e => e.stopPropagation()}>
+
+            <div style={{
+              width: '68px',
+              height: '68px',
+              borderRadius: '50%',
+              background: 'rgba(16, 185, 129, 0.15)',
+              border: '2px solid #10b981',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#10b981',
+              boxShadow: '0 0 24px rgba(16, 185, 129, 0.35)',
+            }}>
+              <Award size={36} color="#10b981" />
+            </div>
+
+            <div>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: '#10b981', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                APPLICATION RECEIVED
+              </span>
+              <h2 className="cth-modal-title" style={{ fontSize: '22px', fontWeight: 900, margin: '6px 0 0' }}>
+                Master Trader Application Submitted!
+              </h2>
+            </div>
+
+            <div className="cth-metrics-box" style={{
+              borderRadius: '14px',
+              padding: '16px 18px',
+              textAlign: 'left',
+              width: '100%',
+            }}>
+              <div style={{
+                fontSize: '13px',
+                fontWeight: 700,
+                color: '#10b981',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                marginBottom: '6px',
+              }}>
+                🎉 Verification Under Review ($500 Fee Settled)
+              </div>
+              <p className="cth-modal-text" style={{
+                fontSize: '12.5px',
+                lineHeight: 1.6,
+                margin: 0,
+              }}>
+                Your application fee of <strong style={{ color: '#10b981' }}>$500.00 USD</strong> has been received and processed. Our compliance team is verifying your strategy metrics.
+              </p>
+              <div style={{
+                marginTop: '10px',
+                paddingTop: '10px',
+                borderTop: '1px solid rgba(255,255,255,0.08)',
+                fontSize: '12px',
+                color: '#00e5ff',
+                fontWeight: 700,
+              }}>
+                💡 Status: PENDING VERIFICATION · Estimated Review: 24 Hours
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setApplySuccessModal(false)}
+              style={{
+                width: '100%',
+                background: 'linear-gradient(135deg, #10b981 0%, #00b0ff 100%)',
+                color: '#030916',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '14px',
+                fontSize: '14px',
+                fontWeight: 900,
+                cursor: 'pointer',
+                boxShadow: '0 8px 24px rgba(16, 185, 129, 0.35)',
+              }}
+            >
+              Done, Return to Hub
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── COPY TRADER CONFIGURATION MODAL ──────────────────────────────── */}
       {selectedTrader && (
