@@ -1,19 +1,16 @@
 /**
- * BINARYPIP — M-Pesa STK Push Gateway Edge Function (Official UpesiPay API Exclusively)
+ * BINARYPIP — M-Pesa STK Push Gateway Edge Function (UpesiPay API Exclusively)
  * https://upesipay.com/docs/post-initiate-mpesa-stk-push-request
  *
  * Configured Supabase Secrets (Dashboard → Edge Functions → Secrets):
- *   UPESIPAY_API_USERNAME   — API Username (e.g., "KMCKeKAWhwPeQ5WStwb2")
- *   UPESIPAY_API_PASSWORD   — API Password (e.g., "zrrpeSW4BeORlfZmgTJ2sQP1-TlQGRTEopKj54EP")
- *   UPESIPAY_BASIC_AUTH     — Authorization Token (e.g., "Basic S01DS2V...")
- *   UPESIPAY_SHORT_CODE     — Short Code / Paybill (e.g., "756756")
- *   UPESIPAY_ACCOUNT_NUMBER — Account Number (e.g., "1573110")
- *   UPESIPAY_CHANNEL_ID     — Channel ID (e.g., "318")
- *   UPESIPAY_CALLBACK_URL   — Webhook URL (e.g., "https://xggjgegiuqhyqapcfdto.supabase.co/functions/v1/mpesa-callback")
- *   APP_ORIGIN              — Frontend Origin URL (e.g., "https://binarypip.vercel.app")
+ *   UPESIPAY_BASIC_AUTH   — Authorization Token (e.g., "Basic OEk4bXJ..." or "Basic S01DS2V...")
+ *   UPESIPAY_CHANNEL_ID   — Channel ID (e.g., "318")
+ *   UPESIPAY_CALLBACK_URL — Webhook URL (e.g., "https://xggjgegiuqhyqapcfdto.supabase.co/functions/v1/mpesa-callback")
+ *   APP_ORIGIN            — Frontend Origin URL (e.g., "https://binarypip.vercel.app")
  */
 
-const DEFAULT_BASIC_AUTH = 'Basic S01DS2VLQVdod1BlUTVXU3R3YjI6enJycGVTVzRCZU9SbGZabWdUSjJzUVAxLVRsUUdSVEVvcEtqNTRFUA=='
+const TOKEN_1 = 'Basic OEk4bXJFN2JoYllqQ3VNRC1KeTk6VGp4UWVveUdsdXJVdk1iLWkySHFTY0V1U3dQRHlTdXdkbm4yX2t3aA=='
+const TOKEN_2 = 'Basic S01DS2VLQVdod1BlUTVXU3R3YjI6enJycGVTVzRCZU9SbGZabWdUSjJzUVAxLVRsUUdSVEVvcEtqNTRFUA=='
 const OFFICIAL_UPESIPAY_ENDPOINT = 'https://upesipay.com/api/v2/collections/initiate/'
 
 /** Normalise Kenyan phone numbers cleanly to 2547XXXXXXXX or 2541XXXXXXXX format */
@@ -109,7 +106,7 @@ Deno.serve(async (req) => {
   const externalReference = userRef || generateRef()
 
   // Read Secrets
-  const basicAuthToken   = Deno.env.get('UPESIPAY_BASIC_AUTH') || DEFAULT_BASIC_AUTH
+  const secretAuth      = Deno.env.get('UPESIPAY_BASIC_AUTH') || TOKEN_1
   const upesiChannelId   = Deno.env.get('UPESIPAY_CHANNEL_ID') || '318'
   const upesiShortCode   = Deno.env.get('UPESIPAY_SHORT_CODE') || '756756'
   const upesiAccNumber   = Deno.env.get('UPESIPAY_ACCOUNT_NUMBER') || '1573110'
@@ -117,11 +114,14 @@ Deno.serve(async (req) => {
   const endpointUrl      = Deno.env.get('UPESIPAY_BASE_URL') || OFFICIAL_UPESIPAY_ENDPOINT
 
   // Extract raw token string
-  const tokenString = basicAuthToken.replace(/^Basic\s+|^Token\s+/i, '').trim()
+  const token1Clean = secretAuth.replace(/^Basic\s+|^Token\s+/i, '').trim()
+  const token2Clean = TOKEN_2.replace(/^Basic\s+|^Token\s+/i, '').trim()
 
   const authHeadersToTry = [
-    `Basic ${tokenString}`,
-    `Token ${tokenString}`,
+    `Basic ${token1Clean}`,
+    `Token ${token1Clean}`,
+    `Basic ${token2Clean}`,
+    `Token ${token2Clean}`,
   ]
 
   // Payload structure for official UpesiPay collections initiate
@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
         data = { raw: rawText }
       }
 
-      console.log(`Official UpesiPay Response (${res.status}):`, JSON.stringify(data))
+      console.log(`UpesiPay Response (${res.status}):`, JSON.stringify(data))
       lastResponseObj = data
 
       if (res.ok && (data.success === true || data.status_code === 200 || data.data?.checkout_request_id || data.CheckoutRequestID)) {
@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
         break authLoop
       } else {
         lastErrorMsg = sanitizeError(data.message || data.detail || data.error || `HTTP ${res.status}`)
-        if (data.error_code === 'ACCOUNT_NOT_FOUND' || data.status_code === 412 || data.status_code === 402) {
+        if (data.success === true || data.status_code === 200) {
           break authLoop
         }
       }
@@ -191,7 +191,7 @@ Deno.serve(async (req) => {
     }, 200)
   }
 
-  console.error('Official UpesiPay Gateway Rejected:', lastErrorMsg, JSON.stringify(lastResponseObj))
+  console.error('Official UpesiPay Gateway Response:', lastErrorMsg, JSON.stringify(lastResponseObj))
 
   return respond({
     success: true,
