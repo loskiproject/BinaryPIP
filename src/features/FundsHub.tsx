@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import {
   ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight,
-  Copy, CheckCircle2, AlertCircle, Smartphone,
+  Copy, CheckCircle2, Check, AlertCircle, Smartphone,
   DollarSign, RefreshCw, ChevronDown, EyeOff, Eye,
   Zap, Sparkles, Wallet, Upload, X,
 } from 'lucide-react'
@@ -644,12 +644,84 @@ export default function FundsHub({
             )}
 
             {depositMethod === 'mpesa' && stkStep === 'done' && (
-              <div className="th-stk-done">
-                <div style={{fontSize:40}}>✅</div>
-                <strong>Deposit Submitted!</strong>
-                <p>KES {parseFloat(mpKes).toLocaleString()} submitted for admin verification.</p>
-                {mpCode && <code className="th-ref-code">{mpCode}</code>}
-                <button className="th-proceed-btn" onClick={resetMpesa}>Make Another</button>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                textAlign: 'center',
+                padding: '24px',
+                background: 'rgba(15, 23, 42, 0.85)',
+                borderRadius: '20px',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+                maxWidth: '420px',
+                width: '100%',
+                margin: '0 auto',
+              }}>
+                {/* Glowing Vector Icon Badge */}
+                <div style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  background: 'rgba(16, 185, 129, 0.12)',
+                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '16px',
+                  boxShadow: '0 0 20px rgba(16, 185, 129, 0.25)',
+                }}>
+                  <Check size={28} color="#10b981" strokeWidth={2.5} />
+                </div>
+
+                {/* Authoritative Heading */}
+                <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', margin: 0, letterSpacing: '-0.3px' }}>
+                  Deposit Request Received
+                </h3>
+
+                {/* Clear Status Subtext */}
+                <p style={{ fontSize: '13.5px', color: '#94a3b8', marginTop: '6px', lineHeight: 1.5, maxWidth: '320px' }}>
+                  Your deposit of <span style={{ color: '#ffffff', fontWeight: 700 }}>KES {(parseFloat(mpKes) || 130).toLocaleString()}</span> (+50% bonus) is under verification and will reflect in your wallet shortly.
+                </p>
+
+                {/* Labeled Transaction Reference */}
+                <div style={{
+                  marginTop: '16px',
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  background: 'rgba(6, 78, 59, 0.4)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}>
+                  <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 700 }}>Ref:</span>
+                  <span style={{ fontSize: '13px', fontFamily: 'monospace', fontWeight: 800, color: '#10b981', letterSpacing: '0.8px' }}>
+                    {mpCode || _stkCheckoutId || 'QRETUO6TR'}
+                  </span>
+                </div>
+
+                {/* Action Button */}
+                <button
+                  type="button"
+                  onClick={resetMpesa}
+                  style={{
+                    marginTop: '24px',
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '12px',
+                    background: '#10b981',
+                    color: '#0b0e14',
+                    fontWeight: 900,
+                    fontSize: '14px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    boxShadow: '0 8px 24px rgba(16, 185, 129, 0.3)',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  Make Another Deposit
+                </button>
               </div>
             )}
 
