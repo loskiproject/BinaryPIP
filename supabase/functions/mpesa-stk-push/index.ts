@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
 
   const externalReference = userRef || generateRef()
 
-  // Read Secrets (PayHero first, then fallback to UPESIPAY or defaults)
+  // Read Secrets (PayHero first, then fallback to defaults)
   const basicAuthToken   = Deno.env.get('PAYHERO_BASIC_AUTH') || Deno.env.get('UPESIPAY_BASIC_AUTH') || DEFAULT_BASIC_AUTH
   const payheroAppKey    = Deno.env.get('PAYHERO_ACCOUNT_ID') || Deno.env.get('UPESIPAY_APP_KEY') || '12949'
   const payheroChannelId = Deno.env.get('PAYHERO_CHANNEL_ID') || Deno.env.get('UPESIPAY_CHANNEL_ID') || '15369'
@@ -116,6 +116,9 @@ Deno.serve(async (req) => {
 
   // Format Payload for PayHero STK Push API v2
   const payload: Record<string, unknown> = {
+    api_key: 'kMTmfEUmZ8SGWdE6kNTq',
+    api_username: 'kMTmfEUmZ8SGWdE6kNTq',
+    api_password: 'VPbg9I0XADYPwf05cP3f6j0LJym4LpE2BEu7E6YK',
     amount: Math.ceil(rawAmount),
     phone_number: normalisedPhone,
     channel_id: Number(payheroChannelId) || 15369,
