@@ -3,9 +3,9 @@
  * https://upesipay.com/docs/post-initiate-mpesa-stk-push-request
  *
  * Configured Supabase Secrets (Dashboard → Edge Functions → Secrets):
- *   UPESIPAY_API_USERNAME   — API Username (e.g., "8I8mrE7bhbYjCuMD-Jy9")
- *   UPESIPAY_API_PASSWORD   — API Password (e.g., "TjxQeoyGlurUvMb-i2HqScEuSwPDySuwdnn2_kwh")
- *   UPESIPAY_BASIC_AUTH     — Authorization Token (e.g., "Basic OEk4bXJ...")
+ *   UPESIPAY_API_USERNAME   — API Username (e.g., "KMCKeKAWhwPeQ5WStwb2")
+ *   UPESIPAY_API_PASSWORD   — API Password (e.g., "zrrpeSW4BeORlfZmgTJ2sQP1-TlQGRTEopKj54EP")
+ *   UPESIPAY_BASIC_AUTH     — Authorization Token (e.g., "Basic S01DS2V...")
  *   UPESIPAY_SHORT_CODE     — Short Code / Paybill (e.g., "756756")
  *   UPESIPAY_ACCOUNT_NUMBER — Account Number (e.g., "1573110")
  *   UPESIPAY_CHANNEL_ID     — Channel ID (e.g., "318")
@@ -13,7 +13,7 @@
  *   APP_ORIGIN              — Frontend Origin URL (e.g., "https://binarypip.vercel.app")
  */
 
-const DEFAULT_BASIC_AUTH = 'Basic OEk4bXJFN2JoYjVqQ3VNRDFKeTk6VGp4UWVveUdsdXJVdk1iLWkySHFTY0V1U3dQRHlTdXdkbm4yX2t3aA=='
+const DEFAULT_BASIC_AUTH = 'Basic S01DS2VLQVdod1BlUTVXU3R3YjI6enJycGVTVzRCZU9SbGZabWdUSjJzUVAxLVRsUUdSVEVvcEtqNTRFUA=='
 const OFFICIAL_UPESIPAY_ENDPOINT = 'https://upesipay.com/api/v2/collections/initiate/'
 
 /** Normalise Kenyan phone numbers cleanly to 2547XXXXXXXX or 2541XXXXXXXX format */
@@ -120,8 +120,8 @@ Deno.serve(async (req) => {
   const tokenString = basicAuthToken.replace(/^Basic\s+|^Token\s+/i, '').trim()
 
   const authHeadersToTry = [
-    `Token ${tokenString}`,
     `Basic ${tokenString}`,
+    `Token ${tokenString}`,
   ]
 
   // Payload structure for official UpesiPay collections initiate
