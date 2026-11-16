@@ -5,6 +5,7 @@ import {
   Menu,
   Search,
   ShieldCheck,
+  HelpCircle,
   Sparkles,
   UserRound,
   X,
@@ -81,7 +82,7 @@ import AdminDashboard from './admin/AdminDashboard'
 import InstallPwaWidget from './components/InstallPwaWidget'
 import CopyTradingHub from './features/CopyTradingHub'
 
-type View = 'overview' | 'assets' | 'tiers' | 'synthetic' | 'copy_trading' | 'institutions' | 'settings' | 'kyc_hub' | 'profile' | 'wallet' | 'funds' | 'help' | 'positions' | 'history' | 'verification'
+type View = 'overview' | 'assets' | 'tiers' | 'synthetic' | 'copy_trading' | 'institutions' | 'settings' | 'kyc_hub' | 'profile' | 'wallet' | 'funds' | 'help' | 'positions' | 'history' | 'verification' | 'how_it_works' | 'terms' | 'privacy'
 type AuthMode = 'login' | 'signup'
 type AccountType = 'none' | 'demo' | 'live'
 type Theme = 'dark' | 'light' | 'midnight' | 'cyberpunk'
@@ -208,6 +209,9 @@ const navigation: { id: View; label: string; icon: typeof LayoutDashboard }[] = 
   { id: 'tiers', label: 'Investments', icon: CandlestickChart },
   { id: 'funds', label: 'Wallet', icon: Wallet },
   { id: 'history', label: 'History', icon: Clock },
+  { id: 'how_it_works', label: 'How It Works', icon: HelpCircle },
+  { id: 'terms', label: 'Terms & Conditions', icon: FileText },
+  { id: 'privacy', label: 'Privacy Policy', icon: ShieldCheck },
   { id: 'profile', label: 'Profile', icon: UserRound },
 ]
 
@@ -5858,6 +5862,202 @@ export default function App() {
           {activeView === 'institutions' && renderInstitutionsView()}
           {activeView === 'positions' && renderOpenAndClosedTrades()}
           {activeView === 'history' && renderHistory()}
+          {(activeView === 'how_it_works' || activeView === 'terms' || activeView === 'privacy') && (
+            <div
+              className="cth-modal-backdrop"
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 99999,
+                background: 'rgba(3, 9, 22, 0.88)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '16px',
+                fontFamily: 'system-ui, -apple-system, sans-serif',
+              }}
+              onClick={() => changeView('overview')}
+            >
+              <div
+                className="cth-modal-container"
+                style={{
+                  background: '#071326',
+                  border: `1px solid ${activeView === 'how_it_works' ? '#00e5ff' : activeView === 'terms' ? '#f59e0b' : '#10b981'}40`,
+                  boxShadow: `0 20px 50px rgba(0, 0, 0, 0.85), 0 0 35px ${activeView === 'how_it_works' ? '#00e5ff' : activeView === 'terms' ? '#f59e0b' : '#10b981'}20`,
+                  borderRadius: '24px',
+                  padding: '28px 24px 24px',
+                  maxWidth: '560px',
+                  width: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '20px',
+                  position: 'relative',
+                  maxHeight: '85vh',
+                  overflowY: 'auto',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Close Button */}
+                <button
+                  type="button"
+                  onClick={() => changeView('overview')}
+                  style={{
+                    position: 'absolute',
+                    top: '18px',
+                    right: '18px',
+                    background: 'rgba(255, 255, 255, 0.06)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#94a3b8',
+                    borderRadius: '50%',
+                    width: '32px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <X size={16} />
+                </button>
+
+                {/* Modal Header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', paddingRight: '36px' }}>
+                  <div
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '14px',
+                      background: activeView === 'how_it_works' ? 'rgba(0, 229, 255, 0.15)' : activeView === 'terms' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                      border: `1px solid ${activeView === 'how_it_works' ? '#00e5ff' : activeView === 'terms' ? '#f59e0b' : '#10b981'}40`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {activeView === 'how_it_works' && <HelpCircle size={24} color="#00e5ff" />}
+                    {activeView === 'terms' && <FileText size={24} color="#f59e0b" />}
+                    {activeView === 'privacy' && <ShieldCheck size={24} color="#10b981" />}
+                  </div>
+                  <div>
+                    <h2 style={{ fontSize: '20px', fontWeight: 900, color: '#ffffff', margin: 0, letterSpacing: '-0.3px' }}>
+                      {activeView === 'how_it_works' ? 'How BinaryPip Works' : activeView === 'terms' ? 'Terms & Conditions' : 'Privacy Policy'}
+                    </h2>
+                    <span style={{ fontSize: '12px', color: activeView === 'how_it_works' ? '#00e5ff' : activeView === 'terms' ? '#f59e0b' : '#10b981', fontWeight: 700, marginTop: '2px', display: 'block' }}>
+                      {activeView === 'how_it_works' ? 'Next-Generation Synthetic & Copy Trading Platform' : activeView === 'terms' ? 'Legal Agreement & Service Rules' : 'Data Protection, Security & User Confidentiality'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Modal Content Sections */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13px', color: '#cbd5e1', lineHeight: 1.6 }}>
+                  {activeView === 'how_it_works' && (
+                    <>
+                      <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '14px' }}>
+                        <strong style={{ color: '#00e5ff', display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+                          1. Account Setup &amp; Dual Infrastructure
+                        </strong>
+                        Select between a Real Account ($ USD) or a Demo Account ($10,000 USD virtual funds). Seamlessly switch trading accounts and manage capital allocations between Main and Quantum Synthetic wallets.
+                      </div>
+
+                      <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '14px' }}>
+                        <strong style={{ color: '#00e5ff', display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+                          2. Instant M-PESA &amp; Multi-Chain Crypto Deposits
+                        </strong>
+                        Fund your trading account in real time using Safaricom M-PESA STK Push (Paybill 756756) or crypto assets (USDT-TRC20, BEP-20, BTC, LTC) with automated welcome bonuses up to +50%.
+                      </div>
+
+                      <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '14px' }}>
+                        <strong style={{ color: '#00e5ff', display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+                          3. 24/7 Quantum Synthetics Trading Engine
+                        </strong>
+                        Trade continuous volatility indices (Volatility 10, 25, 50, 75, 100 1s) featuring zero slippage, instant contract execution, customizable risk parameters, and tick-by-tick charts.
+                      </div>
+
+                      <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '14px' }}>
+                        <strong style={{ color: '#00e5ff', display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+                          4. Master Copy Trading Mirroring
+                        </strong>
+                        Browse top-performing Master Traders with verified win rates (up to 95.4%). Allocate capital, select copy ratios (0.5x – 2.0x), and set stop-loss limits. All profits automatically settle to your account.
+                      </div>
+                    </>
+                  )}
+
+                  {activeView === 'terms' && (
+                    <>
+                      <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '14px' }}>
+                        <strong style={{ color: '#f59e0b', display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+                          1. Acceptance of Terms &amp; Platform Eligibility
+                        </strong>
+                        By accessing or trading on BinaryPip, you agree to be bound by these Terms and Conditions. Users must be at least 18 years of age to open a real trading account.
+                      </div>
+
+                      <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '14px' }}>
+                        <strong style={{ color: '#f59e0b', display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+                          2. Financial Risk Disclosure
+                        </strong>
+                        Trading synthetic volatility contracts and copy trading carries financial risk. Past master trader performance is not an indicator of future results. Only trade with capital you can afford to risk.
+                      </div>
+
+                      <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '14px' }}>
+                        <strong style={{ color: '#f59e0b', display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+                          3. Payment &amp; Withdrawal Verification
+                        </strong>
+                        M-PESA deposits and withdrawals are processed in accordance with Safaricom network rules. All withdrawal requests undergo automated admin verification prior to payout.
+                      </div>
+                    </>
+                  )}
+
+                  {activeView === 'privacy' && (
+                    <>
+                      <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '14px' }}>
+                        <strong style={{ color: '#10b981', display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+                          1. Encryption &amp; Data Security
+                        </strong>
+                        All account data, API requests, and transactions are protected using end-to-end SSL/TLS encryption, JWT authentication, and Supabase Row-Level Security (RLS) policies.
+                      </div>
+
+                      <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '14px' }}>
+                        <strong style={{ color: '#10b981', display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+                          2. Authorized Gateway Integration
+                        </strong>
+                        M-PESA phone numbers are transmitted securely to authorized gateway API partners (UpesiPay/PayHero) strictly for dispatching transaction STK prompts to user phones.
+                      </div>
+
+                      <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '14px' }}>
+                        <strong style={{ color: '#10b981', display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+                          3. User Privacy Guarantee
+                        </strong>
+                        BinaryPip does not sell, rent, or share personal user details with third-party advertisers. Your trading activity and balance details remain 100% confidential.
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Action Button */}
+                <button
+                  type="button"
+                  onClick={() => changeView('overview')}
+                  style={{
+                    width: '100%',
+                    background: `linear-gradient(90deg, ${activeView === 'how_it_works' ? '#00e5ff' : activeView === 'terms' ? '#f59e0b' : '#10b981'}, #3b82f6)`,
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '12px',
+                    fontSize: '14px',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    marginTop: '4px',
+                  }}
+                >
+                  Got It
+                </button>
+              </div>
+            </div>
+          )}
           {(activeView === 'wallet' || activeView === 'funds') && renderFundsManagement()}
           {activeView === 'settings' && renderAdminSettings()}
           {activeView === 'kyc_hub' && renderKycHub()}
