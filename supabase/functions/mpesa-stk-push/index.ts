@@ -35,7 +35,7 @@ function generateRef(): string {
 function sanitizeError(msg: unknown): string {
   if (typeof msg !== 'string') return 'PayHero gateway notification'
   if (msg.includes('Unable to perform request')) {
-    return 'Unable to perform request. Please top up your PayHero Service Wallet float balance.'
+    return 'Unable to perform request. Please ensure float balance is in your PayHero Service Wallet (not Collections).'
   }
   if (msg.trim().startsWith('<') || msg.includes('<!DOCTYPE') || msg.includes('<html') || msg.includes('dns error')) {
     return 'PayHero API endpoint unreachable'
@@ -116,9 +116,6 @@ Deno.serve(async (req) => {
 
   // Format Payload for PayHero STK Push API v2
   const payload: Record<string, unknown> = {
-    api_key: 'kMTmfEUmZ8SGWdE6kNTq',
-    api_username: 'kMTmfEUmZ8SGWdE6kNTq',
-    api_password: 'VPbg9I0XADYPwf05cP3f6j0LJym4LpE2BEu7E6YK',
     amount: Math.ceil(rawAmount),
     phone_number: normalisedPhone,
     channel_id: Number(payheroChannelId) || 15369,
@@ -142,6 +139,7 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
         'Authorization': authVal,
         'X-MERCHANT-ID': payheroAppKey,
+        'X-ACCOUNT-ID': payheroAppKey,
         'X-CHANNEL-ID': payheroChannelId,
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
       },
