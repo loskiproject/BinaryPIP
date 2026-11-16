@@ -287,8 +287,18 @@ export default function CopyTraderModal({
               <span className="cth-sub" style={{ fontSize: '11px' }}>Min $10.00</span>
             </div>
 
-            <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#10b981', fontWeight: 900, fontSize: '16px' }}>
+            <div
+              className="cth-input"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                borderRadius: '12px',
+                padding: '0 14px',
+                boxSizing: 'border-box',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+              }}
+            >
+              <span style={{ color: '#10b981', fontWeight: 900, fontSize: '18px', marginRight: '6px', flexShrink: 0 }}>
                 $
               </span>
               <input
@@ -300,11 +310,12 @@ export default function CopyTraderModal({
                 onChange={e => setAllocationAmount(e.target.value)}
                 placeholder="100"
                 disabled={isUnfunded}
-                className="cth-input"
                 style={{
                   width: '100%',
-                  borderRadius: '12px',
-                  padding: '13px 14px 13px 32px',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'inherit',
+                  padding: '13px 0',
                   fontSize: '16px',
                   fontWeight: 800,
                   outline: 'none',

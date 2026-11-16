@@ -1,5 +1,5 @@
-import React from 'react'
-import { Sparkles, Pause, Play, Square, Users } from 'lucide-react'
+import React, { useState } from 'react'
+import { Sparkles, Pause, Play, Square, Users, X, AlertTriangle, ArrowRight, Wallet } from 'lucide-react'
 import type { CopySubscription } from './useCopyTrading'
 
 interface MyActiveTradersProps {
@@ -24,6 +24,8 @@ export default function MyActiveTraders({
   const normAccountType = accountType === 'live' || accountType === 'real' ? 'real' : 'demo'
   const isDemo = normAccountType === 'demo'
 
+  const [confirmStopSub, setConfirmStopSub] = useState<CopySubscription | null>(null)
+
   // Filter subscriptions for current account type
   const activeSubs = subscriptions.filter(s => {
     const sType = s.account_type
@@ -33,6 +35,13 @@ export default function MyActiveTraders({
   // Total allocated & total P&L across all active subscriptions
   const totalAllocated = activeSubs.reduce((acc, curr) => acc + curr.allocated_amount, 0)
   const totalCopiedPnL = activeSubs.reduce((acc, curr) => acc + curr.total_copied_profit, 0)
+
+  const handleConfirmStop = () => {
+    if (confirmStopSub) {
+      onStop(confirmStopSub.id)
+      setConfirmStopSub(null)
+    }
+  }
 
   return (
     <div
@@ -289,7 +298,7 @@ export default function MyActiveTraders({
 
                   <button
                     type="button"
-                    onClick={() => onStop(sub.id)}
+                    onClick={() => setConfirmStopSub(sub)}
                     style={{
                       flex: 1,
                       background: 'rgba(239, 68, 68, 0.12)',
@@ -314,6 +323,197 @@ export default function MyActiveTraders({
           })}
         </div>
       )}
+
+      {/* STOP COPYING CONFIRMATION & PNL SETTLEMENT POPUP MODAL */}
+      {confirmStopSub && (() => {
+        const trader = confirmStopSub.master_trader_snapshot
+        const allocated = confirmStopSub.allocated_amount
+        const pnl = confirmStopSub.total_copied_profit
+        const totalRefund = allocated + pnl
+        const isProfit = pnl >= 0
+
+        return (
+          <div
+            className="cth-modal-backdrop"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 99999,
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '16px',
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+            }}
+            onClick={() => setConfirmStopSub(null)}
+          >
+            <div
+              className="cth-modal-container"
+              style={{
+                borderRadius: '24px',
+                padding: '28px 24px 24px',
+                maxWidth: '440px',
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '18px',
+                position: 'relative',
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => setConfirmStopSub(null)}
+                style={{
+                  position: 'absolute',
+                  top: '18px',
+                  right: '18px',
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  color: '#94a3b8',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <X size={16} />
+              </button>
+
+              {/* Modal Header */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', paddingRight: '36px' }}>
+                <img
+                  src={trader.avatar}
+                  alt={trader.name}
+                  style={{
+                    width: '52px',
+                    height: '52px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '2px solid #ef4444',
+                    boxShadow: '0 0 14px rgba(239, 68, 68, 0.35)',
+                  }}
+                />
+                <div>
+                  <h3 className="cth-modal-title" style={{ fontSize: '19px', fontWeight: 900, margin: 0 }}>
+                    Stop Copying {trader.name}?
+                  </h3>
+                  <span className="cth-sub" style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                    <AlertTriangle size={13} color="#f59e0b" /> P&amp;L Settlement &amp; Capital Refund
+                  </span>
+                </div>
+              </div>
+
+              {/* Settlement P&L Breakdown Card */}
+              <div
+                className="cth-metrics-box"
+                style={{
+                  borderRadius: '16px',
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  background: 'rgba(15, 23, 42, 0.85)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span className="cth-stat-label" style={{ fontSize: '11px', fontWeight: 800 }}>ALLOCATED CAPITAL</span>
+                  <span className="cth-stat-value" style={{ fontSize: '14px', fontWeight: 900 }}>
+                    ${allocated.toFixed(2)} USD
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span className="cth-stat-label" style={{ fontSize: '11px', fontWeight: 800 }}>REALIZED COPIED P&amp;L</span>
+                  <span
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: 900,
+                      color: isProfit ? '#10b981' : '#ef4444',
+                    }}
+                  >
+                    {isProfit ? `+$${pnl.toFixed(2)}` : `-$${Math.abs(pnl).toFixed(2)}`} USD
+                  </span>
+                </div>
+
+                <div style={{ borderTop: '1px dashed rgba(255, 255, 255, 0.15)', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Wallet size={15} color="#10b981" />
+                    <span className="cth-modal-title" style={{ fontSize: '12px', fontWeight: 900 }}>NET CAPITAL REFUND</span>
+                  </div>
+                  <strong style={{ fontSize: '18px', fontWeight: 900, color: '#10b981' }}>
+                    ${totalRefund.toFixed(2)} USD
+                  </strong>
+                </div>
+              </div>
+
+              {/* Information Notice */}
+              <div
+                style={{
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '12px',
+                  padding: '12px 14px',
+                  fontSize: '12px',
+                  color: '#cbd5e1',
+                  lineHeight: 1.5,
+                }}
+              >
+                Stopping copy trading will unmount all live mirrored positions for <strong>{trader.name}</strong> and immediately credit <strong>${totalRefund.toFixed(2)} USD</strong> directly back to your <strong>{isDemo ? 'Demo' : 'Real'} Account balance</strong>.
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={handleConfirmStop}
+                  style={{
+                    width: '100%',
+                    background: 'linear-gradient(90deg, #ef4444, #f97316)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '14px',
+                    fontSize: '14px',
+                    fontWeight: 900,
+                    cursor: 'pointer',
+                    boxShadow: '0 8px 24px rgba(239, 68, 68, 0.35)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  Confirm Stop &amp; Refund ${totalRefund.toFixed(2)} USD <ArrowRight size={16} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setConfirmStopSub(null)}
+                  className="cth-cancel-btn"
+                  style={{
+                    width: '100%',
+                    borderRadius: '12px',
+                    padding: '11px',
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel &amp; Keep Copying
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
