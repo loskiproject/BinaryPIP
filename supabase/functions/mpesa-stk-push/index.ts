@@ -157,7 +157,16 @@ Deno.serve(async (req) => {
     console.log(`Official UpesiPay Response (${res.status}):`, JSON.stringify(data))
     lastResponseObj = data
 
-    if (res.ok && (data.success === true || data.status_code === 200 || data.data?.checkout_request_id || data.CheckoutRequestID)) {
+    const isSuccessResp = (res.ok || res.status === 200) && (
+      data.success === true ||
+      data.status_code === 200 ||
+      data.data?.status === 'sent' ||
+      data.data?.checkout_request_id ||
+      data.CheckoutRequestID ||
+      data.reference
+    )
+
+    if (isSuccessResp) {
       successData = data
     } else {
       lastErrorMsg = sanitizeError(data.message || data.detail || data.error || `HTTP ${res.status}`)
