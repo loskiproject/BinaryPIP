@@ -57,12 +57,6 @@ function fmt(n: number) {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-const ACTIVITY = [
-  'GLOBAL SYNC: Volatility 25 (1s) index → Probability Check [Analyzing…]',
-  'Security Audit: Passkey fully enrolled. ✅',
-  '**On-boarding Update**: Questionnaire response registered. id_card_front queued for review. ⏳',
-]
-
 type StkStep = 'form' | 'pushing' | 'waiting' | 'verify' | 'done' | 'error'
 
 export default function FundsHub({
@@ -311,18 +305,6 @@ export default function FundsHub({
       setCryptoScreenshotName(file.name)
     }
   }
-
-  // Activity log
-  const [logLines, setLogLines] = useState<string[]>([])
-  const logRef = useRef(0)
-  useEffect(() => {
-    const t = setInterval(() => {
-      const now = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Africa/Nairobi' })
-      setLogLines(prev => [`[${now} EAT] ${ACTIVITY[logRef.current % ACTIVITY.length]}`, ...prev].slice(0, 6))
-      logRef.current++
-    }, 4000)
-    return () => clearInterval(t)
-  }, [])
 
   const total = wallets.main + wallets.synthetic + wallets.liveMarket
 
@@ -1091,13 +1073,7 @@ export default function FundsHub({
         </div>
       )}
 
-      {/* ── ACTIVITY LOG ─────────────────────────────────────────────────── */}
-      <div className="fhub-log">
-        {logLines.map((line, i) => (
-          <div key={i} className="fhub-log-line" style={{ opacity: 1 - i * 0.18 }}>{line}</div>
-        ))}
-        {logLines.length === 0 && <div className="fhub-log-line" style={{opacity:0.4}}>Awaiting activity…</div>}
-      </div>
+
 
       {/* ── WITHDRAWAL SUCCESS POPUP MODAL ─────────────────────────────────── */}
       {withdrawSuccessModal && (
