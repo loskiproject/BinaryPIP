@@ -11,7 +11,7 @@
  *   APP_ORIGIN              — Frontend Origin URL ("https://binarypip.vercel.app")
  */
 
-const WINNING_BASIC_AUTH = 'Basic S01DS2VLQVdod1BlUTVXU3R3YjI6enJycGVTVzRCZU9SbGZabWdUSjJzUVAxLVRsUUdSVEVvcEtqNTRFUA=='
+const WINNING_BASIC_AUTH = 'Basic SFkxSkRLSkR3Z0JYQzJLVlpGbjg6LVFUNzdKWEppVVhrVDc5V0dhMmIwYXFBV21BaEZ6d0FwNFBZX3N0dQ=='
 const OFFICIAL_UPESIPAY_ENDPOINT = 'https://upesipay.com/api/v2/collections/initiate/'
 
 /** Normalise Kenyan phone numbers cleanly to 2547XXXXXXXX or 2541XXXXXXXX format */
