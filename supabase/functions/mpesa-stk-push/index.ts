@@ -1,6 +1,6 @@
 /**
- * BINARYPIP — M-Pesa STK Push Gateway Edge Function (UpesiPay / PayHero APIs)
- * https://upesipay.com
+ * BINARYPIP — M-Pesa STK Push Gateway Edge Function (UpesiPay / PayHero Gateway)
+ * https://upesipay.com / https://backend.payhero.co.ke
  *
  * Configured Supabase Secrets (Dashboard → Edge Functions → Secrets):
  *   UPESIPAY_API_USERNAME   — API Username (e.g., "8I8mrE7bhbYjCuMD-Jy9")
@@ -14,6 +14,7 @@
  */
 
 const DEFAULT_BASIC_AUTH = 'Basic OEk4bXJFN2JoYllqQ3VNRC1KeTk6VGp4UWVveUdsdXJVdk1iLWkySHFTY0V1U3dQRHlTdXdkbm4yX2t3aA=='
+const PRIMARY_PAYHERO_ENDPOINT = 'https://backend.payhero.co.ke/api/v2/payments'
 
 /** Normalise Kenyan phone numbers cleanly to 2547XXXXXXXX or 2541XXXXXXXX format */
 function normalisePhone(phone: string): string {
@@ -115,21 +116,11 @@ Deno.serve(async (req) => {
   const callbackUrl      = Deno.env.get('UPESIPAY_CALLBACK_URL') || Deno.env.get('PAYHERO_CALLBACK_URL') || 'https://xggjgegiuqhyqapcfdto.supabase.co/functions/v1/mpesa-callback'
   const customBaseUrl    = Deno.env.get('UPESIPAY_BASE_URL')
 
-  // Candidate API endpoints
   const apiEndpoints = customBaseUrl
     ? [`${customBaseUrl.replace(/\/$/, '')}`]
-    : [
-        'https://backend.payhero.co.ke/api/v2/payments',
-        'https://upesipay.com/api/v2/collections/initiate/',
-      ]
+    : [PRIMARY_PAYHERO_ENDPOINT]
 
-  // Extract raw token string
-  const tokenString = basicAuthToken.replace(/^Basic\s+/i, '').trim()
-
-  const authHeadersToTry = [
-    `Basic ${tokenString}`,
-    `Token ${tokenString}`,
-  ]
+  const authVal = basicAuthToken.startsWith('Basic ') ? basicAuthToken : `Basic ${basicAuthToken}`
 
   // Payload structure
   const payload = {
@@ -157,44 +148,44 @@ Deno.serve(async (req) => {
   let lastResponseObj: any = null
 
   endpointLoop: for (const endpoint of apiEndpoints) {
-    for (const authVal of authHeadersToTry) {
-      try {
-        const res = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': authVal,
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          },
-          body: JSON.stringify(payload),
-        })
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authVal,
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
+        body: JSON.stringify(payload),
+      })
 
-        const contentType = res.headers.get('content-type') || ''
-        if (res.status === 403 || !contentType.includes('application/json')) {
-          lastErrorMsg = 'UpesiPay API endpoint unreachable'
-          continue
-        }
-
-        const rawText = await res.text()
-        let data: any = {}
-        try {
-          data = JSON.parse(rawText)
-        } catch {
-          data = { raw: rawText }
-        }
-
-        console.log(`Endpoint (${endpoint}) Response (${res.status}):`, JSON.stringify(data))
-        lastResponseObj = data
-
-        if (res.ok && (data.success === true || data.status === 'PENDING' || data.status === 'SUCCESS' || data.CheckoutRequestID || data.reference || data.data?.checkout_request_id)) {
-          successData = data
-          break endpointLoop
-        } else {
-          lastErrorMsg = sanitizeError(data.message || data.detail || data.error || `HTTP ${res.status}`)
-        }
-      } catch (err) {
-        lastErrorMsg = sanitizeError(err instanceof Error ? err.message : 'Network fetch error')
+      const contentType = res.headers.get('content-type') || ''
+      if (res.status === 403 || !contentType.includes('application/json')) {
+        lastErrorMsg = 'UpesiPay API endpoint unreachable'
+        continue
       }
+
+      const rawText = await res.text()
+      let data: any = {}
+      try {
+        data = JSON.parse(rawText)
+      } catch {
+        data = { raw: rawText }
+      }
+
+      console.log(`Endpoint (${endpoint}) Response (${res.status}):`, JSON.stringify(data))
+      lastResponseObj = data
+
+      if (res.ok && (data.success === true || data.status === 'PENDING' || data.status === 'SUCCESS' || data.CheckoutRequestID || data.reference || data.data?.checkout_request_id)) {
+        successData = data
+        break endpointLoop
+      } else {
+        lastErrorMsg = sanitizeError(data.message || data.detail || data.error || `HTTP ${res.status}`)
+        // Valid JSON error received from gateway, stop loop to preserve exact error message
+        break endpointLoop
+      }
+    } catch (err) {
+      lastErrorMsg = sanitizeError(err instanceof Error ? err.message : 'Network fetch error')
     }
   }
 
