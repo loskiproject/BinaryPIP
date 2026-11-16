@@ -383,10 +383,14 @@ export default function FundsHub({
       setStkCheckoutId(data?.checkoutRequestId || data?.reference || '')
       setStkStep('waiting')
 
-      if (data?.gatewayNotice) {
+      if (data?.isRealStkPush) {
+        setStkError('')
+        showNotice('📱 STK Push sent! Please check your phone screen and enter your M-Pesa PIN.')
+      } else if (data?.gatewayNotice) {
         setStkError(data.gatewayNotice)
         showNotice(`⚠️ ${data.gatewayNotice}`)
       } else {
+        setStkError('')
         showNotice('📱 STK Push sent! Please check your phone screen and enter your M-Pesa PIN.')
       }
 
