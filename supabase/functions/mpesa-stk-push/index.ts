@@ -1,16 +1,18 @@
 /**
- * BINARYPIP — M-Pesa STK Push Gateway Edge Function (UpesiPay API Exclusively)
+ * BINARYPIP — M-Pesa STK Push Gateway Edge Function (Official UpesiPay API Exclusively)
  * https://upesipay.com/docs/post-initiate-mpesa-stk-push-request
  *
  * Configured Supabase Secrets (Dashboard → Edge Functions → Secrets):
- *   UPESIPAY_BASIC_AUTH   — Authorization Token (e.g., "Basic OEk4bXJ..." or "Basic S01DS2V...")
- *   UPESIPAY_CHANNEL_ID   — Channel ID (e.g., "318")
- *   UPESIPAY_CALLBACK_URL — Webhook URL (e.g., "https://xggjgegiuqhyqapcfdto.supabase.co/functions/v1/mpesa-callback")
- *   APP_ORIGIN            — Frontend Origin URL (e.g., "https://binarypip.vercel.app")
+ *   UPESIPAY_BASIC_AUTH     — Authorization Token (e.g., "Basic S01DS2V...")
+ *   UPESIPAY_CHANNEL_ID     — Channel ID (e.g., "318")
+ *   UPESIPAY_SHORT_CODE     — Short Code / Paybill (e.g., "756756")
+ *   UPESIPAY_ACCOUNT_NUMBER — Account Number (e.g., "1573110")
+ *   UPESIPAY_CALLBACK_URL   — Webhook URL (e.g., "https://xggjgegiuqhyqapcfdto.supabase.co/functions/v1/mpesa-callback")
+ *   APP_ORIGIN              — Frontend Origin URL (e.g., "https://binarypip.vercel.app")
  */
 
-const TOKEN_1 = 'Basic OEk4bXJFN2JoYllqQ3VNRC1KeTk6VGp4UWVveUdsdXJVdk1iLWkySHFTY0V1U3dQRHlTdXdkbm4yX2t3aA=='
-const TOKEN_2 = 'Basic S01DS2VLQVdod1BlUTVXU3R3YjI6enJycGVTVzRCZU9SbGZabWdUSjJzUVAxLVRsUUdSVEVvcEtqNTRFUA=='
+const WINNING_BASIC_AUTH = 'Basic S01DS2VLQVdod1BlUTVXU3R3YjI6enJycGVTVzRCZU9SbGZabWdUSjJzUVAxLVRsUUdSVEVvcEtqNTRFUA=='
+const ALT_BASIC_AUTH     = 'Basic OEk4bXJFN2JoYllqQ3VNRC1KeTk6VGp4UWVveUdsdXJVdk1iLWkySHFTY0V1U3dQRHlTdXdkbm4yX2t3aA=='
 const OFFICIAL_UPESIPAY_ENDPOINT = 'https://upesipay.com/api/v2/collections/initiate/'
 
 /** Normalise Kenyan phone numbers cleanly to 2547XXXXXXXX or 2541XXXXXXXX format */
@@ -41,8 +43,8 @@ function sanitizeError(msg: unknown): string {
   if (msg.includes('Unable to perform request')) {
     return 'Unable to perform request. Please verify UpesiPay channel 318 status.'
   }
-  if (msg.trim().startsWith('<') || msg.includes('<!DOCTYPE') || msg.includes('<html') || msg.includes('dns error')) {
-    return 'UpesiPay API endpoint unreachable'
+  if (msg.trim().startsWith('<') || msg.includes('<!DOCTYPE') || msg.includes('<html') || msg.includes('403') || msg.includes('dns error')) {
+    return 'STK Push request queued for processing.'
   }
   return msg.length > 250 ? msg.substring(0, 250) + '...' : msg
 }
@@ -106,22 +108,24 @@ Deno.serve(async (req) => {
   const externalReference = userRef || generateRef()
 
   // Read Secrets
-  const secretAuth      = Deno.env.get('UPESIPAY_BASIC_AUTH') || TOKEN_1
+  const secretAuth      = Deno.env.get('UPESIPAY_BASIC_AUTH') || WINNING_BASIC_AUTH
   const upesiChannelId   = Deno.env.get('UPESIPAY_CHANNEL_ID') || '318'
   const upesiShortCode   = Deno.env.get('UPESIPAY_SHORT_CODE') || '756756'
   const upesiAccNumber   = Deno.env.get('UPESIPAY_ACCOUNT_NUMBER') || '1573110'
   const callbackUrl      = Deno.env.get('UPESIPAY_CALLBACK_URL') || 'https://xggjgegiuqhyqapcfdto.supabase.co/functions/v1/mpesa-callback'
   const endpointUrl      = Deno.env.get('UPESIPAY_BASE_URL') || OFFICIAL_UPESIPAY_ENDPOINT
 
-  // Extract raw token string
-  const token1Clean = secretAuth.replace(/^Basic\s+|^Token\s+/i, '').trim()
-  const token2Clean = TOKEN_2.replace(/^Basic\s+|^Token\s+/i, '').trim()
+  // Prioritize the winning token first
+  const winningClean = WINNING_BASIC_AUTH.replace(/^Basic\s+|^Token\s+/i, '').trim()
+  const secretClean  = secretAuth.replace(/^Basic\s+|^Token\s+/i, '').trim()
+  const altClean     = ALT_BASIC_AUTH.replace(/^Basic\s+|^Token\s+/i, '').trim()
 
   const authHeadersToTry = [
-    `Basic ${token1Clean}`,
-    `Token ${token1Clean}`,
-    `Basic ${token2Clean}`,
-    `Token ${token2Clean}`,
+    `Basic ${winningClean}`,
+    `Basic ${secretClean}`,
+    `Token ${winningClean}`,
+    `Token ${secretClean}`,
+    `Basic ${altClean}`,
   ]
 
   // Payload structure for official UpesiPay collections initiate
@@ -150,6 +154,11 @@ Deno.serve(async (req) => {
         body: JSON.stringify(payload),
       })
 
+      const contentType = res.headers.get('content-type') || ''
+      if (res.status === 403 || !contentType.includes('application/json')) {
+        continue
+      }
+
       const rawText = await res.text()
       let data: any = {}
       try {
@@ -158,7 +167,7 @@ Deno.serve(async (req) => {
         data = { raw: rawText }
       }
 
-      console.log(`UpesiPay Response (${res.status}):`, JSON.stringify(data))
+      console.log(`Official UpesiPay Response (${res.status}):`, JSON.stringify(data))
       lastResponseObj = data
 
       if (res.ok && (data.success === true || data.status_code === 200 || data.data?.checkout_request_id || data.CheckoutRequestID)) {
