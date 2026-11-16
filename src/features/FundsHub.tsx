@@ -61,7 +61,7 @@ type StkStep = 'form' | 'pushing' | 'waiting' | 'verify' | 'done' | 'error'
 
 export default function FundsHub({
   wallets, onTransfer, onDepositRequest, onWithdrawalRequest, adminAddresses, showNotice,
-  minDepositUSD = 1, minDepositKES = 130, minWithdrawalUSD = 1,
+  minDepositUSD = 1, minDepositKES = 130, minWithdrawalUSD = 100,
 }: Props) {
   const [tab, setTab] = useState<'deposit' | 'withdraw' | 'transfer'>('deposit')
   const [selectedWallet, setSelectedWallet] = useState<keyof WalletBalances>('main')
@@ -376,9 +376,10 @@ export default function FundsHub({
         showNotice('📱 STK Push sent! Please check your phone screen and enter your M-Pesa PIN.')
       }
 
-      const usdEquiv = kes / 130
+      const baseUSD = kes / 130
+      const totalCreditedUSD = baseUSD * 1.50
       const refCode = data?.checkoutRequestId || data?.externalReference || data?.reference || `STK-${Date.now()}`
-      onDepositRequest(usdEquiv, 'MPESA', `STK Push: ${refCode} | Phone: ${mpPhone}`)
+      onDepositRequest(totalCreditedUSD, 'MPESA', `STK Push: ${refCode} | Phone: ${mpPhone} | +50% Bonus`)
 
     } catch (err) {
       setStkStep('waiting')
@@ -398,19 +399,22 @@ export default function FundsHub({
         submitMpesaCode()
       }
     } else {
-      // Crypto Deposit
+      // Crypto Deposit with +50% Deposit Bonus
       const amt = parseFloat(amount)
       if (!amt || amt < minDepositUSD) { showNotice(`Minimum deposit is $${minDepositUSD}.`); return }
+
+      const totalCreditedUSD = amt * 1.50
 
       let refCode = cryptoTxHash.trim() ? `TxHash: ${cryptoTxHash.trim()}` : `Crypto Deposit (${depositMethod})`
       if (cryptoScreenshotName) {
         refCode += ` | Proof: ${cryptoScreenshotName}`
       }
+      refCode += ' | +50% Bonus'
 
-      onDepositRequest(amt, depositMethod, refCode)
+      onDepositRequest(totalCreditedUSD, depositMethod, refCode)
 
       setDepositSuccessModal({
-        amountUSD: amt,
+        amountUSD: totalCreditedUSD,
         method: depositMethod,
         ref: cryptoTxHash.trim() || cryptoScreenshotName || 'Crypto Transfer',
       })
@@ -424,7 +428,9 @@ export default function FundsHub({
   const submitMpesaCode = () => {
     if (!mpCode.trim()) { showNotice('Enter the M-Pesa transaction code.'); return }
     setStkVerifying(true)
-    onDepositRequest(parseFloat(mpKes || amount) / 130, 'MPESA', mpCode.trim())
+    const baseUSD = parseFloat(mpKes || amount) / 130
+    const totalCreditedUSD = baseUSD * 1.50
+    onDepositRequest(totalCreditedUSD, 'MPESA', `${mpCode.trim()} (+50% Bonus)`)
     setTimeout(() => { setStkStep('done'); setStkVerifying(false) }, 800)
   }
 
@@ -432,7 +438,7 @@ export default function FundsHub({
 
   const confirmWithdraw = () => {
     const amt = parseFloat(wAmt)
-    if (!amt || amt < minWithdrawalUSD) { showNotice(`Minimum withdrawal is $${minWithdrawalUSD}.`); return }
+    if (!amt || amt < minWithdrawalUSD) { showNotice(`Minimum withdrawal amount is $${minWithdrawalUSD.toFixed(2)} USD.`); return }
     if (wallets.main < amt) { showNotice('Insufficient main balance.'); return }
 
     let destinationSummary = wAddr.trim()
@@ -741,15 +747,31 @@ export default function FundsHub({
               </div>
             )}
 
-            {/* Real Account Deposit Capital Calculation Card */}
-            {((depositMethod === 'mpesa' && parseFloat(mpKes) > 0) || (depositMethod !== 'mpesa' && parseFloat(amount) > 0)) && (
-              <div style={{ background: 'rgba(0, 230, 118, 0.08)', border: '1px solid rgba(0, 230, 118, 0.28)', borderRadius: '10px', padding: '12px 14px', marginTop: '14px', fontSize: '11.5px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ffffff', fontWeight: 800 }}>
-                  <span>Deposit Capital Credited:</span>
-                  <strong style={{ color: '#00e676', fontSize: '13px' }}>${(depositMethod === 'mpesa' ? (parseFloat(mpKes) || 0) / 130 : (parseFloat(amount) || 0)).toFixed(2)} USD</strong>
+            {/* Real Account Deposit Capital Calculation Card (+50% Bonus) */}
+            {((depositMethod === 'mpesa' && parseFloat(mpKes) > 0) || (depositMethod !== 'mpesa' && parseFloat(amount) > 0)) && (() => {
+              const baseUSD = depositMethod === 'mpesa' ? (parseFloat(mpKes) || 0) / 130 : (parseFloat(amount) || 0)
+              const bonusUSD = baseUSD * 0.50
+              const totalUSD = baseUSD * 1.50
+
+              return (
+                <div style={{ background: 'rgba(0, 230, 118, 0.08)', border: '1px solid rgba(0, 230, 118, 0.28)', borderRadius: '12px', padding: '14px', marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Base Deposit:</span>
+                    <strong style={{ color: '#ffffff' }}>${baseUSD.toFixed(2)} USD</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px' }}>
+                    <span style={{ color: '#20eb5a', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      🎁 Welcome Bonus (+50%):
+                    </span>
+                    <strong style={{ color: '#20eb5a' }}>+${bonusUSD.toFixed(2)} USD</strong>
+                  </div>
+                  <div style={{ borderTop: '1px dashed rgba(255, 255, 255, 0.15)', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#ffffff', fontWeight: 900, fontSize: '13px' }}>Total Capital Credited:</span>
+                    <strong style={{ color: '#00e676', fontSize: '16px', fontWeight: 900 }}>${totalUSD.toFixed(2)} USD</strong>
+                  </div>
                 </div>
-              </div>
-            )}
+              )
+            })()}
           </div>
 
           {/* ── RIGHT: INSTRUCTIONS ──────────────────────────────────────── */}

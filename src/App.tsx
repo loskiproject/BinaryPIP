@@ -5133,7 +5133,7 @@ export default function App() {
         showNotice={showNotice}
         minDepositUSD={minDepositUSD}
         minDepositKES={minDepositKES}
-        minWithdrawalUSD={10}
+        minWithdrawalUSD={100}
       />
     </section>
   )
