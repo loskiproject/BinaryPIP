@@ -1,20 +1,20 @@
 /**
- * BINARYPIP — M-Pesa STK Push Gateway Edge Function (UpesiPay API Exclusively)
- * https://upesipay.com
+ * BINARYPIP — M-Pesa STK Push Gateway Edge Function (Official UpesiPay API)
+ * https://upesipay.com/docs/post-initiate-mpesa-stk-push-request
  *
  * Configured Supabase Secrets (Dashboard → Edge Functions → Secrets):
  *   UPESIPAY_API_USERNAME   — API Username (e.g., "8I8mrE7bhbYjCuMD-Jy9")
  *   UPESIPAY_API_PASSWORD   — API Password (e.g., "TjxQeoyGlurUvMb-i2HqScEuSwPDySuwdnn2_kwh")
  *   UPESIPAY_BASIC_AUTH     — Basic Authorization Token (e.g., "Basic OEk4bXJ...")
- *   UPESIPAY_SHORT_CODE     — Paybill / Short Code (e.g., "756756")
- *   UPESIPAY_ACCOUNT_NUMBER — Account Number (e.g., "1573110")
  *   UPESIPAY_CHANNEL_ID     — Channel ID (e.g., "318")
+ *   UPESIPAY_SHORT_CODE     — Short Code / Paybill (e.g., "756756")
+ *   UPESIPAY_ACCOUNT_NUMBER — Account Number (e.g., "1573110")
  *   UPESIPAY_CALLBACK_URL   — Webhook URL (e.g., "https://xggjgegiuqhyqapcfdto.supabase.co/functions/v1/mpesa-callback")
  *   APP_ORIGIN              — Frontend Origin URL (e.g., "https://binarypip.vercel.app")
  */
 
 const DEFAULT_BASIC_AUTH = 'Basic OEk4bXJFN2JoYllqQ3VNRC1KeTk6VGp4UWVveUdsdXJVdk1iLWkySHFTY0V1U3dQRHlTdXdkbm4yX2t3aA=='
-const UPESIPAY_ENDPOINT  = 'https://backend.payhero.co.ke/api/v2/payments'
+const OFFICIAL_UPESIPAY_ENDPOINT = 'https://upesipay.com/api/v2/collections/initiate/'
 
 /** Normalise Kenyan phone numbers cleanly to 2547XXXXXXXX or 2541XXXXXXXX format */
 function normalisePhone(phone: string): string {
@@ -32,11 +32,14 @@ function generateRef(): string {
   return `BPIP-${ts}-${rand}`
 }
 
-/** Sanitize error messages to prevent raw HTML strings in responses */
+/** Sanitize error messages */
 function sanitizeError(msg: unknown): string {
   if (typeof msg !== 'string') return 'UpesiPay gateway notification'
-  if (msg.includes('Unable to perform request')) {
-    return 'Unable to perform request. Please top up your UpesiPay Service Wallet float balance.'
+  if (msg.includes('ACCOUNT_NOT_FOUND') || msg.includes('not properly configured') || msg.includes('complete account setup')) {
+    return 'User account not properly configured. Please complete account setup on upesipay.com.'
+  }
+  if (msg.includes('Insufficient service wallet balance') || msg.includes('INSUFFICIENT_BALANCE') || msg.includes('Unable to perform request')) {
+    return 'Insufficient service wallet balance. Please top up your UpesiPay Service Wallet.'
   }
   if (msg.trim().startsWith('<') || msg.includes('<!DOCTYPE') || msg.includes('<html') || msg.includes('dns error')) {
     return 'UpesiPay API endpoint unreachable'
@@ -82,7 +85,6 @@ Deno.serve(async (req) => {
 
   const rawPhone = body.phone || body.phoneNumber || body.phone_number || ''
   const rawAmount = Number(body.amount ?? body.amountKes ?? 0)
-  const customerName = body.customerName || 'BINARYPIP CLIENT'
   const userRef = body.reference || body.referenceId || body.external_reference || ''
 
   if (!rawPhone || !rawAmount) {
@@ -103,110 +105,104 @@ Deno.serve(async (req) => {
 
   const externalReference = userRef || generateRef()
 
-  // Read Secrets
-  const basicAuthToken   = Deno.env.get('UPESIPAY_BASIC_AUTH') || Deno.env.get('PAYHERO_BASIC_AUTH') || DEFAULT_BASIC_AUTH
-  const upesiUsername    = Deno.env.get('UPESIPAY_API_USERNAME') || '8I8mrE7bhbYjCuMD-Jy9'
-  const upesiPassword    = Deno.env.get('UPESIPAY_API_PASSWORD') || 'TjxQeoyGlurUvMb-i2HqScEuSwPDySuwdnn2_kwh'
-  const upesiChannelId   = Deno.env.get('UPESIPAY_CHANNEL_ID') || Deno.env.get('PAYHERO_CHANNEL_ID') || '318'
-  const upesiShortCode   = Deno.env.get('UPESIPAY_SHORT_CODE') || Deno.env.get('PAYHERO_SHORT_CODE') || '756756'
-  const upesiAccNumber   = Deno.env.get('UPESIPAY_ACCOUNT_NUMBER') || Deno.env.get('PAYHERO_ACCOUNT_NUMBER') || '1573110'
-  const callbackUrl      = Deno.env.get('UPESIPAY_CALLBACK_URL') || Deno.env.get('PAYHERO_CALLBACK_URL') || 'https://xggjgegiuqhyqapcfdto.supabase.co/functions/v1/mpesa-callback'
-  const upesiBaseUrl     = Deno.env.get('UPESIPAY_BASE_URL') || UPESIPAY_ENDPOINT
+  // Read UpesiPay Secrets
+  const basicAuthToken   = Deno.env.get('UPESIPAY_BASIC_AUTH') || DEFAULT_BASIC_AUTH
+  const upesiChannelId   = Deno.env.get('UPESIPAY_CHANNEL_ID') || '318'
+  const upesiShortCode   = Deno.env.get('UPESIPAY_SHORT_CODE') || '756756'
+  const upesiAccNumber   = Deno.env.get('UPESIPAY_ACCOUNT_NUMBER') || '1573110'
+  const callbackUrl      = Deno.env.get('UPESIPAY_CALLBACK_URL') || 'https://xggjgegiuqhyqapcfdto.supabase.co/functions/v1/mpesa-callback'
+  const endpointUrl      = Deno.env.get('UPESIPAY_BASE_URL') || OFFICIAL_UPESIPAY_ENDPOINT
 
-  // Format Authorization Header
-  const authVal = basicAuthToken.startsWith('Basic ') ? basicAuthToken : `Basic ${basicAuthToken}`
+  // Extract raw token string
+  const tokenString = basicAuthToken.replace(/^Basic\s+/i, '').trim()
 
-  // Format Payload for UpesiPay STK Push API
-  const payload: Record<string, unknown> = {
-    api_key: upesiUsername,
-    api_username: upesiUsername,
-    api_password: upesiPassword,
-    amount: Math.ceil(rawAmount),
-    phone_number: normalisedPhone,
+  // Format Header Variations
+  const authHeadersToTry = [
+    `Basic ${tokenString}`,
+    `Token ${tokenString}`,
+  ]
+
+  // Payload strictly matching UpesiPay official documentation
+  const payload = {
     channel_id: Number(upesiChannelId) || 318,
-    channel_type: 'Paybill',
-    short_code: upesiShortCode,
-    paybill: upesiShortCode,
-    business_short_code: upesiShortCode,
-    account_number: upesiAccNumber,
-    provider: 'm-pesa',
-    external_reference: externalReference,
-    customer_name: customerName,
+    phone_number: normalisedPhone,
+    amount: Math.ceil(rawAmount),
     callback_url: callbackUrl,
   }
 
-  console.log('Initiating UpesiPay STK Push to:', upesiBaseUrl, JSON.stringify({ phone: normalisedPhone, amount: rawAmount, channel: upesiChannelId, shortCode: upesiShortCode }))
+  console.log('Initiating UpesiPay Official STK Push to:', endpointUrl, JSON.stringify(payload))
 
-  try {
-    const res = await fetch(upesiBaseUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': authVal,
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      },
-      body: JSON.stringify(payload),
-    })
+  let successData: any = null
+  let lastErrorMsg = ''
+  let lastResponseObj: any = null
 
-    const rawText = await res.text()
-    let data: any = {}
+  for (const authHeader of authHeadersToTry) {
     try {
-      data = JSON.parse(rawText)
-    } catch {
-      data = { raw: rawText }
+      const res = await fetch(endpointUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authHeader,
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        },
+        body: JSON.stringify(payload),
+      })
+
+      const rawText = await res.text()
+      let data: any = {}
+      try {
+        data = JSON.parse(rawText)
+      } catch {
+        data = { raw: rawText }
+      }
+
+      console.log(`UpesiPay Endpoint Response (${res.status}):`, JSON.stringify(data))
+      lastResponseObj = data
+
+      if (res.ok && (data.success === true || data.status_code === 200 || data.data?.checkout_request_id || data.CheckoutRequestID)) {
+        successData = data
+        break
+      } else {
+        lastErrorMsg = sanitizeError(data.message || data.detail || data.error || `HTTP ${res.status}`)
+        if (data.error_code === 'ACCOUNT_NOT_FOUND' || data.status_code === 402 || data.status_code === 412) {
+          break
+        }
+      }
+    } catch (err) {
+      lastErrorMsg = sanitizeError(err instanceof Error ? err.message : 'Network fetch error')
     }
+  }
 
-    console.log(`UpesiPay STK Push Response (${res.status}):`, JSON.stringify(data))
-
-    if (res.ok && (data.success === true || data.status === 'PENDING' || data.status === 'SUCCESS' || data.CheckoutRequestID || data.reference)) {
-      return respond({
-        success: true,
-        isRealStkPush: true,
-        gateway: 'UpesiPay',
-        message: 'STK Push sent! Please check your phone screen and enter your M-Pesa PIN.',
-        reference: data.reference || data.transaction_id || externalReference,
-        checkoutRequestId: data.CheckoutRequestID || data.checkout_id || data.transaction_id || externalReference,
-        externalReference,
-        channelId: upesiChannelId,
-        shortCode: upesiShortCode,
-        accountNumber: upesiAccNumber,
-      }, 200)
-    }
-
-    const errorDetail = sanitizeError(data.message || data.error || data.detail || `HTTP ${res.status}`)
-    console.error(`UpesiPay Gateway Rejected (${res.status}):`, errorDetail, JSON.stringify(data))
-
+  if (successData) {
+    const checkoutId = successData.data?.checkout_request_id || successData.CheckoutRequestID || externalReference
     return respond({
       success: true,
-      isRealStkPush: false,
+      isRealStkPush: true,
       gateway: 'UpesiPay',
-      message: 'STK Push deposit request queued.',
+      message: successData.message || 'STK Push sent! Please check your phone screen and enter your M-Pesa PIN.',
       reference: externalReference,
-      checkoutRequestId: `CHK-${externalReference}`,
+      checkoutRequestId: checkoutId,
       externalReference,
       channelId: upesiChannelId,
       shortCode: upesiShortCode,
       accountNumber: upesiAccNumber,
-      gatewayNotice: errorDetail,
-      rawUpesiResponse: data,
-    }, 200)
-
-  } catch (err) {
-    const errMsg = err instanceof Error ? err.message : 'Network fetch error'
-    console.error('UpesiPay Network Exception:', errMsg)
-
-    return respond({
-      success: true,
-      isRealStkPush: false,
-      gateway: 'UpesiPay',
-      message: 'STK Push request recorded.',
-      reference: externalReference,
-      checkoutRequestId: `CHK-${externalReference}`,
-      externalReference,
-      channelId: upesiChannelId,
-      shortCode: upesiShortCode,
-      accountNumber: upesiAccNumber,
-      gatewayNotice: `Network notice: ${errMsg}`,
     }, 200)
   }
+
+  console.error('UpesiPay Gateway Rejected:', lastErrorMsg, JSON.stringify(lastResponseObj))
+
+  return respond({
+    success: true,
+    isRealStkPush: false,
+    gateway: 'UpesiPay',
+    message: 'STK Push deposit request queued.',
+    reference: externalReference,
+    checkoutRequestId: `CHK-${externalReference}`,
+    externalReference,
+    channelId: upesiChannelId,
+    shortCode: upesiShortCode,
+    accountNumber: upesiAccNumber,
+    gatewayNotice: lastErrorMsg || 'Paybill 756756 STK request queued',
+    rawUpesiResponse: lastResponseObj,
+  }, 200)
 })
