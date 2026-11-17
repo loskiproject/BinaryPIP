@@ -208,7 +208,7 @@ const generateAllTraders540 = (): MasterTrader[] => {
   return list.sort((a, b) => a.name.localeCompare(b.name))
 }
 
-const MASTER_TRADERS_540: MasterTrader[] = generateAllTraders540()
+export const MASTER_TRADERS_540: MasterTrader[] = generateAllTraders540()
 
 export default function CopyTradingHub({
   userBalance,

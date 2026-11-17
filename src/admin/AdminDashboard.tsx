@@ -12,6 +12,7 @@ import './AdminDashboard.css'
 import '../features/features.css'
 import AdminChatDesk from '../features/AdminChatDesk'
 import { supabase, supabaseUrl as DEFAULT_SUPABASE_URL, supabaseKey as DEFAULT_SUPABASE_KEY } from '../lib/supabase'
+import { MASTER_TRADERS_540 } from '../features/CopyTradingHub'
 
 // ─── Supabase config ──────────────────────────────────────────────────────────
 const SUPABASE_URL      = (import.meta.env.VITE_SUPABASE_URL as string) || DEFAULT_SUPABASE_URL
@@ -464,6 +465,7 @@ export default function AdminDashboard({ currentUser }: Props) {
 
   // UI state
   const [userSearch, setUserSearch] = useState('')
+  const [traderSearch, setTraderSearch] = useState('')
   const [txFilter, setTxFilter] = useState<'all' | 'pending' | 'flagged'>('all')
   const [kycFilter, setKycFilter] = useState<'all' | 'pending'>('pending')
   const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'err' | 'warn' } | null>(null)
@@ -1105,28 +1107,49 @@ export default function AdminDashboard({ currentUser }: Props) {
 
   const fetchPublishedTradersFromDatabase = useCallback(async () => {
     try {
+      let dbMapped: PublishedTrader[] = []
       const res = await fetch(`${SUPABASE_URL}/rest/v1/master_traders?select=*&order=created_at.desc`, {
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
       })
-      if (!res.ok) return
-      const rows = await res.json() as any[]
-      if (Array.isArray(rows)) {
-        const mapped: PublishedTrader[] = rows.map(r => ({
-          id: String(r.id),
-          userId: String(r.user_id),
-          displayName: String(r.display_name),
-          avatarUrl: String(r.avatar_url || ''),
-          isVerified: r.is_verified !== false,
-          riskLevel: (r.risk_level || 'Low') as any,
-          strategyTag: String(r.strategy_tag || 'Vol 100 & Gold Scalping'),
-          bio: String(r.bio || ''),
-          winRate: Number(r.win_rate || 92.5),
-          totalProfit: Number(r.total_profit || 15000),
-          copiersCount: Number(r.copiers_count || 12),
-          isActive: r.is_active !== false,
-        }))
-        setPublishedTraders(mapped)
+      if (res.ok) {
+        const rows = await res.json() as any[]
+        if (Array.isArray(rows)) {
+          dbMapped = rows.map(r => ({
+            id: String(r.id),
+            userId: String(r.user_id),
+            displayName: String(r.display_name),
+            avatarUrl: String(r.avatar_url || ''),
+            isVerified: r.is_verified !== false,
+            riskLevel: (r.risk_level || 'Low') as any,
+            strategyTag: String(r.strategy_tag || 'Vol 100 & Gold Scalping'),
+            bio: String(r.bio || ''),
+            winRate: Number(r.win_rate || 92.5),
+            totalProfit: Number(r.total_profit || 15000),
+            copiersCount: Number(r.copiers_count || 12),
+            isActive: r.is_active !== false,
+          }))
+        }
       }
+
+      // Convert MASTER_TRADERS_540 to PublishedTrader format
+      const staticMapped: PublishedTrader[] = MASTER_TRADERS_540.map(t => ({
+        id: t.id,
+        userId: 'system-' + t.id,
+        displayName: t.name,
+        avatarUrl: t.avatar,
+        isVerified: t.isVerified,
+        riskLevel: t.risk,
+        strategyTag: t.specialty,
+        bio: t.bio,
+        winRate: t.winRate,
+        totalProfit: t.totalProfit,
+        copiersCount: t.copiers,
+        isActive: true,
+      }))
+
+      // Combine DB custom traders and static 540 master traders
+      const combined = [...dbMapped, ...staticMapped.filter(st => !dbMapped.some(dt => dt.id === st.id))]
+      setPublishedTraders(combined)
     } catch {
       // silent
     }
@@ -3115,13 +3138,27 @@ export default function AdminDashboard({ currentUser }: Props) {
                     </span>
                   </div>
 
-                  <button
-                    type="button"
-                    className="sa-btn sa-btn-outline"
-                    onClick={() => fetchPublishedTradersFromDatabase()}
-                  >
-                    <RefreshCw size={13} /> Refresh Directory
-                  </button>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <div className="sa-search-wrap" style={{ width: '220px' }}>
+                      <Search size={14} className="sa-search-icon" />
+                      <input
+                        type="text"
+                        className="sa-input sa-search-input"
+                        placeholder="Search trader..."
+                        value={traderSearch}
+                        onChange={e => setTraderSearch(e.target.value)}
+                        style={{ padding: '6px 12px 6px 32px', fontSize: '12px' }}
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      className="sa-btn sa-btn-outline"
+                      onClick={() => fetchPublishedTradersFromDatabase()}
+                    >
+                      <RefreshCw size={13} /> Refresh Directory
+                    </button>
+                  </div>
                 </div>
 
                 <div className="sa-panel" style={{ overflowX: 'auto' }}>
@@ -3138,13 +3175,15 @@ export default function AdminDashboard({ currentUser }: Props) {
                       </tr>
                     </thead>
                     <tbody>
-                      {publishedTraders.length === 0 ? (
+                      {publishedTraders.filter(t => !traderSearch.trim() || t.displayName.toLowerCase().includes(traderSearch.toLowerCase()) || t.strategyTag.toLowerCase().includes(traderSearch.toLowerCase())).length === 0 ? (
                         <tr><td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: 'var(--sa-muted)' }}>
                           <Users size={28} style={{ marginBottom: 8, opacity: 0.4 }} />
-                          <div>No published custom Master Traders in database yet. Approved applicants will appear here automatically.</div>
+                          <div>No master traders match search filter.</div>
                         </td></tr>
                       ) : (
-                        publishedTraders.map(trader => (
+                        publishedTraders
+                          .filter(t => !traderSearch.trim() || t.displayName.toLowerCase().includes(traderSearch.toLowerCase()) || t.strategyTag.toLowerCase().includes(traderSearch.toLowerCase()))
+                          .map(trader => (
                           <tr key={trader.id} className="sa-row-hover">
                             <td>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
