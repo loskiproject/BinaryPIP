@@ -371,7 +371,9 @@ export default function CopyTradingHub({
   const normAccountType = accountType === 'live' || accountType === 'real' ? 'real' : 'demo'
   const isDemo = normAccountType === 'demo'
 
-  const rawCombinedTraders = [...dbTraders, ...MASTER_TRADERS_540.filter(gt => !dbTraders.some(dt => dt.id === gt.id))]
+  const rawCombinedTraders = dbTraders.length > 0
+    ? [...dbTraders, ...MASTER_TRADERS_540.filter(gt => !dbTraders.some(dt => dt.id === gt.id))]
+    : MASTER_TRADERS_540
 
   const allCombinedTraders = rawCombinedTraders
     .map(trader => {
