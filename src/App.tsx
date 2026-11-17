@@ -2603,12 +2603,33 @@ export default function App() {
   }
 
   const [passkeyEnrolling, setPasskeyEnrolling] = useState(false)
+  const [passkeyDeleting, setPasskeyDeleting] = useState<string | null>(null)
   const [passkeyFactors, setPasskeyFactors] = useState<any[]>([])
 
   const fetchPasskeyFactors = useCallback(async () => {
     let combined: any[] = []
 
-    // 1. Fetch saved passkeys directly from Supabase user_passkeys database table
+    // 1. Query Supabase Auth MFA listFactors API
+    if (supabase && supabase.auth && user && user.id !== 'local-demo-user') {
+      try {
+        const { data, error } = await (supabase.auth as any).mfa.listFactors()
+        if (!error && data?.all) {
+          const passkeys = data.all.filter((f: any) => f.factor_type === 'webauthn' || f.friendly_name)
+          const mfaMapped = passkeys.map((f: any) => ({
+            id: f.id,
+            credential_id: f.id,
+            friendly_name: f.friendly_name || f.friendlyName || 'BinaryPIP Device Passkey',
+            createdAt: f.created_at || new Date().toISOString(),
+            isMfaFactor: true,
+          }))
+          combined = [...mfaMapped, ...combined.filter(c => !mfaMapped.some((m: any) => m.id === c.id))]
+        }
+      } catch {
+        // silent
+      }
+    }
+
+    // 2. Query Supabase user_passkeys database table
     if (supabase && user) {
       try {
         const { data } = await supabase
@@ -2619,20 +2640,22 @@ export default function App() {
           .limit(20)
 
         if (Array.isArray(data) && data.length > 0) {
-          combined = data.map(r => ({
+          const dbMapped = data.map(r => ({
             id: r.credential_id || r.id,
+            credential_id: r.credential_id || r.id,
             friendly_name: r.friendly_name,
             friendlyName: r.friendly_name,
             userEmail: r.user_email,
             createdAt: r.created_at,
           }))
+          combined = [...combined, ...dbMapped.filter(d => !combined.some(c => c.id === d.id))]
         }
       } catch {
         // silent
       }
     }
 
-    // Read stored device passkeys fallback
+    // 3. Local storage fallback
     try {
       const storedStr = localStorage.getItem('binarypip_registered_passkeys')
       if (storedStr) {
@@ -2647,6 +2670,56 @@ export default function App() {
   useEffect(() => {
     void fetchPasskeyFactors()
   }, [fetchPasskeyFactors])
+
+  const handleDeletePasskey = async (factorId: string) => {
+    if (!factorId) return
+    try {
+      setPasskeyDeleting(factorId)
+
+      // 1. Call Supabase Auth MFA unenroll if it's an MFA factor ID
+      if (supabase && supabase.auth && user && user.id !== 'local-demo-user') {
+        try {
+          const unenrollFn = (supabase.auth as any).mfa?.unenroll
+          if (typeof unenrollFn === 'function') {
+            await unenrollFn({ factorId: factorId })
+          }
+        } catch {
+          // silent
+        }
+
+        // Delete from Supabase user_passkeys database table
+        try {
+          await supabase.from('user_passkeys').delete().eq('credential_id', factorId)
+          await supabase.from('user_passkeys').delete().eq('id', factorId)
+        } catch {
+          // silent
+        }
+      }
+
+      // Delete from localStorage fallback list
+      try {
+        const storedStr = localStorage.getItem('binarypip_registered_passkeys')
+        if (storedStr) {
+          const list = JSON.parse(storedStr)
+          const updated = list.filter((p: any) => p.id !== factorId && p.credential_id !== factorId)
+          localStorage.setItem('binarypip_registered_passkeys', JSON.stringify(updated))
+        }
+      } catch {
+        // silent
+      }
+
+      setPasskeyFactors(prev => prev.filter(f => f.id !== factorId && f.credential_id !== factorId))
+      showNotice('🗑️ Passkey revoked and deleted successfully.')
+      void recordSecurityEvent('security_update', 'LOW', user?.email || 'user', 'Revoked WebAuthn Passkey')
+      void logUserActivity(user?.email || 'user', 'PROFILE_UPDATE', 'Revoked and deleted WebAuthn device passkey', 'Info')
+
+      void fetchPasskeyFactors()
+    } catch (err: any) {
+      showNotice(`Failed to delete passkey: ${err?.message || 'Error occurred'}`)
+    } finally {
+      setPasskeyDeleting(null)
+    }
+  }
 
   const handleRegisterPasskey = async () => {
     if (typeof window === 'undefined' || !window.PublicKeyCredential) {
@@ -5341,18 +5414,48 @@ export default function App() {
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {passkeyFactors.map((factor, idx) => (
-                      <div key={factor.id || idx} style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: '10px', padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <Fingerprint size={20} color="#10b981" />
-                          <div>
-                            <strong style={{ fontSize: '13px', color: '#ffffff', display: 'block' }}>{factor.friendly_name || factor.friendlyName || 'BinaryPIP Device Passkey'}</strong>
-                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Factor ID: {factor.id || 'registered'} · WebAuthn Biometric</span>
+                    {passkeyFactors.map((factor, idx) => {
+                      const fid = factor.id || factor.credential_id
+                      return (
+                        <div key={fid || idx} style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: '10px', padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <Fingerprint size={20} color="#10b981" />
+                            <div>
+                              <strong style={{ fontSize: '13px', color: '#ffffff', display: 'block' }}>{factor.friendly_name || factor.friendlyName || 'BinaryPIP Device Passkey'}</strong>
+                              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                Registered: {factor.createdAt ? new Date(factor.createdAt).toLocaleDateString() : 'Active'} · WebAuthn Biometric
+                              </span>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span className="sa-badge" style={{ background: 'rgba(16,185,129,0.2)', color: '#10b981' }}>✓ Active</span>
+
+                            <button
+                              type="button"
+                              onClick={() => void handleDeletePasskey(fid)}
+                              disabled={passkeyDeleting === fid}
+                              style={{
+                                background: 'rgba(239, 68, 68, 0.15)',
+                                border: '1px solid rgba(239, 68, 68, 0.35)',
+                                color: '#ef4444',
+                                borderRadius: '8px',
+                                padding: '6px 12px',
+                                fontSize: '11.5px',
+                                fontWeight: 800,
+                                cursor: passkeyDeleting === fid ? 'not-allowed' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                transition: 'all 0.15s ease',
+                              }}
+                            >
+                              <Trash2 size={13} /> {passkeyDeleting === fid ? 'Revoking…' : 'Revoke'}
+                            </button>
                           </div>
                         </div>
-                        <span className="sa-badge" style={{ background: 'rgba(16,185,129,0.2)', color: '#10b981' }}>✓ Active</span>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </div>
