@@ -367,7 +367,8 @@ export default function AuthPortal({ onLogin, onSignup, onDemo, onGoogle, onForg
         void recordSecurityEvent('login_success', 'LOW', savedEmail, 'Biometric Passkey Database Login Verified')
         void logUserActivity(savedEmail, 'USER_LOGIN', 'Biometric Passkey sign-in verified via Supabase user_passkeys database table', 'Success')
 
-        onDemo()
+        sessionStorage.setItem('pending_real_account', 'true')
+        await onLogin(savedEmail, 'passkey-authenticated')
       } else {
         setFormError('Passkey authentication cancelled or failed.')
       }
