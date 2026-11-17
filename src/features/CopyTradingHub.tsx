@@ -4,6 +4,7 @@ import { useCopyTrading } from './useCopyTrading'
 import MyActiveTraders from './MyActiveTraders'
 import CopyTraderModal from './CopyTraderModal'
 import { supabase } from '../lib/supabase'
+import { logUserActivity } from '../utils/logUserActivity'
 
 export interface MasterTrader {
   id: string
@@ -509,6 +510,8 @@ export default function CopyTradingHub({
           // silent
         }
       }
+
+      void logUserActivity('client@binarypip.com', 'MASTER_TRADER_APPLY', `Submitted Master Trader application for '${applyName.trim()}' ($500 Fee)`, 'Success')
 
       // 2. Save into local pending applications storage for instant cross-tab sync
       try {

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import './AuthPortal.css'
 import { recordSecurityEvent } from '../lib/supabase'
+import { logUserActivity } from '../utils/logUserActivity'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -279,8 +280,10 @@ export default function AuthPortal({ onLogin, onSignup, onDemo, onGoogle, onForg
     if (err) {
       setFormError(err)
       void recordSecurityEvent('login_failed', 'MEDIUM', loginForm.identifier.trim(), 'Client Login Failed (Invalid Credentials)')
+      void logUserActivity(loginForm.identifier.trim(), 'AUTH_FAILED', 'Client login attempt failed: Invalid credentials', 'Warning')
     } else {
       void recordSecurityEvent('login_success', 'LOW', loginForm.identifier.trim(), 'Client Authenticated Successfully')
+      void logUserActivity(loginForm.identifier.trim(), 'USER_LOGIN', 'Successfully signed in to platform', 'Info')
     }
   }
 

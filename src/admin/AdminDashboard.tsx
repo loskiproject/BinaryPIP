@@ -6,11 +6,12 @@ import {
   Download, TrendingUp, TrendingDown, Zap, Sparkles,
   DollarSign, Clock, Shield, AlertCircle, X,
   Pencil, Globe, Wifi, RefreshCw, Award,
-  ServerCrash, ChevronRight, MessageSquare, KeyRound, CreditCard, ToggleLeft, ToggleRight, Copy,
+  ServerCrash, ChevronRight, MessageSquare, KeyRound, CreditCard, ToggleLeft, ToggleRight, Copy, ListOrdered,
 } from 'lucide-react'
 import './AdminDashboard.css'
 import '../features/features.css'
 import AdminChatDesk from '../features/AdminChatDesk'
+import UserLogs from './UserLogs'
 import { supabase, recordSecurityEvent, supabaseUrl as DEFAULT_SUPABASE_URL, supabaseKey as DEFAULT_SUPABASE_KEY } from '../lib/supabase'
 import { MASTER_TRADERS_540 } from '../features/CopyTradingHub'
 
@@ -29,6 +30,7 @@ type AdminSection =
   | 'security'
   | 'admins'
   | 'audit'
+  | 'user_logs'
   | 'settings'
   | 'support'
   | 'gateway'
@@ -2774,6 +2776,7 @@ export default function AdminDashboard({ currentUser }: Props) {
     { id: 'admins',    label: 'Admin Team',   icon: Shield,        perm: 'canManageAdmins' },
     { id: 'gateway',   label: 'Payment Gateway', icon: CreditCard  },
     { id: 'audit',     label: 'Audit Log',    icon: Activity,      perm: 'canViewAuditLogs' },
+    { id: 'user_logs', label: 'User Logs',    icon: ListOrdered,   perm: 'canViewAuditLogs' },
     { id: 'support',   label: 'Live Chat',    icon: MessageSquare },
     { id: 'settings',  label: 'Settings',     icon: Settings },
   ]
@@ -3862,6 +3865,11 @@ export default function AdminDashboard({ currentUser }: Props) {
                 </table>
               </div>
             </div>
+          )}
+
+          {/* ═══════════════════ USER LOGS ═════════════════════════════════ */}
+          {section === 'user_logs' && (
+            <UserLogs showNotice={(msg, type) => notify(msg, type === 'err' ? 'err' : type === 'warn' ? 'warn' : 'ok')} />
           )}
 
           {/* ═══════════════════ AI SECURITY GUARDIAN ══════════════════════ */}
