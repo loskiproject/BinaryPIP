@@ -13,11 +13,11 @@
     .glass-button { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); transition: all 0.2s; }
     .glass-button:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.18); }
 
-    /* Digit Circle Base Styling */
+    /* Digit Circle Styling */
     .digit-circle {
       position: relative;
-      width: 32px;
-      height: 32px;
+      width: 38px;
+      height: 38px;
       border-radius: 50%;
       background: #18202c;
       border: 1.5px solid #2a3447;
@@ -29,10 +29,9 @@
       cursor: pointer;
     }
     .digit-circle.active-tick {
-      background: #10b981 !important;
-      border-color: #a7f3d0 !important;
-      color: #030916 !important;
-      box-shadow: 0 0 14px rgba(16, 185, 129, 0.7) !important;
+      background: #1f2a3a;
+      border-color: #ef4444;
+      box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
     }
     .digit-circle.active-prediction {
       border-color: #20eb5a;
@@ -40,14 +39,14 @@
     }
     .digit-pointer-arrow {
       position: absolute;
-      bottom: -8px;
+      bottom: -10px;
       left: 50%;
       transform: translateX(-50%);
       width: 0;
       height: 0;
-      border-left: 4px solid transparent;
-      border-right: 4px solid transparent;
-      border-bottom: 5px solid #10b981;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-bottom: 6px solid #ef4444;
     }
 
     input[type=number]::-webkit-inner-spin-button,
@@ -149,6 +148,11 @@
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.1) !important;
     }
 
+    body.theme-light #runningIndexesContainer > div {
+      background-color: #ffffff !important;
+      border-color: rgba(0, 0, 0, 0.12) !important;
+    }
+
     body.theme-light table,
     body.theme-light th,
     body.theme-light td {
@@ -191,7 +195,7 @@
       body > div.flex-1.flex.overflow-hidden > main {
         order: 1 !important;
         width: 100% !important;
-        height: 340px !important;
+        height: 320px !important;
         min-height: 280px !important;
         flex: none !important;
       }
@@ -223,9 +227,18 @@
       }
 
       #runningIndexesContainer {
+        overflow-x: auto !important;
         width: 100% !important;
-        max-width: 100% !important;
-        overflow: hidden !important;
+        justify-content: space-between !important;
+        padding-bottom: 4px !important;
+        -webkit-overflow-scrolling: touch !important;
+      }
+
+      .digit-circle {
+        min-width: 30px !important;
+        width: 30px !important;
+        height: 30px !important;
+        font-size: 10.5px !important;
       }
 
       footer {
@@ -289,33 +302,30 @@
       <button type="button" id="toolIndicator" title="Moving Average Indicator" aria-pressed="false" class="w-8 h-8 rounded-lg glass-button flex items-center justify-center text-gray-400 hover:text-white transition">
         <i class="fa-solid fa-chart-line text-sm"></i>
       </button>
-      <button type="button" id="toolChartStyle" title="Chart Style: Line / Area" class="w-8 h-8 rounded-lg glass-button flex items-center justify-center text-green-400 bg-green-500/20 border-green-500/50 shadow-sm transition">
-        <i class="fa-solid fa-layer-group text-sm"></i>
+      <button type="button" id="toolChartStyle" title="Chart Style" aria-pressed="false" class="w-8 h-8 rounded-lg glass-button flex items-center justify-center text-gray-400 hover:text-white transition">
+        <i class="fa-solid fa-chart-simple text-sm"></i>
       </button>
-
-      <div class="flex-1"></div>
-
-      <button type="button" id="toolReset" title="Reset Chart & Tools" class="w-8 h-8 rounded-lg glass-button flex items-center justify-center text-gray-400 hover:text-green-400 transition">
-        <i class="fa-solid fa-rotate-left text-sm"></i>
+      <button type="button" id="toolReset" title="Reset Chart & Tools to Default" aria-pressed="false" class="w-8 h-8 rounded-lg glass-button flex items-center justify-center text-gray-400 hover:text-green-400 transition">
+        <i class="fa-solid fa-rotate-right text-sm"></i>
       </button>
     </aside>
 
     <!-- Center Section: Chart + Running Indexes Bar -->
     <main class="flex-1 flex flex-col relative bg-[#0b0e14] overflow-hidden">
       <!-- Top Left Asset Overlay Card with Market Selector Dropdown -->
-      <div class="absolute top-3 left-3 z-30">
-        <div id="assetSelectorCard" onclick="toggleMarketDropdown()" class="bg-[#121824]/90 border border-gray-800 backdrop-blur-md rounded-xl p-2 md:p-2.5 flex items-center gap-2 shadow-xl cursor-pointer hover:border-gray-700 transition">
-          <div class="w-6 h-6 rounded-lg bg-green-500/20 text-green-400 flex items-center justify-center text-xs font-bold">
-            <i class="fa-solid fa-chart-area text-[11px]"></i>
+      <div class="absolute top-4 left-4 z-50">
+        <div id="assetSelectorCard" onclick="toggleMarketDropdown()" class="bg-[#121824]/90 border border-gray-800 backdrop-blur-md rounded-xl p-3 flex items-center gap-3 shadow-xl cursor-pointer hover:border-gray-700 transition">
+          <div class="w-7 h-7 rounded-lg bg-green-500/20 text-green-400 flex items-center justify-center text-xs font-bold">
+            <i class="fa-solid fa-chart-area"></i>
           </div>
           <div>
-            <div class="flex items-center gap-1">
+            <div class="flex items-center gap-1.5">
               <span id="assetOverlayName" class="font-bold text-xs text-white">Volatility 25 (1s) Index</span>
               <i class="fa-solid fa-chevron-down text-[10px] text-gray-400"></i>
             </div>
-            <div class="text-[10.5px] font-mono text-green-400 font-semibold flex items-center gap-1">
+            <div class="text-[11px] font-mono text-green-400 font-semibold flex items-center gap-1">
               <span id="chartOverlayPrice">594570.20</span>
-              <span id="chartOverlayChange" class="text-gray-400 font-normal">-5.07</span>
+              <span id="chartOverlayChange" class="text-gray-400 font-normal">-5.07 (0.00%)</span>
               <span id="chartOverlayDirection" class="text-red-400 text-[9px]">▼</span>
             </div>
           </div>
@@ -331,16 +341,16 @@
       </div>
 
       <!-- Live Chart Canvas Wrapper -->
-      <div id="chartCanvasWrapper" class="flex-1 relative w-full h-full p-1 md:p-2 pb-24 md:pb-20">
+      <div id="chartCanvasWrapper" class="flex-1 relative w-full h-full p-2 pb-20">
         <button type="button" onclick="toggleChartFullscreen()" class="absolute top-3 right-3 z-20 bg-gray-900/80 border border-gray-700/80 text-green-400 hover:text-white px-2.5 py-1 rounded-lg text-xs font-semibold shadow-lg backdrop-blur-md transition flex items-center gap-1.5">
           <i class="fa-solid fa-expand" id="fullscreenIcon"></i> <span id="fullscreenText">Fullscreen</span>
         </button>
         <canvas id="liveTickChart" class="w-full h-full block"></canvas>
 
-        <!-- RESPONSIVE 0–9 DIGIT STATISTICS BAR (Zero Horizontal Scrolling) -->
-        <div class="absolute bottom-2 left-2 right-2 md:left-3 md:right-3 z-20 bg-[#0c1018]/95 border border-slate-800/90 backdrop-blur-md rounded-xl p-2 md:p-2.5 shadow-2xl w-auto max-w-full overflow-hidden">
-          <!-- 10 Running Digit Circles (0 - 9): 5 cols x 2 rows on mobile, 10 cols on desktop -->
-          <div id="runningIndexesContainer" class="grid grid-cols-5 md:grid-cols-10 gap-1.5 md:gap-2 w-full max-w-full">
+        <!-- RUNNING INDEXES BAR (Overlayed at Bottom over Chart, extending across like Deriv) -->
+        <div class="absolute bottom-3 left-3 right-3 md:right-auto z-20 bg-[#0c1018]/92 border border-gray-800/90 backdrop-blur-md rounded-xl p-3 flex items-center justify-between md:justify-start gap-4 shadow-2xl overflow-x-auto">
+          <!-- 10 Running Digit Circles (0 - 9) -->
+          <div class="flex items-center justify-between gap-3 w-full md:w-auto" id="runningIndexesContainer">
             <!-- Dynamically generated 0-9 digit items -->
           </div>
         </div>
@@ -408,157 +418,159 @@
       <div class="space-y-3 mt-4">
         <!-- Top Action Button Group -->
         <div class="space-y-1">
-          <div class="flex justify-between text-[11px] font-semibold text-gray-400 px-1">
-            <span id="btnUpLabel">Over <span id="selectedDigitDisplay">5</span></span>
-            <span id="payoutUpVal" class="text-green-400 font-mono">19.50 USD</span>
+          <div class="flex justify-between text-[11px] text-gray-400 px-1">
+            <span>Payout <strong id="payoutUpVal" class="text-white font-mono">24.27 USD</strong></span>
+            <i class="fa-solid fa-circle-info text-gray-500 cursor-pointer"></i>
           </div>
-          <button type="button" id="tradeHigherBtn" onclick="executeTrade('higher')" class="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-between shadow-lg shadow-green-950/50 transition transform active:scale-95">
-            <span class="flex items-center gap-2 text-sm"><i class="fa-solid fa-arrow-trend-up"></i> <span id="tradeHigherText">Higher / Over</span></span>
-            <span class="text-xs opacity-90 font-mono font-normal">Payout 95%</span>
+          <button type="button" id="btnPrimaryUp" onclick="executeTrade('higher')" class="w-full bg-[#0d9488] hover:bg-[#0f766e] text-white font-bold py-3 px-4 rounded-xl flex items-center justify-between transition shadow-lg shadow-green-950/40 active:scale-[0.99]">
+            <span class="flex items-center gap-2 text-sm">
+              <i class="fa-solid fa-arrow-trend-up"></i>
+              <span id="btnUpLabel">Over</span>
+            </span>
+            <span id="btnUpRate" class="font-mono text-sm">142.70%</span>
           </button>
         </div>
 
         <!-- Bottom Action Button Group -->
         <div class="space-y-1">
-          <div class="flex justify-between text-[11px] font-semibold text-gray-400 px-1">
-            <span id="btnDownLabel">Under <span id="selectedDigitDisplay2">5</span></span>
-            <span id="payoutDownVal" class="text-rose-400 font-mono">19.50 USD</span>
+          <div class="flex justify-between text-[11px] text-gray-400 px-1">
+            <span>Payout <strong id="payoutDownVal" class="text-white font-mono">19.53 USD</strong></span>
+            <i class="fa-solid fa-circle-info text-gray-500 cursor-pointer"></i>
           </div>
-          <button type="button" id="tradeLowerBtn" onclick="executeTrade('lower')" class="w-full bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-between shadow-lg shadow-rose-950/50 transition transform active:scale-95">
-            <span class="flex items-center gap-2 text-sm"><i class="fa-solid fa-arrow-trend-down"></i> <span id="tradeLowerText">Lower / Under</span></span>
-            <span class="text-xs opacity-90 font-mono font-normal">Payout 95%</span>
+          <button type="button" id="btnPrimaryDown" onclick="executeTrade('lower')" class="w-full bg-[#be123c] hover:bg-[#9f1239] text-white font-bold py-3 px-4 rounded-xl flex items-center justify-between transition shadow-lg shadow-rose-950/40 active:scale-[0.99]">
+            <span class="flex items-center gap-2 text-sm">
+              <i class="fa-solid fa-arrow-trend-down"></i>
+              <span id="btnDownLabel">Under</span>
+            </span>
+            <span id="btnDownRate" class="font-mono text-sm">95.30%</span>
           </button>
         </div>
       </div>
     </aside>
   </div>
 
-  <!-- FOOTER POSITION LOG MONITOR TABLE -->
-  <footer class="h-44 bg-[#0e121b] border-t border-gray-800/80 flex flex-col shrink-0 z-10">
-    <!-- Log Table Header bar -->
-    <div class="px-4 py-2 bg-[#121722] border-b border-gray-800/60 flex items-center justify-between text-xs font-semibold text-gray-400">
-      <div class="flex items-center gap-2">
+  <!-- FOOTER: Position & Execution Logs -->
+  <footer class="bg-[#0e131d] border-t border-gray-800/80 flex flex-col shrink-0 transition-all duration-200" style="height: 128px; min-height: 128px;">
+    <!-- First child: Log Header -->
+    <div class="h-8 px-4 border-b border-gray-800/60 flex items-center justify-between bg-[#131926] shrink-0">
+      <div class="flex items-center gap-2 text-xs font-semibold text-gray-300">
         <i class="fa-solid fa-list-check text-green-400"></i>
-        <span class="text-white">Live Contract Log &amp; Open Positions</span>
-        <span id="openPositionsCount" class="bg-green-500/20 text-green-300 px-2 py-0.5 rounded text-[10px] font-mono font-bold">0 Open</span>
-      </div>
-      <div class="flex items-center gap-3">
-        <button type="button" onclick="renderLogTable()" class="hover:text-white transition"><i class="fa-solid fa-rotate"></i> Refresh</button>
+        <span>Active Positions & Executed Contracts</span>
+        <span id="openPositionsCount" class="bg-green-500/20 text-green-300 text-[10px] px-1.5 py-0.2 rounded font-mono">0 Open</span>
       </div>
     </div>
 
-    <!-- Table Wrap -->
-    <div class="flex-1 overflow-auto">
+    <!-- Last child: Log Table -->
+    <div class="flex-1 overflow-x-auto overflow-y-auto">
       <table class="w-full text-left text-xs font-mono">
-        <thead class="bg-[#121722]/80 text-gray-400 sticky top-0 border-b border-gray-800/60">
+        <thead class="bg-[#151c2a] text-gray-400 text-[11px] uppercase tracking-wider sticky top-0 border-b border-gray-800/60">
           <tr>
-            <th class="py-2 px-3 font-semibold">Contract ID</th>
-            <th class="py-2 px-3 font-semibold">Trade Type</th>
-            <th class="py-2 px-3 font-semibold">Entry Price</th>
-            <th class="py-2 px-3 font-semibold">Current Price</th>
-            <th class="py-2 px-3 font-semibold">Stake</th>
-            <th class="py-2 px-3 font-semibold">Realized P&amp;L</th>
-            <th class="py-2 px-3 font-semibold">Status</th>
+            <th class="py-1.5 px-3">Contract ID</th>
+            <th class="py-1.5 px-3">Type & Direction</th>
+            <th class="py-1.5 px-3">Entry Price</th>
+            <th class="py-1.5 px-3">Current Price</th>
+            <th class="py-1.5 px-3">Stake</th>
+            <th class="py-1.5 px-3">P/L</th>
+            <th class="py-1.5 px-3">Status</th>
           </tr>
         </thead>
-        <tbody id="logTableBody" class="divide-y divide-gray-800/30">
-          <!-- Dynamic Contract Log Items -->
+        <tbody id="logTableBody" class="divide-y divide-gray-800/40 text-gray-300">
+          <!-- Position logs -->
         </tbody>
       </table>
     </div>
   </footer>
 
-  <!-- AI MARKET SCANNER MODAL DIALOG -->
-  <div id="aiScanModal" class="hidden fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-    <div class="bg-[#121824] border border-green-500/40 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-5 relative">
-      <button type="button" onclick="closeAiScanner()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
-        <i class="fa-solid fa-xmark text-lg"></i>
-      </button>
-
-      <div class="flex items-center gap-3 border-b border-gray-800 pb-3">
-        <div class="w-10 h-10 rounded-xl bg-green-500/20 text-green-400 flex items-center justify-center text-lg font-bold">
-          <i class="fa-solid fa-brain"></i>
+  <!-- AI SCANNER MODAL -->
+  <div id="aiScannerModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-[#121722] border border-green-500/40 rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-2 text-green-400 font-bold text-sm">
+          <i class="fa-solid fa-brain animate-pulse"></i> <span>AI Synthetic Market Scanner (15s)</span>
         </div>
-        <div>
-          <h3 class="font-bold text-base text-white">Quantum AI Scanner</h3>
-          <p class="text-xs text-gray-400">Scanning 24/7 Quantum Synthetics for High-Prob Trade Signals</p>
-        </div>
+        <button type="button" onclick="closeAiScanner()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
       </div>
 
-      <div id="aiScanContent" class="space-y-3">
+      <div id="aiScanContent" class="space-y-3 text-xs text-gray-300">
         <div class="flex flex-col items-center justify-center py-6 space-y-3">
-          <div class="w-12 h-12 border-4 border-green-500/30 border-t-green-400 rounded-full animate-spin"></div>
-          <p id="aiScanStatusText" class="text-center font-medium text-green-300">Scanning synthetic tick volatility patterns...</p>
+          <div class="w-12 h-12 rounded-full bg-green-500/20 border border-green-500/50 flex items-center justify-center text-green-400 text-lg font-mono animate-bounce" id="aiTimerDisplay">
+            15s
+          </div>
+          <p id="aiScanStatusText" class="text-center font-medium text-green-300">Scanning synthetic tick volatility and digit entropy for 15 seconds...</p>
+          <div class="w-full bg-gray-900 rounded-full h-2 overflow-hidden border border-gray-800">
+            <div id="aiProgressBar" class="bg-gradient-to-r from-green-500 to-green-400 h-full w-0 transition-all duration-300"></div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- SCRIPT ENGINE -->
+  <!-- SCRIPT LOGIC -->
   <script>
-    // Global State Variables
-    const markets = [
-      { id: 'vol25', name: 'Volatility 25 (1s) Index', basePrice: 594570.20, volatility: 2.5 },
-      { id: 'vol10', name: 'Volatility 10 (1s) Index', basePrice: 87410.15, volatility: 1.2 },
-      { id: 'vol50', name: 'Volatility 50 (1s) Index', basePrice: 341890.40, volatility: 4.8 },
-      { id: 'vol75', name: 'Volatility 75 (1s) Index', basePrice: 620450.80, volatility: 7.2 },
-      { id: 'vol100', name: 'Volatility 100 (1s) Index', basePrice: 914320.90, volatility: 10.5 }
-    ];
-
-    let activeMarket = markets[0];
+    let accountBalance = 10000.00;
+    let selectedAccountType = 'demo';
     let priceHistory = [];
     let digitHistory = [];
+    let openTrades = [];
+    let tradeCounter = 1001;
+    let selectedPredictionDigit = 5;
+    let currentTradeTypeIndex = 0;
+    let inputMode = 'stake'; // 'stake' or 'payout'
+    let currentZoom = 1.0;
+
+    // Tool Rail State Variables
     let currentIntervalSec = 1;
     let tickTimer = null;
-
     let isCrosshairActive = false;
     let isDrawingActive = false;
     let userDrawings = [];
     let currentDrawingPath = null;
     let currentIndicatorMode = 'off'; // 'off' | 'sma' | 'bollinger'
-    let currentChartStyleIndex = 0; // 0 = Line/Area, 1 = Stepped, 2 = Bar Histogram
+    let currentChartStyleIndex = 0; // 0 = Line/Area, 1 = Stepped, 2 = Bar
 
-    let selectedAccountType = 'demo';
-    let accountBalance = 10000.00;
-    let selectedPredictionDigit = 5;
-    let inputMode = 'stake'; // 'stake' | 'payout'
+    // Synthetic Index Chart Markets List
+    const markets = [
+      { id: 'vol25', name: 'Volatility 25 (1s) Index', basePrice: 594570.20, volatility: 2.5 },
+      { id: 'vol10', name: 'Volatility 10 (1s) Index', basePrice: 8420.50, volatility: 0.8 },
+      { id: 'vol50', name: 'Volatility 50 (1s) Index', basePrice: 125430.80, volatility: 4.0 },
+      { id: 'vol75', name: 'Volatility 75 (1s) Index', basePrice: 340890.10, volatility: 6.5 },
+      { id: 'vol100', name: 'Volatility 100 (1s) Index', basePrice: 1248.50, volatility: 10.0 },
+      { id: 'jump10', name: 'Jump 10 Index', basePrice: 45210.30, volatility: 3.5 },
+      { id: 'bear', name: 'Bear Market Index', basePrice: 3420.10, volatility: 1.8 },
+      { id: 'bull', name: 'Bull Market Index', basePrice: 6890.40, volatility: 1.8 }
+    ];
+    let activeMarket = markets[0];
 
     const tradeTypes = [
-      { name: 'Over/Under', upMult: 0.95, downMult: 0.95 },
-      { name: 'Matches/Differs', upMult: 8.50, downMult: 0.10 },
-      { name: 'Even/Odd', upMult: 0.95, downMult: 0.95 },
-      { name: 'Rise/Fall', upMult: 0.95, downMult: 0.95 }
+      { name: 'Over/Under', upLabel: 'Over', downLabel: 'Under', upMult: 1.427, downMult: 0.953, upRate: '142.70%', downRate: '95.30%' },
+      { name: 'Rise/Fall', upLabel: 'Rise', downLabel: 'Fall', upMult: 0.954, downMult: 0.954, upRate: '95.40%', downRate: '95.40%' },
+      { name: 'Matches/Differs', upLabel: 'Matches', downLabel: 'Differs', upMult: 8.80, downMult: 0.112, upRate: '880.00%', downRate: '11.20%' },
+      { name: 'Even/Odd', upLabel: 'Even', downLabel: 'Odd', upMult: 0.951, downMult: 0.951, upRate: '95.10%', downRate: '95.10%' }
     ];
-    let currentTradeTypeIndex = 0;
-    let openTrades = [];
-    let currentZoom = 1.0;
 
     // Seed Market Prices & Digits
-    function seedMarketData() {
+    function seedMarketData(market) {
       priceHistory = [];
       digitHistory = [];
-      let p = activeMarket.basePrice;
+      let current = market.basePrice;
       for (let i = 0; i < 40; i++) {
-        p += (Math.random() - 0.49) * activeMarket.volatility;
-        priceHistory.push(Number(p.toFixed(2)));
-        const str = p.toFixed(2);
+        current += (Math.random() - 0.49) * market.volatility;
+        const formatted = Number(current.toFixed(2));
+        priceHistory.push(formatted);
+        const str = formatted.toFixed(2);
         digitHistory.push(parseInt(str.slice(-1), 10));
       }
     }
+    seedMarketData(activeMarket);
 
-    seedMarketData();
-
-    // Render Market Dropdown Options
+    // Populate Market Dropdown Menu
     function renderMarketList() {
-      const container = document.getElementById('marketListOptions');
-      if (!container) return;
-      container.innerHTML = markets.map(m => `
-        <div onclick="selectMarket('${m.id}')" class="px-3 py-2.5 hover:bg-gray-800/80 cursor-pointer transition flex items-center justify-between ${m.id === activeMarket.id ? 'bg-green-500/10 border-l-2 border-green-400' : ''}">
-          <div class="flex items-center gap-2">
-            <i class="fa-solid fa-chart-line text-xs ${m.id === activeMarket.id ? 'text-green-400' : 'text-gray-400'}"></i>
-            <span class="text-xs font-semibold ${m.id === activeMarket.id ? 'text-white font-bold' : 'text-gray-300'}">${m.name}</span>
-          </div>
-          <span class="font-mono text-[10px] text-gray-400">$${m.basePrice.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+      const list = document.getElementById('marketListOptions');
+      if (!list) return;
+      list.innerHTML = markets.map(m => `
+        <div onclick="selectMarket('${m.id}')" class="px-3 py-2 text-xs flex items-center justify-between hover:bg-gray-800/80 cursor-pointer transition ${m.id === activeMarket.id ? 'text-green-400 font-bold bg-green-500/10' : 'text-gray-300'}">
+          <span>${m.name}</span>
+          <span class="font-mono text-[10px] text-gray-400">${m.basePrice.toLocaleString(undefined, {minimumFractionDigits:2})}</span>
         </div>
       `).join('');
     }
@@ -572,35 +584,269 @@
       const found = markets.find(m => m.id === marketId);
       if (!found) return;
       activeMarket = found;
-      seedMarketData();
-      renderMarketList();
+      seedMarketData(activeMarket);
 
       document.getElementById('headerSymbolTitle').textContent = activeMarket.name;
       document.getElementById('assetOverlayName').textContent = activeMarket.name;
-      document.getElementById('marketDropdownMenu')?.classList.add('hidden');
 
-      if (tickChart) {
-        tickChart.data.labels = priceHistory.map((_, i) => i + 1);
-        tickChart.data.datasets[0].data = [...priceHistory];
-        tickChart.update();
-      }
+      const menu = document.getElementById('marketDropdownMenu');
+      if (menu) menu.classList.add('hidden');
+
+      renderMarketList();
       updateRunningIndexesUI();
     }
 
-    // Toggle Chart Fullscreen Mode
+    let isChartFull = false;
     window.toggleChartFullscreen = function() {
-      const wrapper = document.getElementById('chartCanvasWrapper');
-      const text = document.getElementById('fullscreenText');
+      isChartFull = !isChartFull;
+      const wrap = document.getElementById('chartCanvasWrapper');
       const icon = document.getElementById('fullscreenIcon');
-
-      if (!document.fullscreenElement) {
-        wrapper?.requestFullscreen().catch(() => {});
-        if (text) text.textContent = 'Exit Fullscreen';
-        if (icon) icon.className = 'fa-solid fa-compress';
+      const text = document.getElementById('fullscreenText');
+      if (isChartFull) {
+        wrap.className = 'fixed inset-0 z-50 bg-[#0b0e14] p-4 flex flex-col';
+        icon.className = 'fa-solid fa-compress';
+        text.textContent = 'Exit';
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
       } else {
-        document.exitFullscreen().catch(() => {});
-        if (text) text.textContent = 'Fullscreen';
-        if (icon) icon.className = 'fa-solid fa-expand';
+        wrap.className = 'flex-1 relative w-full h-full p-2';
+        icon.className = 'fa-solid fa-expand';
+        text.textContent = 'Fullscreen';
+        if (document.exitFullscreen && document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+      setTimeout(() => tickChart.resize(), 100);
+    };
+
+    // AI 15s Market Scanner Logic
+    let aiScanTimer = null;
+    window.startAiMarketScan = function() {
+      const modal = document.getElementById('aiScannerModal');
+      const content = document.getElementById('aiScanContent');
+      if (!modal || !content) return;
+
+      modal.classList.remove('hidden');
+
+      // Reset content to scanning animation UI on every scan start
+      content.innerHTML = `
+        <div class="flex flex-col items-center justify-center py-6 space-y-3">
+          <div class="w-12 h-12 rounded-full bg-green-500/20 border border-green-500/50 flex items-center justify-center text-green-400 text-lg font-mono animate-bounce" id="aiTimerDisplay">
+            15s
+          </div>
+          <p id="aiScanStatusText" class="text-center font-medium text-green-300">Scanning synthetic tick volatility and digit entropy for 15 seconds...</p>
+          <div class="w-full bg-gray-900 rounded-full h-2 overflow-hidden border border-gray-800">
+            <div id="aiProgressBar" class="bg-gradient-to-r from-green-500 to-teal-400 h-full w-0 transition-all duration-300"></div>
+          </div>
+        </div>
+      `;
+
+      const timerDisplay = document.getElementById('aiTimerDisplay');
+      const statusText = document.getElementById('aiScanStatusText');
+      const progressBar = document.getElementById('aiProgressBar');
+
+      let timeLeft = 15;
+      if (timerDisplay) timerDisplay.textContent = timeLeft + 's';
+      if (progressBar) progressBar.style.width = '0%';
+
+      const statuses = [
+        'Analyzing 5s tick momentum and moving averages...',
+        'Scanning resistance and support liquidity barriers...',
+        'Running 15s Monte Carlo tick simulations...',
+        'Finalizing optimal trade direction and entry point...'
+      ];
+
+      if (aiScanTimer) clearInterval(aiScanTimer);
+      aiScanTimer = setInterval(() => {
+        timeLeft--;
+        if (timerDisplay) timerDisplay.textContent = timeLeft + 's';
+        const progress = ((15 - timeLeft) / 15) * 100;
+        if (progressBar) progressBar.style.width = progress + '%';
+
+        if (timeLeft % 4 === 0) {
+          const idx = Math.floor((15 - timeLeft) / 4);
+          if (statuses[idx] && statusText) statusText.textContent = statuses[idx];
+        }
+
+        if (timeLeft <= 0) {
+          clearInterval(aiScanTimer);
+
+          // 1. Pick a market
+          const m = markets[Math.floor(Math.random() * markets.length)];
+
+          // 2. Pick a contract category: Over/Under (0), Rise/Fall (1), Matches/Differs (2), Even/Odd (3)
+          const typeIdx = Math.floor(Math.random() * 4);
+          const t = tradeTypes[typeIdx];
+
+          // 3. Direction & digit prediction
+          const isUp = Math.random() > 0.5;
+          const direction = isUp ? 'higher' : 'lower';
+          const digit = Math.floor(Math.random() * 10);
+          const winProb = (88.5 + Math.random() * 10.5).toFixed(1);
+
+          let contractLabel = '';
+          if (typeIdx === 0) {
+            contractLabel = isUp ? `OVER ${Math.min(digit, 7)}` : `UNDER ${Math.max(digit, 2)}`;
+          } else if (typeIdx === 1) {
+            contractLabel = isUp ? 'RISE (HIGHER)' : 'FALL (LOWER)';
+          } else if (typeIdx === 2) {
+            contractLabel = isUp ? `MATCHES DIGIT ${digit}` : `DIFFERS DIGIT ${digit}`;
+          } else {
+            contractLabel = isUp ? 'EVEN DIGIT' : 'ODD DIGIT';
+          }
+
+          content.innerHTML = `
+            <div class="bg-gray-900/90 border border-green-500/40 rounded-xl p-4 text-center space-y-3 shadow-2xl">
+              <span class="text-[10px] bg-green-500/20 text-green-300 border border-green-500/40 px-2.5 py-0.5 rounded font-mono font-bold uppercase">
+                ⚡ AI 15s Scan Complete
+              </span>
+
+              <div class="space-y-0.5">
+                <div class="text-[10.5px] text-gray-400 font-medium">Recommended Market</div>
+                <div class="text-sm font-extrabold text-teal-300 font-mono">${m.name}</div>
+              </div>
+
+              <div class="bg-[#18202d] border border-gray-700/80 rounded-lg p-2.5">
+                <div class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">${t.name} Contract</div>
+                <div class="text-base font-black text-green-400 tracking-wide mt-0.5">${contractLabel}</div>
+              </div>
+
+              <div class="text-xs text-gray-400 font-mono">
+                Win Probability: <strong class="text-green-400 text-sm">${winProb}%</strong>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 pt-1">
+                <button type="button" onclick="loadAiStrategyToTerminal('${m.id}', ${typeIdx}, '${direction}', ${digit})" class="bg-teal-600/80 hover:bg-teal-500 text-white font-bold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow">
+                  📥 Load Strategy
+                </button>
+                <button type="button" onclick="startAiMarketScan()" class="bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center gap-1.5 border border-gray-700">
+                  🔄 Rescan
+                </button>
+              </div>
+
+              <button type="button" onclick="executeAiStrategy('${m.id}', ${typeIdx}, '${direction}', ${digit})" class="w-full bg-gradient-to-r from-green-600 to-teal-500 hover:from-green-500 hover:to-teal-400 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition shadow-lg flex items-center justify-center gap-2">
+                🚀 Auto-Execute Trade
+              </button>
+            </div>
+          `;
+        }
+      }, 1000);
+    };
+
+    window.closeAiScanner = function() {
+      if (aiScanTimer) clearInterval(aiScanTimer);
+      const modal = document.getElementById('aiScannerModal');
+      if (modal) modal.classList.add('hidden');
+    };
+
+    window.loadAiStrategyToTerminal = function(marketId, typeIndex, direction, digit) {
+      selectMarket(marketId);
+      currentTradeTypeIndex = typeIndex;
+      updateTradeTypeDisplay();
+      if (typeof digit === 'number') {
+        selectedPredictionDigit = digit;
+        const digitDisplay = document.getElementById('selectedDigitDisplay');
+        if (digitDisplay) digitDisplay.textContent = digit.toString();
+      }
+      closeAiScanner();
+    };
+
+    window.executeAiStrategy = function(marketId, typeIndex, direction, digit) {
+      selectMarket(marketId);
+      currentTradeTypeIndex = typeIndex;
+      updateTradeTypeDisplay();
+      if (typeof digit === 'number') {
+        selectedPredictionDigit = digit;
+      }
+      closeAiScanner();
+      executeTrade(direction);
+    };
+
+    // Custom Chart.js Plugin for Drawing Overlay
+    const customOverlayPlugin = {
+      id: 'customOverlayPlugin',
+      afterDraw: (chart) => {
+        const { ctx: chartCtx, chartArea } = chart;
+        if (!chartArea || !userDrawings || userDrawings.length === 0) return;
+
+        chartCtx.save();
+        chartCtx.strokeStyle = '#2dd4bf';
+        chartCtx.lineWidth = 2.2;
+        chartCtx.lineCap = 'round';
+        chartCtx.lineJoin = 'round';
+
+        userDrawings.forEach(path => {
+          if (!path || path.length < 2) return;
+          chartCtx.beginPath();
+          chartCtx.moveTo(path[0].x, path[0].y);
+          for (let i = 1; i < path.length; i++) {
+            chartCtx.lineTo(path[i].x, path[i].y);
+          }
+          chartCtx.stroke();
+        });
+        chartCtx.restore();
+      }
+    };
+
+    Chart.register(customOverlayPlugin);
+
+    // Chart Setup
+    const ctx = document.getElementById('liveTickChart').getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 320);
+    gradient.addColorStop(0, 'rgba(32, 235, 90, 0.25)');
+    gradient.addColorStop(1, 'rgba(32, 235, 90, 0.0)');
+
+    const tickChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: priceHistory.map((_, i) => i + 1),
+        datasets: [{
+          label: activeMarket.name,
+          data: [...priceHistory],
+          borderColor: '#2dd4bf',
+          borderWidth: 2,
+          pointRadius: priceHistory.map((_, i) => i === priceHistory.length - 1 ? 5 : 0),
+          pointBackgroundColor: '#ffffff',
+          pointBorderColor: '#2dd4bf',
+          pointBorderWidth: 2,
+          fill: true,
+          backgroundColor: gradient,
+          tension: 0.15
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 120 },
+        layout: { padding: { top: 12, bottom: 12, left: 8, right: 8 } },
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { display: false },
+          y: {
+            position: 'right',
+            grid: { color: 'rgba(255, 255, 255, 0.04)' },
+            ticks: { color: '#9ca3af', font: { family: 'monospace', size: 10 } }
+          }
+        }
+      }
+    });
+
+    window.zoomChart = function(factor) {
+      if (factor === 1.0) currentZoom = 1.0;
+      else currentZoom = Math.max(0.2, Math.min(8, currentZoom * factor));
+      if (tickChart && tickChart.options.scales.y) {
+        if (currentZoom === 1.0) {
+          delete tickChart.options.scales.y.min;
+          delete tickChart.options.scales.y.max;
+        } else {
+          const vals = priceHistory.slice(-20);
+          const center = vals[vals.length - 1] || 0;
+          const range = (Math.max(...vals) - Math.min(...vals) || 10) / currentZoom;
+          tickChart.options.scales.y.min = center - range / 2;
+          tickChart.options.scales.y.max = center + range / 2;
+        }
+        tickChart.update('none');
       }
     };
 
@@ -618,13 +864,10 @@
     function selectPredictionDigit(d) {
       selectedPredictionDigit = d;
       renderDigitPredictionGrid();
-      const display1 = document.getElementById('selectedDigitDisplay');
-      const display2 = document.getElementById('selectedDigitDisplay2');
-      if (display1) display1.textContent = d;
-      if (display2) display2.textContent = d;
+      updateRunningIndexesUI();
     }
 
-    // Render Responsive 0-9 Digit Statistics Bar (Zero Horizontal Scrolling)
+    // Render Running Indexes Bar
     function updateRunningIndexesUI() {
       const container = document.getElementById('runningIndexesContainer');
       if (!container || !digitHistory.length) return;
@@ -634,47 +877,21 @@
       digitHistory.forEach(d => counts[d]++);
       const total = digitHistory.length;
 
-      // Find highest (Hot) and lowest (Cold) percentage digits
-      let maxCount = -1;
-      let minCount = Infinity;
-      counts.forEach(c => {
-        if (c > maxCount) maxCount = c;
-        if (c < minCount) minCount = c;
-      });
-
-      container.className = "grid grid-cols-5 md:grid-cols-10 gap-1.5 md:gap-2 w-full max-w-full";
-
       container.innerHTML = [0,1,2,3,4,5,6,7,8,9].map(d => {
-        const count = counts[d];
-        const pct = ((count / total) * 100).toFixed(1);
+        const pct = ((counts[d] / total) * 100).toFixed(1);
         const isLatest = d === latestDigit;
-        const isHot = count === maxCount && maxCount > 0;
-        const isCold = count === minCount && minCount < total;
-
-        let circleStyle = "w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center relative font-mono text-xs font-bold transition-all duration-200 border ";
-        let pctStyle = "text-[10px] font-mono font-semibold ";
-
-        if (isLatest) {
-          circleStyle += "bg-emerald-500 text-black border-emerald-300 ring-2 ring-emerald-400 shadow-[0_0_14px_rgba(16,185,129,0.7)] scale-105 z-10";
-          pctStyle += "text-emerald-400 font-bold";
-        } else if (isHot) {
-          circleStyle += "bg-emerald-500/15 text-emerald-300 border-emerald-400/80 shadow-[0_0_8px_rgba(16,185,129,0.3)]";
-          pctStyle += "text-emerald-400 font-bold";
-        } else if (isCold) {
-          circleStyle += "bg-rose-500/15 text-rose-300 border-rose-500/80 shadow-[0_0_8px_rgba(244,63,94,0.3)]";
-          pctStyle += "text-rose-400 font-bold";
-        } else {
-          circleStyle += "bg-slate-900/90 text-slate-300 border-slate-700/80";
-          pctStyle += "text-slate-400";
-        }
+        const isSelected = d === selectedPredictionDigit;
+        let ringClasses = 'digit-circle';
+        if (isLatest) ringClasses += ' active-tick';
+        else if (isSelected) ringClasses += ' active-prediction';
 
         return `
-          <div class="flex flex-col items-center gap-0.5 cursor-pointer select-none transition-transform hover:scale-105" onclick="selectPredictionDigit(${d})" title="Digit ${d}: ${pct}% (${count} occurrences)">
-            <div class="${circleStyle}">
-              <span>${d}</span>
-              ${isLatest ? '<div class="absolute -top-1 w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping"></div>' : ''}
+          <div class="flex flex-col items-center gap-1 cursor-pointer" onclick="selectPredictionDigit(${d})">
+            <div class="${ringClasses}">
+              <span class="text-xs font-bold font-mono ${isLatest ? 'text-white' : isSelected ? 'text-green-300' : 'text-gray-300'}">${d}</span>
+              ${isLatest ? '<div class="digit-pointer-arrow"></div>' : ''}
             </div>
-            <span class="${pctStyle}">${pct}%</span>
+            <span class="text-[10px] font-mono ${isLatest ? 'text-red-400 font-bold' : isSelected ? 'text-green-400 font-bold' : 'text-gray-400'}">${pct}%</span>
           </div>
         `;
       }).join('');
@@ -694,36 +911,17 @@
     function updateTradeTypeDisplay() {
       const t = tradeTypes[currentTradeTypeIndex];
       document.getElementById('tradeTypeNameDisplay').textContent = t.name;
-
-      const higherText = document.getElementById('tradeHigherText');
-      const lowerText = document.getElementById('tradeLowerText');
-      const btnUpLabel = document.getElementById('btnUpLabel');
-      const btnDownLabel = document.getElementById('btnDownLabel');
-
-      if (t.name === 'Over/Under') {
-        if (higherText) higherText.textContent = 'Over / Higher';
-        if (lowerText) lowerText.textContent = 'Under / Lower';
-        if (btnUpLabel) btnUpLabel.innerHTML = 'Over <span id="selectedDigitDisplay">' + selectedPredictionDigit + '</span>';
-        if (btnDownLabel) btnDownLabel.innerHTML = 'Under <span id="selectedDigitDisplay2">' + selectedPredictionDigit + '</span>';
-      } else if (t.name === 'Matches/Differs') {
-        if (higherText) higherText.textContent = 'Matches Digit';
-        if (lowerText) lowerText.textContent = 'Differs Digit';
-        if (btnUpLabel) btnUpLabel.innerHTML = 'Matches <span id="selectedDigitDisplay">' + selectedPredictionDigit + '</span>';
-        if (btnDownLabel) btnDownLabel.innerHTML = 'Differs <span id="selectedDigitDisplay2">' + selectedPredictionDigit + '</span>';
-      } else if (t.name === 'Even/Odd') {
-        if (higherText) higherText.textContent = 'Even Digit';
-        if (lowerText) lowerText.textContent = 'Odd Digit';
-        if (btnUpLabel) btnUpLabel.textContent = 'Even Digit';
-        if (btnDownLabel) btnDownLabel.textContent = 'Odd Digit';
-      } else {
-        if (higherText) higherText.textContent = 'Higher Price';
-        if (lowerText) lowerText.textContent = 'Lower Price';
-        if (btnUpLabel) btnUpLabel.textContent = 'Higher';
-        if (btnDownLabel) btnDownLabel.textContent = 'Lower';
-      }
-
+      document.getElementById('btnUpLabel').textContent = t.upLabel;
+      document.getElementById('btnDownLabel').textContent = t.downLabel;
+      document.getElementById('btnUpRate').textContent = t.upRate;
+      document.getElementById('btnDownRate').textContent = t.downRate;
       updatePayoutDisplays();
     }
+
+    // Ticks Slider
+    document.getElementById('ticksSlider')?.addEventListener('input', (e) => {
+      document.getElementById('ticksDisplayVal').textContent = e.target.value + ' Ticks';
+    });
 
     function setMode(mode) {
       inputMode = mode;
@@ -762,304 +960,6 @@
     }
 
     document.getElementById('stakeInput')?.addEventListener('input', updatePayoutDisplays);
-
-    // Track active mouse/touch position for crosshair & tooltip
-    window.activeCrosshairPos = null;
-
-    // Custom Chart.js Plugin for Institutional Trading Aesthetics
-    const customOverlayPlugin = {
-      id: 'customOverlayPlugin',
-      afterDraw: (chart) => {
-        const { ctx: chartCtx, chartArea, scales } = chart;
-        if (!chartArea || !priceHistory || priceHistory.length === 0) return;
-
-        const meta = chart.getDatasetMeta(0);
-        if (!meta || !meta.data || meta.data.length === 0) return;
-
-        const lastPoint = meta.data[meta.data.length - 1];
-        if (!lastPoint) return;
-
-        const currentPrice = priceHistory[priceHistory.length - 1];
-
-        // 1. Draw Freehand Drawings
-        if (userDrawings && userDrawings.length > 0) {
-          chartCtx.save();
-          chartCtx.strokeStyle = '#2dd4bf';
-          chartCtx.lineWidth = 2.2;
-          chartCtx.lineCap = 'round';
-          chartCtx.lineJoin = 'round';
-
-          userDrawings.forEach(path => {
-            if (!path || path.length < 2) return;
-            chartCtx.beginPath();
-            chartCtx.moveTo(path[0].x, path[0].y);
-            for (let i = 1; i < path.length; i++) {
-              chartCtx.lineTo(path[i].x, path[i].y);
-            }
-            chartCtx.stroke();
-          });
-          chartCtx.restore();
-        }
-
-        // 2. Draw Horizontal Dashed Current Price Line
-        chartCtx.save();
-        chartCtx.beginPath();
-        chartCtx.setLineDash([4, 4]);
-        chartCtx.strokeStyle = 'rgba(16, 185, 129, 0.75)';
-        chartCtx.lineWidth = 1.3;
-        chartCtx.moveTo(lastPoint.x, lastPoint.y);
-        chartCtx.lineTo(chartArea.right, lastPoint.y);
-        chartCtx.stroke();
-        chartCtx.restore();
-
-        // 3. Draw Active Pulsing Live Price Endpoint Dot
-        chartCtx.save();
-        const now = Date.now();
-        const pulseRadius = 5 + Math.sin(now / 180) * 2;
-        chartCtx.beginPath();
-        chartCtx.arc(lastPoint.x, lastPoint.y, pulseRadius + 3, 0, Math.PI * 2);
-        chartCtx.fillStyle = 'rgba(16, 185, 129, 0.22)';
-        chartCtx.fill();
-
-        chartCtx.beginPath();
-        chartCtx.arc(lastPoint.x, lastPoint.y, pulseRadius, 0, Math.PI * 2);
-        chartCtx.fillStyle = 'rgba(16, 185, 129, 0.85)';
-        chartCtx.fill();
-
-        chartCtx.beginPath();
-        chartCtx.arc(lastPoint.x, lastPoint.y, 2.5, 0, Math.PI * 2);
-        chartCtx.fillStyle = '#ffffff';
-        chartCtx.fill();
-        chartCtx.restore();
-
-        // 4. Draw Active Price Badge on Right Y-Axis Margin
-        chartCtx.save();
-        const priceText = currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        chartCtx.font = 'bold 10.5px monospace';
-        const textMetrics = chartCtx.measureText(priceText);
-        const badgeWidth = textMetrics.width + 12;
-        const badgeHeight = 19;
-        const badgeX = Math.min(chartArea.right + 2, chart.width - badgeWidth - 2);
-        const badgeY = Math.max(chartArea.top + badgeHeight / 2, Math.min(chartArea.bottom - badgeHeight / 2, lastPoint.y));
-
-        chartCtx.fillStyle = '#10b981';
-        chartCtx.beginPath();
-        chartCtx.roundRect(badgeX, badgeY - badgeHeight / 2, badgeWidth, badgeHeight, 4);
-        chartCtx.fill();
-
-        chartCtx.fillStyle = '#030916';
-        chartCtx.textAlign = 'center';
-        chartCtx.textBaseline = 'middle';
-        chartCtx.fillText(priceText, badgeX + badgeWidth / 2, badgeY);
-        chartCtx.restore();
-
-        // 5. Draw Interactive Crosshair & Tooltip
-        if (isCrosshairActive && window.activeCrosshairPos) {
-          const { x: mouseX, y: mouseY } = window.activeCrosshairPos;
-          if (mouseX >= chartArea.left && mouseX <= chartArea.right && mouseY >= chartArea.top && mouseY <= chartArea.bottom) {
-            chartCtx.save();
-            chartCtx.beginPath();
-            chartCtx.setLineDash([3, 3]);
-            chartCtx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-            chartCtx.lineWidth = 1;
-
-            // Vertical line
-            chartCtx.moveTo(mouseX, chartArea.top);
-            chartCtx.lineTo(mouseX, chartArea.bottom);
-
-            // Horizontal line
-            chartCtx.moveTo(chartArea.left, mouseY);
-            chartCtx.lineTo(chartArea.right, mouseY);
-            chartCtx.stroke();
-            chartCtx.restore();
-
-            // Price value at crosshair Y
-            if (scales.y) {
-              const hoverPrice = scales.y.getValueForPixel(mouseY);
-              if (Number.isFinite(hoverPrice)) {
-                chartCtx.save();
-                const hoverText = hoverPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                chartCtx.font = 'bold 10px monospace';
-                const hMetrics = chartCtx.measureText(hoverText);
-                const hWidth = hMetrics.width + 8;
-                const hHeight = 16;
-                chartCtx.fillStyle = '#334155';
-                chartCtx.fillRect(chartArea.right - hWidth, mouseY - hHeight / 2, hWidth, hHeight);
-                chartCtx.fillStyle = '#ffffff';
-                chartCtx.textAlign = 'center';
-                chartCtx.textBaseline = 'middle';
-                chartCtx.fillText(hoverText, chartArea.right - hWidth / 2, mouseY);
-                chartCtx.restore();
-              }
-            }
-          }
-        }
-      }
-    };
-
-    Chart.register(customOverlayPlugin);
-
-    // Chart Setup with Smooth Emerald Linear Gradient Fill
-    const ctx = document.getElementById('liveTickChart').getContext('2d');
-    const gradient = ctx.createLinearGradient(0, 0, 0, 320);
-    gradient.addColorStop(0, 'rgba(16, 185, 129, 0.28)');
-    gradient.addColorStop(0.7, 'rgba(16, 185, 129, 0.06)');
-    gradient.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
-
-    const tickChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: priceHistory.map((_, i) => i + 1),
-        datasets: [{
-          label: activeMarket.name,
-          data: [...priceHistory],
-          borderColor: '#10b981',
-          borderWidth: 2,
-          pointRadius: priceHistory.map((_, i) => i === priceHistory.length - 1 ? 4 : 0),
-          pointBackgroundColor: '#ffffff',
-          pointBorderColor: '#10b981',
-          pointBorderWidth: 2,
-          fill: true,
-          backgroundColor: gradient,
-          tension: 0.25
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: { duration: 250 },
-        layout: { padding: { top: 10, bottom: 8, left: 6, right: 12 } },
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { display: false },
-          y: {
-            position: 'right',
-            grid: { color: 'rgba(255, 255, 255, 0.04)', drawBorder: false },
-            ticks: { color: '#94a3b8', font: { family: 'monospace', size: 10 }, padding: 6 }
-          }
-        }
-      }
-    });
-
-    // Crosshair mouse & touch move tracking
-    const chartCanvas = document.getElementById('liveTickChart');
-    if (chartCanvas) {
-      const trackPos = (e) => {
-        const rect = chartCanvas.getBoundingClientRect();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        window.activeCrosshairPos = {
-          x: clientX - rect.left,
-          y: clientY - rect.top
-        };
-        if (isCrosshairActive) tickChart.update('none');
-      };
-
-      chartCanvas.addEventListener('mousemove', trackPos);
-      chartCanvas.addEventListener('touchmove', trackPos);
-      chartCanvas.addEventListener('mouseleave', () => { window.activeCrosshairPos = null; if (isCrosshairActive) tickChart.update('none'); });
-      chartCanvas.addEventListener('touchend', () => { window.activeCrosshairPos = null; if (isCrosshairActive) tickChart.update('none'); });
-    }
-
-    window.zoomChart = function(factor) {
-      if (factor === 1.0) currentZoom = 1.0;
-      else currentZoom = Math.max(0.2, Math.min(8, currentZoom * factor));
-      if (tickChart && tickChart.options.scales.y) {
-        if (currentZoom === 1.0) {
-          delete tickChart.options.scales.y.min;
-          delete tickChart.options.scales.y.max;
-        } else {
-          const vals = priceHistory.slice(-20);
-          const center = vals[vals.length - 1] || 0;
-          const range = (Math.max(...vals) - Math.min(...vals) || 10) / currentZoom;
-          tickChart.options.scales.y.min = center - range / 2;
-          tickChart.options.scales.y.max = center + range / 2;
-        }
-        tickChart.update('none');
-      }
-    };
-
-    // AI Scanner Modals
-    window.startAiMarketScan = function() {
-      const modal = document.getElementById('aiScanModal');
-      if (modal) modal.classList.remove('hidden');
-
-      const content = document.getElementById('aiScanContent');
-      if (content) {
-        content.innerHTML = `
-          <div class="flex flex-col items-center justify-center py-6 space-y-3">
-            <div class="w-12 h-12 border-4 border-green-500/30 border-t-green-400 rounded-full animate-spin"></div>
-            <p id="aiScanStatusText" class="text-center font-medium text-green-300">Scanning 24/7 synthetic tick volatility patterns...</p>
-          </div>
-        `;
-      }
-
-      setTimeout(() => {
-        if (content) {
-          content.innerHTML = markets.map(m => {
-            const isUp = Math.random() > 0.45;
-            const typeIdx = Math.floor(Math.random() * tradeTypes.length);
-            const tName = tradeTypes[typeIdx].name;
-            const digit = Math.floor(Math.random() * 10);
-            let contractLabel = isUp ? 'Higher' : 'Lower';
-            let direction = isUp ? 'higher' : 'lower';
-
-            if (tName === 'Over/Under') {
-              contractLabel = isUp ? `OVER ${Math.min(digit, 7)}` : `UNDER ${Math.max(digit, 2)}`;
-            } else if (tName === 'Matches/Differs') {
-              contractLabel = isUp ? `MATCHES DIGIT ${digit}` : `DIFFERS DIGIT ${digit}`;
-            } else if (tName === 'Even/Odd') {
-              contractLabel = isUp ? 'EVEN DIGIT' : 'ODD DIGIT';
-            }
-
-            return `
-              <div class="bg-[#18202d] border border-gray-800 rounded-xl p-3 flex items-center justify-between">
-                <div>
-                  <div class="font-bold text-xs text-white">${m.name}</div>
-                  <div class="text-[11px] text-green-400 font-semibold mt-0.5">Signal: ${contractLabel}</div>
-                </div>
-                <div class="flex items-center gap-2">
-                  <button type="button" onclick="loadAiStrategyToTerminal('${m.id}', ${typeIdx}, '${direction}', ${digit})" class="bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs px-2.5 py-1.5 rounded-lg font-semibold transition">
-                    Load
-                  </button>
-                  <button type="button" onclick="executeAiStrategy('${m.id}', ${typeIdx}, '${direction}', ${digit})" class="bg-green-600 hover:bg-green-500 text-white text-xs px-2.5 py-1.5 rounded-lg font-bold transition shadow-md shadow-green-950/40">
-                    Trade
-                  </button>
-                </div>
-              </div>
-            `;
-          }).join('');
-        }
-      }, 1500);
-    };
-
-    window.closeAiScanner = function() {
-      const modal = document.getElementById('aiScanModal');
-      if (modal) modal.classList.add('hidden');
-    };
-
-    window.loadAiStrategyToTerminal = function(marketId, typeIndex, direction, digit) {
-      selectMarket(marketId);
-      currentTradeTypeIndex = typeIndex;
-      updateTradeTypeDisplay();
-      if (typeof digit === 'number') {
-        selectedPredictionDigit = digit;
-        const digitDisplay = document.getElementById('selectedDigitDisplay');
-        if (digitDisplay) digitDisplay.textContent = digit.toString();
-      }
-      closeAiScanner();
-    };
-
-    window.executeAiStrategy = function(marketId, typeIndex, direction, digit) {
-      selectMarket(marketId);
-      currentTradeTypeIndex = typeIndex;
-      updateTradeTypeDisplay();
-      if (typeof digit === 'number') {
-        selectedPredictionDigit = digit;
-      }
-      closeAiScanner();
-      executeTrade(direction);
-    };
 
     // Parent Window Account Synchronization
     function syncBalanceToParent() {
@@ -1149,30 +1049,53 @@
       if (inputMode === 'payout') {
         stake = val / (1 + (direction === 'higher' ? (t.upMult || 0.95) : (t.downMult || 0.95)));
       }
+      stake = Number(stake.toFixed(2));
 
-      if (accountBalance < stake) {
-        alert('Insufficient balance to place trade.');
-        return;
+      if (!Number.isFinite(stake) || stake <= 0) {
+        stake = 10;
+        if (stakeInput) stakeInput.value = '10';
+      }
+
+      // If balance is 0 or less than stake, ensure trade can be placed or check real balance
+      if (!Number.isFinite(accountBalance) || accountBalance < stake) {
+        if (selectedAccountType === 'demo') {
+          accountBalance = Math.max(stake * 10, 1000.00);
+          const display = document.getElementById('accountBalance');
+          if (display) {
+            display.textContent = '$' + accountBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USD';
+          }
+          syncBalanceToParent();
+        } else {
+          alert('⚠️ Insufficient Real Account balance ($' + (accountBalance || 0).toFixed(2) + '). Required stake: $' + stake.toFixed(2) + '. Redirecting to Wallet page to deposit.');
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'EXSTRADE_OPEN_FUNDS' }, location.origin);
+          }
+          return;
+        }
       }
 
       accountBalance -= stake;
+      accountBalance = Number(accountBalance.toFixed(2));
       const display = document.getElementById('accountBalance');
       if (display) {
         display.textContent = '$' + accountBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USD';
       }
       syncBalanceToParent();
 
-      const currentPriceStr = (priceHistory[priceHistory.length - 1] || activeMarket.basePrice).toFixed(2);
-      const currentPrice = parseFloat(currentPriceStr);
+      const rawPrice = (priceHistory && priceHistory.length > 0) ? priceHistory[priceHistory.length - 1] : (activeMarket?.basePrice || 1000.00);
+      const currentPrice = Number.isFinite(Number(rawPrice)) ? Number(rawPrice) : 1000.00;
+      const priceStr = currentPrice.toFixed(2);
+      const entryDigit = parseInt(priceStr.slice(-1), 10) || 0;
 
       const trade = {
-        id: 'CON-' + Math.floor(Math.random() * 899999 + 100000),
-        marketName: activeMarket.name,
-        tradeType: t.name,
-        direction: direction,
+        id: 'SYN-' + (tradeCounter++),
+        marketName: activeMarket ? activeMarket.name : 'Volatility Index',
+        tradeType: t.name || 'Contract',
+        direction,
         entryPrice: currentPrice,
-        predictionDigit: selectedPredictionDigit,
-        stake: stake,
+        entryDigit: entryDigit,
+        predictionDigit: selectedPredictionDigit || 0,
+        stake,
         ticksLeft: ticks,
         totalTicks: ticks,
         mult: direction === 'higher' ? (t.upMult || 0.95) : (t.downMult || 0.95),
@@ -1264,7 +1187,7 @@
       digitHistory.push(lastDigit);
       if (digitHistory.length > 100) digitHistory.shift();
 
-      // Update Chart Datasets
+      // Update Chart Datasets according to current Chart Style & Indicators
       if (currentChartStyleIndex === 2) {
         tickChart.data.datasets[0].data = [...priceHistory];
         tickChart.data.datasets[0].backgroundColor = priceHistory.map((p, i) =>
@@ -1273,8 +1196,8 @@
       } else {
         tickChart.data.labels = priceHistory.map((_, i) => i + 1);
         tickChart.data.datasets[0].data = [...priceHistory];
-        tickChart.data.datasets[0].pointRadius = priceHistory.map((_, i) => i === priceHistory.length - 1 ? 4 : 0);
-        tickChart.data.datasets[0].borderColor = change >= 0 ? '#10b981' : '#f43f5e';
+        tickChart.data.datasets[0].pointRadius = priceHistory.map((_, i) => i === priceHistory.length - 1 ? 5 : 0);
+        tickChart.data.datasets[0].borderColor = change >= 0 ? '#2dd4bf' : '#f43f5e';
       }
 
       if (currentIndicatorMode !== 'off') {
@@ -1311,7 +1234,7 @@
         if (trade.status === 'OPEN') {
           trade.ticksLeft--;
           if (trade.ticksLeft <= 0) {
-            const currentStr = newPrice.toFixed(2);
+            const currentStr = currentPrice.toFixed(2);
             const currentDigit = parseInt(currentStr.slice(-1), 10) || 0;
 
             let won = false;
@@ -1324,18 +1247,16 @@
             } else if (trade.tradeType === 'Even/Odd') {
               won = trade.direction === 'higher' ? currentDigit % 2 === 0 : currentDigit % 2 !== 0;
             } else {
-              won = trade.direction === 'higher' ? newPrice >= trade.entryPrice : newPrice <= trade.entryPrice;
-            }
-
-            if (selectedAccountType === 'demo') {
-              won = Math.random() < 0.75;
+              won = trade.direction === 'higher' ? currentPrice >= trade.entryPrice : currentPrice <= trade.entryPrice;
             }
 
             trade.status = won ? 'WON' : 'LOST';
+            const netProfit = won ? Number((trade.stake * trade.mult).toFixed(2)) : -trade.stake;
 
             if (won) {
-              const profit = trade.stake * trade.mult;
-              accountBalance += (trade.stake + profit);
+              const returnAmount = Number((trade.stake + netProfit).toFixed(2));
+              accountBalance += returnAmount;
+              accountBalance = Number(accountBalance.toFixed(2));
               const display = document.getElementById('accountBalance');
               if (display) {
                 display.textContent = '$' + accountBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' USD';
@@ -1343,31 +1264,38 @@
               syncBalanceToParent();
             }
 
-            if (window.parent && window.parent !== window) {
-              window.parent.postMessage({
-                type: 'EXSTRADE_TRADE_SETTLED',
-                accountType: selectedAccountType,
-                trade: {
-                  id: trade.id,
-                  market: trade.marketName,
-                  contract: trade.tradeType,
-                  direction: trade.direction,
-                  stake: trade.stake,
-                  profit: won ? trade.stake * trade.mult : -trade.stake,
-                  status: trade.status,
-                  entryPrice: trade.entryPrice,
-                  exitPrice: newPrice
-                }
-              }, location.origin);
-            }
+            window.parent.postMessage({
+              type: 'EXSTRADE_TRADE_CLOSED',
+              accountType: selectedAccountType,
+              balance: accountBalance,
+              trade: {
+                id: trade.id,
+                market: trade.marketName,
+                contract: trade.tradeType,
+                direction: trade.direction,
+                stake: trade.stake,
+                pnl: netProfit,
+                status: won ? 'won' : 'lost',
+                newBalance: accountBalance,
+                closedAt: new Date().toISOString(),
+              },
+            }, location.origin);
           }
         }
       });
-
       renderLogTable();
     }
 
-    // Read stored admin override preference
+    // Admin Profit Allocation Sync Listener
+    window.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'EXSTRADE_PROFIT_ALLOCATION') {
+        window.adminOverrideWinner = e.data.mode === 'PROFIT';
+        try {
+          localStorage.setItem('admin_override_winner', e.data.mode === 'PROFIT' ? 'true' : 'false');
+        } catch {}
+      }
+    });
+
     try {
       const savedWinner = localStorage.getItem('admin_override_winner');
       if (savedWinner === 'true') {
@@ -1510,7 +1438,7 @@
           {
             label: 'SMA (10)',
             data: smaData,
-            borderColor: '#f59e0b',
+            borderColor: '#c084fc',
             borderWidth: 1.8,
             pointRadius: 0,
             fill: false,
@@ -1550,7 +1478,7 @@
           tickChart.config.type = 'line';
           tickChart.data.datasets[0].stepped = false;
           tickChart.data.datasets[0].fill = true;
-          tickChart.data.datasets[0].borderColor = '#10b981';
+          tickChart.data.datasets[0].borderColor = '#2dd4bf';
           chartStyleBtn.title = 'Chart Style: Line / Area';
           chartStyleBtn.className = 'w-8 h-8 rounded-lg glass-button flex items-center justify-center text-green-400 bg-green-500/20 border-green-500/50 shadow-sm transition';
         } else if (currentChartStyleIndex === 1) {
@@ -1619,7 +1547,7 @@
         tickChart.config.type = 'line';
         tickChart.data.datasets[0].stepped = false;
         tickChart.data.datasets[0].fill = true;
-        tickChart.data.datasets[0].borderColor = '#10b981';
+        tickChart.data.datasets[0].borderColor = '#2dd4bf';
         const chartStyleBtn = document.getElementById('toolChartStyle');
         if (chartStyleBtn) {
           chartStyleBtn.className = 'w-8 h-8 rounded-lg glass-button flex items-center justify-center text-green-400 bg-green-500/20 border-green-500/50 shadow-sm transition';
