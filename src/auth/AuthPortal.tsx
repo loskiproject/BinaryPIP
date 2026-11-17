@@ -5,6 +5,7 @@ import {
   BarChart2, Activity, Lock, LogIn, Sparkles, AtSign,
 } from 'lucide-react'
 import './AuthPortal.css'
+import { recordSecurityEvent } from '../lib/supabase'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -275,7 +276,12 @@ export default function AuthPortal({ onLogin, onSignup, onDemo, onGoogle, onForg
       return
     }
     const err = await onLogin(loginForm.identifier.trim(), loginForm.password)
-    if (err) setFormError(err)
+    if (err) {
+      setFormError(err)
+      void recordSecurityEvent('login_failed', 'MEDIUM', loginForm.identifier.trim(), 'Client Login Failed (Invalid Credentials)')
+    } else {
+      void recordSecurityEvent('login_success', 'LOW', loginForm.identifier.trim(), 'Client Authenticated Successfully')
+    }
   }
 
   // ── Signup validation per step ───────────────────────────────────────────

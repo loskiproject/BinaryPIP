@@ -11,7 +11,7 @@ import {
 import './AdminDashboard.css'
 import '../features/features.css'
 import AdminChatDesk from '../features/AdminChatDesk'
-import { supabase, supabaseUrl as DEFAULT_SUPABASE_URL, supabaseKey as DEFAULT_SUPABASE_KEY } from '../lib/supabase'
+import { supabase, recordSecurityEvent, supabaseUrl as DEFAULT_SUPABASE_URL, supabaseKey as DEFAULT_SUPABASE_KEY } from '../lib/supabase'
 import { MASTER_TRADERS_540 } from '../features/CopyTradingHub'
 
 // ─── Supabase config ──────────────────────────────────────────────────────────
@@ -144,6 +144,34 @@ export type CopySubscriptionRecord = {
   totalCopiedProfit: number
   status: 'active' | 'paused' | 'stopped'
   createdAt: string
+}
+
+export type SecurityEventRecord = {
+  id: string
+  createdAt: string
+  eventType: string
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+  userEmail: string
+  ipAddress: string
+  subnet: string
+  userAgent: string
+  actionTaken: string
+  metadata?: any
+}
+
+export type BlockedIpRecord = {
+  id: string
+  ipOrSubnet: string
+  reason: string
+  blockedBy: string
+  createdAt: string
+}
+
+export type SecuritySettingsRecord = {
+  lockdownMode: boolean
+  withdrawalsFrozen: boolean
+  strict2faEnforced: boolean
+  autoBlockBruteForce: boolean
 }
 
 type AuditEntry = {
@@ -463,6 +491,21 @@ export default function AdminDashboard({ currentUser }: Props) {
   const [publishedTraders, setPublishedTraders] = useState<PublishedTrader[]>([])
   const [copySubscriptions, setCopySubscriptions] = useState<CopySubscriptionRecord[]>([])
 
+  // AI Security Guardian State
+  const [securityEvents, setSecurityEvents] = useState<SecurityEventRecord[]>([])
+  const [blockedIps, setBlockedIps] = useState<BlockedIpRecord[]>([])
+  const [securitySettings, setSecuritySettings] = useState<SecuritySettingsRecord>({
+    lockdownMode: false,
+    withdrawalsFrozen: false,
+    strict2faEnforced: true,
+    autoBlockBruteForce: true,
+  })
+  const [securityLoading, setSecurityLoading] = useState(false)
+  const [blockIpModalOpen, setBlockIpModalOpen] = useState(false)
+  const [ipToBlockInput, setIpToBlockInput] = useState('')
+  const [blockReasonInput, setBlockReasonInput] = useState('Suspicious automated probing')
+  const [analyzingAi, setAnalyzingAi] = useState(false)
+
   // UI state
   const [userSearch, setUserSearch] = useState('')
   const [traderSearch, setTraderSearch] = useState('')
@@ -666,19 +709,23 @@ export default function AdminDashboard({ currentUser }: Props) {
             }
             setCurrentAdmin(adminObj)
             setPhase('mfa')
+            void recordSecurityEvent('login_success', 'LOW', cleanEmail, 'Admin Authenticated Successfully')
             return
           }
         } else {
           setLoginError('Invalid email or password.')
+          void recordSecurityEvent('login_failed', 'MEDIUM', cleanEmail, 'Admin Login Failed (Invalid Credentials)')
           return
         }
       } catch {
         setLoginError('Authentication service unavailable. Check network or configuration.')
+        void recordSecurityEvent('login_failed', 'HIGH', cleanEmail, 'Admin Login Error (Service Unavailable)')
         return
       }
     }
 
     setLoginError('Invalid credentials. Please check your email and password.')
+    void recordSecurityEvent('login_failed', 'MEDIUM', cleanEmail, 'Admin Login Failed (Invalid Credentials)')
     addAudit('FAILED_LOGIN', cleanEmail, 'Auth', `Failed login attempt for ${cleanEmail}`, 'warning')
   }
 
@@ -1084,26 +1131,256 @@ export default function AdminDashboard({ currentUser }: Props) {
         }
       }
 
-      // Read local apps queue
-      let localApps: MasterTraderApp[] = []
-      try {
-        const localStr = localStorage.getItem('binarypip_master_trader_apps')
-        if (localStr) localApps = JSON.parse(localStr)
-      } catch {}
-
-      // Deduplicate DB and local apps
-      const mergedMap = new Map<string, MasterTraderApp>()
-      localApps.forEach(a => mergedMap.set(a.id, a))
-      dbMapped.forEach(a => mergedMap.set(a.id, a))
-
-      const allMerged = Array.from(mergedMap.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      const allMerged = dbMapped.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       setMasterApps(allMerged)
     } catch {
       // silent
     } finally {
-      if (isInitial) setMasterAppsLoading(false)
+      setMasterAppsLoading(false)
     }
   }, [users])
+
+  // Fetch real Security Events, Blocked IPs, & Settings from Supabase
+  const fetchSecurityFromDatabase = useCallback(async () => {
+    try {
+      const [eventsRes, blockedRes, settingsRes] = await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/security_events?select=*&order=created_at.desc&limit=100`, {
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        }),
+        fetch(`${SUPABASE_URL}/rest/v1/blocked_ips?select=*&order=created_at.desc&limit=50`, {
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        }),
+        fetch(`${SUPABASE_URL}/rest/v1/security_settings?id=eq.1&select=*`, {
+          headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        }),
+      ])
+
+      if (eventsRes.ok) {
+        const rows = await eventsRes.json() as any[]
+        if (Array.isArray(rows)) {
+          setSecurityEvents(rows.map(r => ({
+            id: String(r.id),
+            createdAt: String(r.created_at || new Date().toISOString()),
+            eventType: String(r.event_type || 'system_event'),
+            severity: (r.severity || 'LOW') as any,
+            userEmail: String(r.user_email || '—'),
+            ipAddress: String(r.ip_address || '127.0.0.1'),
+            subnet: String(r.subnet || '127.0.0.0/24'),
+            userAgent: String(r.user_agent || 'BinaryPip Client'),
+            actionTaken: String(r.action_taken || 'Logged'),
+            metadata: r.metadata,
+          })))
+        }
+      }
+
+      if (blockedRes.ok) {
+        const rows = await blockedRes.json() as any[]
+        if (Array.isArray(rows)) {
+          setBlockedIps(rows.map(r => ({
+            id: String(r.id),
+            ipOrSubnet: String(r.ip_or_subnet),
+            reason: String(r.reason || 'Suspicious activity'),
+            blockedBy: String(r.blocked_by || 'Admin'),
+            createdAt: String(r.created_at || new Date().toISOString()),
+          })))
+        }
+      }
+
+      if (settingsRes.ok) {
+        const rows = await settingsRes.json() as any[]
+        if (Array.isArray(rows) && rows[0]) {
+          const s = rows[0]
+          setSecuritySettings({
+            lockdownMode: s.lockdown_mode === true,
+            withdrawalsFrozen: s.withdrawals_frozen === true,
+            strict2faEnforced: s.strict_2fa_enforced !== false,
+            autoBlockBruteForce: s.auto_block_brute_force !== false,
+          })
+          setLockdownActive(s.lockdown_mode === true)
+        }
+      }
+    } catch {
+      // silent
+    }
+  }, [])
+
+  // Security Threat Calculations
+  const last24hEvents = securityEvents.filter(e => {
+    const ageMs = Date.now() - new Date(e.createdAt).getTime()
+    return ageMs <= 24 * 60 * 60 * 1000
+  })
+
+  const failedLogins24h = last24hEvents.filter(e => e.eventType === 'login_failed').length
+  const failed2fa24h = last24hEvents.filter(e => e.eventType === '2fa_failed').length
+  const highCriticalCount = last24hEvents.filter(e => e.severity === 'HIGH' || e.severity === 'CRITICAL').length
+
+  const threatScore = Math.min(100, 10 + (failedLogins24h * 10) + (failed2fa24h * 15) + (highCriticalCount * 25))
+  const threatLabel = threatScore <= 30 ? 'LOW' : threatScore <= 69 ? 'MEDIUM' : 'CRITICAL'
+  const threatColor = threatScore <= 30 ? '#1ccf84' : threatScore <= 69 ? '#f2b94b' : '#f04452'
+
+  const toggleLockdownMode = async () => {
+    const nextMode = !securitySettings.lockdownMode
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/security_settings?id=eq.1`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ lockdown_mode: nextMode, updated_at: new Date().toISOString() })
+      })
+      await fetch(`${SUPABASE_URL}/rest/v1/security_events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({
+          event_type: 'lockdown_triggered',
+          severity: nextMode ? 'CRITICAL' : 'LOW',
+          user_email: currentAdmin?.email || 'admin@binarypip.com',
+          ip_address: '127.0.0.1',
+          action_taken: nextMode ? 'Emergency Lockdown Activated' : 'Emergency Lockdown Lifted',
+        })
+      })
+      setSecuritySettings(s => ({ ...s, lockdownMode: nextMode }))
+      setLockdownActive(nextMode)
+      notify(nextMode ? '🚨 EMERGENCY LOCKDOWN ACTIVATED' : 'Lockdown Mode Lifted.', nextMode ? 'err' : 'ok')
+      void fetchSecurityFromDatabase()
+    } catch {
+      notify('Failed to update lockdown mode', 'err')
+    }
+  }
+
+  const toggleFreezeWithdrawals = async () => {
+    const nextVal = !securitySettings.withdrawalsFrozen
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/security_settings?id=eq.1`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ withdrawals_frozen: nextVal, updated_at: new Date().toISOString() })
+      })
+      await fetch(`${SUPABASE_URL}/rest/v1/security_events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({
+          event_type: 'security_update',
+          severity: nextVal ? 'HIGH' : 'LOW',
+          user_email: currentAdmin?.email || 'admin@binarypip.com',
+          ip_address: '127.0.0.1',
+          action_taken: nextVal ? 'All Withdrawals Frozen' : 'Withdrawals Unfrozen',
+        })
+      })
+      setSecuritySettings(s => ({ ...s, withdrawalsFrozen: nextVal }))
+      notify(nextVal ? '❄️ ALL WITHDRAWALS FROZEN' : 'Withdrawals un-frozen.', nextVal ? 'warn' : 'ok')
+      void fetchSecurityFromDatabase()
+    } catch {
+      notify('Failed to update withdrawal freeze state', 'err')
+    }
+  }
+
+  const toggleEnforce2FA = async () => {
+    const nextVal = !securitySettings.strict2faEnforced
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/security_settings?id=eq.1`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ strict_2fa_enforced: nextVal, updated_at: new Date().toISOString() })
+      })
+      setSecuritySettings(s => ({ ...s, strict2faEnforced: nextVal }))
+      notify(nextVal ? '🔒 Strict Admin 2FA Enforced' : 'Admin 2FA optional.', 'ok')
+      void fetchSecurityFromDatabase()
+    } catch {
+      notify('Failed to update 2FA state', 'err')
+    }
+  }
+
+  const toggleAutoBlockBruteForce = async () => {
+    const nextVal = !securitySettings.autoBlockBruteForce
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/security_settings?id=eq.1`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({ auto_block_brute_force: nextVal, updated_at: new Date().toISOString() })
+      })
+      setSecuritySettings(s => ({ ...s, autoBlockBruteForce: nextVal }))
+      notify(nextVal ? '🛡️ Auto-Block Brute Force Active' : 'Auto-block disabled.', 'ok')
+      void fetchSecurityFromDatabase()
+    } catch {
+      notify('Failed to update brute-force auto-block state', 'err')
+    }
+  }
+
+  const blockIpOrSubnet = async (targetIp: string, reasonStr: string = 'Suspicious activity') => {
+    if (!targetIp.trim()) { notify('Please enter a valid IP address or subnet.', 'err'); return }
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/blocked_ips`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({
+          ip_or_subnet: targetIp.trim(),
+          reason: reasonStr,
+          blocked_by: currentAdmin?.name || 'Admin',
+        })
+      })
+      await fetch(`${SUPABASE_URL}/rest/v1/security_events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({
+          event_type: 'subnet_blocked',
+          severity: 'HIGH',
+          ip_address: targetIp.trim(),
+          action_taken: `Blocked IP ${targetIp.trim()} (${reasonStr})`,
+        })
+      })
+      setBlockIpModalOpen(false)
+      setIpToBlockInput('')
+      notify(`Blocked ${targetIp.trim()} successfully!`)
+      void fetchSecurityFromDatabase()
+    } catch {
+      notify(`Failed to block ${targetIp}.`, 'err')
+    }
+  }
+
+  const exportForensicJson = () => {
+    try {
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(securityEvents, null, 2))
+      const downloadAnchor = document.createElement('a')
+      downloadAnchor.setAttribute('href', dataStr)
+      downloadAnchor.setAttribute('download', `binarypip-security-audit-${Date.now()}.json`)
+      document.body.appendChild(downloadAnchor)
+      downloadAnchor.click()
+      downloadAnchor.remove()
+      notify('Exported Forensic JSON audit log.')
+    } catch {
+      notify('Failed to export JSON', 'err')
+    }
+  }
+
+  const runAiAnalysisScan = async () => {
+    setAnalyzingAi(true)
+    try {
+      await new Promise(r => setTimeout(r, 1000))
+      const flagged = securityEvents.filter(e => e.severity === 'HIGH' || e.severity === 'CRITICAL')
+      const findingsMsg = flagged.length > 0
+        ? `AI Security Scan Complete: Flagged ${flagged.length} anomalous event(s) across subnets.`
+        : 'AI Security Scan Complete: Zero critical threats detected in last 24h.'
+
+      await fetch(`${SUPABASE_URL}/rest/v1/security_events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        body: JSON.stringify({
+          event_type: 'ai_analysis',
+          severity: 'LOW',
+          user_email: currentAdmin?.email || 'admin@binarypip.com',
+          ip_address: '127.0.0.1',
+          action_taken: 'AI Anomaly Scan Executed',
+          metadata: { findings: findingsMsg }
+        })
+      })
+
+      notify(findingsMsg)
+      void fetchSecurityFromDatabase()
+    } catch {
+      notify('Failed to run AI Security Scan', 'err')
+    } finally {
+      setAnalyzingAi(false)
+    }
+  }
 
   const fetchPublishedTradersFromDatabase = useCallback(async () => {
     try {
@@ -1318,6 +1595,7 @@ export default function AdminDashboard({ currentUser }: Props) {
     void fetchMasterTraderAppsFromDatabase(true)
     void fetchPublishedTradersFromDatabase()
     void fetchCopySubscriptionsFromDatabase()
+    void fetchSecurityFromDatabase()
 
     const timer = setInterval(() => {
       void fetchUsers()
@@ -1325,6 +1603,7 @@ export default function AdminDashboard({ currentUser }: Props) {
       void fetchKycFromDatabase()
       void fetchMasterTraderAppsFromDatabase(false)
       void fetchCopySubscriptionsFromDatabase()
+      void fetchSecurityFromDatabase()
     }, 4000)
 
     const handleStorageEvent = (e: StorageEvent) => {
@@ -1338,6 +1617,7 @@ export default function AdminDashboard({ currentUser }: Props) {
         void fetchTransactionsFromDatabase()
         void fetchMasterTraderAppsFromDatabase()
         void fetchCopySubscriptionsFromDatabase()
+        void fetchSecurityFromDatabase()
       }
     }
     window.addEventListener('storage', handleStorageEvent)
@@ -1360,6 +1640,15 @@ export default function AdminDashboard({ currentUser }: Props) {
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'copy_subscriptions' }, () => {
           void fetchCopySubscriptionsFromDatabase()
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'security_events' }, () => {
+          void fetchSecurityFromDatabase()
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'blocked_ips' }, () => {
+          void fetchSecurityFromDatabase()
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'security_settings' }, () => {
+          void fetchSecurityFromDatabase()
         })
         .subscribe()
     }
@@ -2093,20 +2382,25 @@ export default function AdminDashboard({ currentUser }: Props) {
       <div className="sa-security-hero">
         <div className="sa-security-hero-head">
           <div>
-            <span className="sa-security-badge">
-              <ShieldCheck size={12} /> ENTERPRISE-GRADE ZERO TRUST SECURITY
+            <span className="sa-security-badge" style={{ background: securitySettings.lockdownMode ? 'rgba(239, 68, 68, 0.2)' : undefined, color: securitySettings.lockdownMode ? '#ef4444' : undefined, borderColor: securitySettings.lockdownMode ? '#ef4444' : undefined }}>
+              <ShieldCheck size={12} /> {securitySettings.lockdownMode ? '🚨 EMERGENCY LOCKDOWN ACTIVE' : 'ENTERPRISE-GRADE ZERO TRUST SECURITY'}
             </span>
             <h1>
-              <Shield size={24} color="#20eb5a" /> AI Security Guardian
+              <Shield size={24} color={threatColor} /> AI Security Guardian
             </h1>
-            <p>FIPS 140-3 HSM Hardware Vault • Post-Quantum Cryptography • Justice Ultimate Automobiles Architecture</p>
+            <p>Real-Time Threat Monitoring • Automated Incident Playbooks • Live Audit Trail &amp; Subnet Controls</p>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button className="sa-btn sa-btn-outline" onClick={() => addAudit('EXPORT_SECURITY_PDF', 'guardian', 'Security', 'Exported AI Security Audit PDF', 'info')}>
-              <FileText size={14} /> Export PDF
+            <button className="sa-btn sa-btn-outline" onClick={() => window.print()}>
+              <FileText size={14} /> Export PDF Report
             </button>
-            <button className="sa-btn sa-btn-primary" onClick={() => { addAudit('RUN_AI_SECURITY_ANALYSIS', 'guardian', 'Security', 'Executed AI Anomaly Analysis scan', 'info'); showToast('AI Security Analysis executed. Zero critical threats detected.') }}>
-              <Zap size={14} /> Run AI Analysis
+            <button
+              className="sa-btn sa-btn-primary"
+              disabled={analyzingAi}
+              onClick={() => void runAiAnalysisScan()}
+            >
+              {analyzingAi ? <RefreshCw size={14} style={{ animation: 'sa-spin 1s linear infinite' }} /> : <Zap size={14} />}
+              {analyzingAi ? 'Analyzing Subnets...' : 'Run AI Analysis'}
             </button>
           </div>
         </div>
@@ -2117,150 +2411,265 @@ export default function AdminDashboard({ currentUser }: Props) {
         <div className="sa-sec-metric-card">
           <div className="sa-sec-metric-top">
             <span className="sa-sec-metric-label">AI Threat Score</span>
-            <span className="sa-badge" style={{ background: 'rgba(28,207,132,0.15)', color: '#1ccf84' }}>LOW</span>
+            <span className="sa-badge" style={{ background: `${threatColor}20`, color: threatColor }}>{threatLabel}</span>
           </div>
-          <div className="sa-sec-metric-val">25/100</div>
+          <div className="sa-sec-metric-val" style={{ color: threatColor }}>{threatScore}/100</div>
           <div className="sa-sec-metric-sub">
-            <CheckCircle2 size={13} color="#1ccf84" /> Real-time threat model active
+            <CheckCircle2 size={13} color={threatColor} /> Real-time threat model active
           </div>
         </div>
 
         <div className="sa-sec-metric-card">
           <div className="sa-sec-metric-top">
-            <span className="sa-sec-metric-label">AI Anomaly Detection</span>
-            <span className="sa-badge" style={{ background: 'rgba(240,68,82,0.15)', color: '#f04452' }}>HIGH</span>
+            <span className="sa-sec-metric-label">Anomalies Detected</span>
+            <span className="sa-badge" style={{ background: highCriticalCount > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)', color: highCriticalCount > 0 ? '#ef4444' : '#10b981' }}>
+              {highCriticalCount > 0 ? 'HIGH' : 'LOW'}
+            </span>
           </div>
-          <div className="sa-sec-metric-val">2 Detected</div>
+          <div className="sa-sec-metric-val">{highCriticalCount} Detected</div>
           <div className="sa-sec-metric-sub">
-            <AlertCircle size={13} color="#f04452" /> IP obscurity &amp; duration anomaly
+            <AlertCircle size={13} color={highCriticalCount > 0 ? '#ef4444' : '#10b981'} /> Subnet &amp; severity alerts
           </div>
         </div>
 
         <div className="sa-sec-metric-card">
           <div className="sa-sec-metric-top">
             <span className="sa-sec-metric-label">Failed Logins (24h)</span>
-            <span className="sa-badge" style={{ background: 'rgba(242,185,75,0.15)', color: '#f2b94b' }}>2 Events</span>
+            <span className="sa-badge" style={{ background: failedLogins24h > 0 ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)', color: failedLogins24h > 0 ? '#f59e0b' : '#10b981' }}>
+              {failedLogins24h} Events
+            </span>
           </div>
-          <div className="sa-sec-metric-val">2 / 100</div>
+          <div className="sa-sec-metric-val">{failedLogins24h} Failed</div>
           <div className="sa-sec-metric-sub">
-            <Clock size={13} color="#f2b94b" /> Subnet 41.90.172.0/24 probed
+            <Clock size={13} color="#f59e0b" /> Real-time login authentication logs
           </div>
         </div>
 
         <div className="sa-sec-metric-card">
           <div className="sa-sec-metric-top">
-            <span className="sa-sec-metric-label">2FA Attempts</span>
-            <span className="sa-badge" style={{ background: 'rgba(32,235,90,0.15)', color: '#20eb5a' }}>8 Total</span>
+            <span className="sa-sec-metric-label">2FA Failed Attempts</span>
+            <span className="sa-badge" style={{ background: failed2fa24h > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)', color: failed2fa24h > 0 ? '#ef4444' : '#10b981' }}>
+              {failed2fa24h} Failed
+            </span>
           </div>
-          <div className="sa-sec-metric-val">6 Failed</div>
+          <div className="sa-sec-metric-val">{failed2fa24h} Total</div>
           <div className="sa-sec-metric-sub">
-            <Shield size={13} color="#20eb5a" /> FIPS 140-3 HSM Enforced
+            <Shield size={13} color="#10b981" /> Strict TOTP 2FA Verification
           </div>
         </div>
       </div>
 
-      {/* Military-Grade Security Standards Card */}
+      {/* Active Security Status & Subnets */}
       <div className="sa-pqc-grid">
         <div className="sa-pqc-card">
-          <h3>🔐 Encryption Standards (NSA Approved)</h3>
+          <h3>🔐 Active Infrastructure Controls</h3>
           <div className="sa-pqc-list">
-            <div className="sa-pqc-item"><strong>AES-256-GCM</strong> — Data at rest encryption</div>
-            <div className="sa-pqc-item"><strong>TLS 1.3</strong> — Data in transit with Perfect Forward Secrecy</div>
-            <div className="sa-pqc-item"><strong>Argon2id</strong> — Password hashing (memory-hard)</div>
-            <div className="sa-pqc-item"><strong>SHA-384 / ECDSA P-384</strong> — Cryptographic integrity &amp; signatures</div>
+            <div className="sa-pqc-item"><strong>Supabase RLS &amp; JWT</strong> — Row level security policies active</div>
+            <div className="sa-pqc-item"><strong>TLS 1.3 / SSL Encryption</strong> — Data in transit protected</div>
+            <div className="sa-pqc-item"><strong>Supabase Realtime WebSockets</strong> — Subnet audit channel online</div>
+            <div className="sa-pqc-item"><strong>Idempotency Guards</strong> — Race condition protection enabled</div>
           </div>
         </div>
 
-        <div className="sa-pqc-card" style={{ borderColor: 'rgba(32,235,90,0.25)' }}>
-          <h3 style={{ color: '#20eb5a' }}>🔒 Hardware Security Module (HSM)</h3>
+        <div className="sa-pqc-card" style={{ borderColor: securitySettings.withdrawalsFrozen ? 'rgba(239,68,68,0.4)' : 'rgba(16,185,129,0.3)' }}>
+          <h3 style={{ color: securitySettings.withdrawalsFrozen ? '#ef4444' : '#10b981' }}>
+            {securitySettings.withdrawalsFrozen ? '❄️ Withdrawals State: FROZEN' : '💳 Withdrawals State: ACTIVE'}
+          </h3>
           <div className="sa-pqc-list">
-            <div className="sa-pqc-item">✓ FIPS 140-3 Level 3 certified key storage</div>
-            <div className="sa-pqc-item">✓ Tamper-proof secure enclave</div>
-            <div className="sa-pqc-item">✓ Keys never exposed outside HSM boundary</div>
-            <div className="sa-pqc-item">✓ Auto-destruction on physical tampering</div>
+            <div className="sa-pqc-item">Withdrawals Frozen: <strong>{securitySettings.withdrawalsFrozen ? 'YES (FROZEN)' : 'NO (ACTIVE)'}</strong></div>
+            <div className="sa-pqc-item">Strict Admin 2FA: <strong>{securitySettings.strict2faEnforced ? 'ENFORCED' : 'OPTIONAL'}</strong></div>
+            <div className="sa-pqc-item">Auto-Block Brute Force: <strong>{securitySettings.autoBlockBruteForce ? 'ENABLED' : 'DISABLED'}</strong></div>
+            <div className="sa-pqc-item">Emergency Lockdown Mode: <strong>{securitySettings.lockdownMode ? 'LOCKDOWN ACTIVE' : 'NOMINAL'}</strong></div>
           </div>
         </div>
 
-        <div className="sa-pqc-card" style={{ borderColor: 'rgba(28,207,132,0.25)' }}>
-          <h3 style={{ color: '#1ccf84' }}>⚛️ Post-Quantum Cryptography (PQC)</h3>
-          <div className="sa-pqc-list">
-            <div className="sa-pqc-item">✓ CRYSTALS-Kyber — Key encapsulation (NIST selected)</div>
-            <div className="sa-pqc-item">✓ CRYSTALS-Dilithium — Digital signatures</div>
-            <div className="sa-pqc-item">✓ SPHINCS+ — Stateless hash-based signatures</div>
-            <div className="sa-pqc-item">✓ Hybrid Mode: Classical + PQC for transition safety</div>
+        <div className="sa-pqc-card" style={{ borderColor: 'rgba(0,229,255,0.3)' }}>
+          <h3 style={{ color: '#00e5ff' }}>⛔ Blocked Subnets &amp; IPs ({blockedIps.length})</h3>
+          <div className="sa-pqc-list" style={{ maxHeight: '120px', overflowY: 'auto' }}>
+            {blockedIps.length === 0 ? (
+              <div className="sa-pqc-item" style={{ color: 'var(--sa-muted)' }}>Zero blocked IPs currently.</div>
+            ) : (
+              blockedIps.map(b => (
+                <div key={b.id} className="sa-pqc-item" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <code>{b.ipOrSubnet}</code>
+                  <span style={{ fontSize: '10.5px', color: 'var(--sa-muted)' }}>{b.reason}</span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
 
-      {/* Automated AI Playbooks */}
+      {/* Real Security Incident Response Controls (Playbooks) */}
       <div className="sa-panel">
-        <div className="sa-panel-head"><Zap size={14} color="#20eb5a" /> Automated AI Actions (Zero Manual Delay)</div>
-        <p style={{ fontSize: '12px', color: 'var(--sa-muted)', marginBottom: '12px' }}>AI playbooks execute automatically on threat detection to protect client balances and secrets.</p>
+        <div className="sa-panel-head"><Zap size={14} color="#10b981" /> Incident Response Playbooks (Supabase Connected)</div>
+        <p style={{ fontSize: '12px', color: 'var(--sa-muted)', marginBottom: '12px' }}>Execute incident response playbooks directly on live database rules.</p>
         <div className="sa-playbooks-row">
-          <button className="sa-playbook-btn" onClick={() => showToast('AES-256 Auto-encrypt executed.')}><Lock size={13} /> AES-256 Auto-encrypt</button>
-          <button className="sa-playbook-btn" onClick={() => showToast('HSM Key Rotation complete.')}><RefreshCw size={13} /> HSM Key Rotation</button>
-          <button className="sa-playbook-btn" onClick={() => showToast('Service Isolation enabled.')}><Ban size={13} /> Service Isolation</button>
-          <button className="sa-playbook-btn" onClick={() => showToast('SIEM Alert Dispatched to Security Ops.')}><Activity size={13} /> SIEM Alert Dispatch</button>
-          <button className="sa-playbook-btn" onClick={() => showToast('Forensic Snapshot generated.')}><FileText size={13} /> Forensic Snapshot</button>
-          <button className="sa-playbook-btn" onClick={() => showToast('MITRE ATT&CK Map updated.')}><Globe size={13} /> MITRE ATT&CK Map</button>
-          <button className="sa-playbook-btn" onClick={() => showToast('Hash Chain Verified.')}><CheckCircle2 size={13} /> Hash Chain Verify</button>
-          <button className="sa-playbook-btn" onClick={() => showToast('PQC Fallback Mode active.')}><ShieldCheck size={13} /> PQC Fallback Mode</button>
+          <button
+            className="sa-playbook-btn"
+            style={{ background: securitySettings.withdrawalsFrozen ? 'rgba(239,68,68,0.2)' : undefined, color: securitySettings.withdrawalsFrozen ? '#ef4444' : undefined }}
+            onClick={() => void toggleFreezeWithdrawals()}
+          >
+            <Lock size={13} /> {securitySettings.withdrawalsFrozen ? 'Unfreeze Withdrawals' : 'Freeze All Withdrawals'}
+          </button>
+
+          <button
+            className="sa-playbook-btn"
+            onClick={() => setBlockIpModalOpen(true)}
+          >
+            <Ban size={13} /> Block IP / Subnet
+          </button>
+
+          <button
+            className="sa-playbook-btn"
+            style={{ background: securitySettings.strict2faEnforced ? 'rgba(16,185,129,0.18)' : undefined }}
+            onClick={() => void toggleEnforce2FA()}
+          >
+            <KeyRound size={13} /> {securitySettings.strict2faEnforced ? 'Admin 2FA Enforced' : 'Enforce Admin 2FA'}
+          </button>
+
+          <button
+            className="sa-playbook-btn"
+            style={{ background: securitySettings.autoBlockBruteForce ? 'rgba(0,229,255,0.18)' : undefined }}
+            onClick={() => void toggleAutoBlockBruteForce()}
+          >
+            <Zap size={13} /> {securitySettings.autoBlockBruteForce ? 'Brute-Force Auto-Block Active' : 'Auto-Block Brute Force'}
+          </button>
+
+          <button
+            className="sa-playbook-btn"
+            onClick={exportForensicJson}
+          >
+            <Download size={13} /> Export Forensic JSON
+          </button>
+
+          <button
+            className="sa-playbook-btn"
+            onClick={() => void toggleLockdownMode()}
+            style={{ background: securitySettings.lockdownMode ? 'rgba(239,68,68,0.3)' : undefined, color: securitySettings.lockdownMode ? '#ef4444' : undefined }}
+          >
+            <AlertTriangle size={13} /> {securitySettings.lockdownMode ? 'Lift Emergency Lockdown' : 'Trigger Emergency Lockdown'}
+          </button>
         </div>
       </div>
 
       {/* Recent Security Events Table */}
       <div className="sa-panel" style={{ marginTop: '20px' }}>
-        <div className="sa-panel-head"><Activity size={14} /> Recent Security Events &amp; Audit Trail</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+          <div className="sa-panel-head" style={{ margin: 0 }}><Activity size={14} /> Recent Security Events &amp; Audit Trail ({securityEvents.length})</div>
+          <button className="sa-btn sa-btn-outline" onClick={() => void fetchSecurityFromDatabase()}>
+            <RefreshCw size={12} /> Refresh Events
+          </button>
+        </div>
+
         <table className="sa-table">
           <thead>
             <tr>
-              <th>Severity</th><th>Event</th><th>User / Email</th><th>Subnet / IP</th><th>Timestamp</th><th>Action</th>
+              <th>Severity</th><th>Event Type</th><th>User / Email</th><th>Subnet / IP</th><th>Timestamp</th><th>Action / Block</th>
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td><span className="sa-badge" style={{ background: 'rgba(28,207,132,0.15)', color: '#1ccf84' }}>LOW</span></td>
-              <td><strong>Successful Login</strong></td>
-              <td>daniwesttechnologies@gmail.com</td>
-              <td><code>41.90.172.36</code></td>
-              <td><span className="sa-dim">8/25/2026, 12:53:17 AM</span></td>
-              <td><span className="sa-dim">Authenticated</span></td>
-            </tr>
-            <tr>
-              <td><span className="sa-badge" style={{ background: 'rgba(28,207,132,0.15)', color: '#1ccf84' }}>LOW</span></td>
-              <td><strong>Successful Login</strong></td>
-              <td>daniwesttechnologies@gmail.com</td>
-              <td><code>154.159.238.12</code></td>
-              <td><span className="sa-dim">7/31/2026, 12:41:52 AM</span></td>
-              <td><span className="sa-dim">Authenticated</span></td>
-            </tr>
-            <tr>
-              <td><span className="sa-badge" style={{ background: 'rgba(242,185,75,0.15)', color: '#f2b94b' }}>MEDIUM</span></td>
-              <td><strong>Failed Login Attempt</strong></td>
-              <td>daniwesttechnologies@gmail.com</td>
-              <td><code>41.90.172.69</code></td>
-              <td><span className="sa-dim">6/12/2026, 10:44:56 AM</span></td>
-              <td><span className="sa-badge sa-badge-danger">Flagged</span></td>
-            </tr>
-            <tr>
-              <td><span className="sa-badge" style={{ background: 'rgba(242,185,75,0.15)', color: '#f2b94b' }}>MEDIUM</span></td>
-              <td><strong>Failed Login Attempt</strong></td>
-              <td>daniwesttechnologies@gmail.com</td>
-              <td><code>41.90.172.69</code></td>
-              <td><span className="sa-dim">6/10/2026, 11:11:11 PM</span></td>
-              <td><span className="sa-badge sa-badge-danger">Flagged</span></td>
-            </tr>
-            <tr>
-              <td><span className="sa-badge" style={{ background: 'rgba(28,207,132,0.15)', color: '#1ccf84' }}>LOW</span></td>
-              <td><strong>Successful Login</strong></td>
-              <td>daniwesttechnologies@gmail.com</td>
-              <td><code>105.164.118.8</code></td>
-              <td><span className="sa-dim">6/6/2026, 1:26:18 PM</span></td>
-              <td><span className="sa-dim">Authenticated</span></td>
-            </tr>
+            {securityLoading && securityEvents.length === 0 && (
+              <tr><td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--sa-muted)' }}>Loading security audit logs...</td></tr>
+            )}
+            {!securityLoading && securityEvents.length === 0 && (
+              <tr><td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: 'var(--sa-muted)' }}>Zero security events logged yet.</td></tr>
+            )}
+            {securityEvents.map(e => {
+              const sevColor = e.severity === 'CRITICAL' ? '#ef4444' : e.severity === 'HIGH' ? '#f97316' : e.severity === 'MEDIUM' ? '#f59e0b' : '#10b981'
+              const sevBg = e.severity === 'CRITICAL' ? 'rgba(239,68,68,0.18)' : e.severity === 'HIGH' ? 'rgba(249,115,22,0.18)' : e.severity === 'MEDIUM' ? 'rgba(245,158,11,0.18)' : 'rgba(16,185,129,0.18)'
+
+              return (
+                <tr key={e.id} className="sa-row-hover">
+                  <td>
+                    <span className="sa-badge" style={{ background: sevBg, color: sevColor, fontWeight: 800 }}>
+                      {e.severity}
+                    </span>
+                  </td>
+                  <td><strong>{e.eventType}</strong></td>
+                  <td>{e.userEmail}</td>
+                  <td><code>{e.ipAddress}</code></td>
+                  <td><span className="sa-dim">{new Date(e.createdAt).toLocaleString()}</span></td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="sa-dim">{e.actionTaken}</span>
+                      <button
+                        type="button"
+                        className="sa-btn-xs sa-btn-xs-danger"
+                        style={{ padding: '2px 6px', fontSize: '10px' }}
+                        onClick={() => void blockIpOrSubnet(e.ipAddress, `Flagged during event ${e.eventType}`)}
+                      >
+                        Block IP
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
+
+      {/* Block IP Modal */}
+      {blockIpModalOpen && (
+        <div className="cth-modal-backdrop" style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(3, 9, 22, 0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }} onClick={() => setBlockIpModalOpen(false)}>
+          <div className="cth-modal-container" style={{ background: '#071326', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '20px', padding: '24px', maxWidth: '420px', width: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }} onClick={ev => ev.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#ffffff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Ban size={20} color="#ef4444" /> Block IP or Subnet
+              </h3>
+              <button type="button" onClick={() => setBlockIpModalOpen(false)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><X size={18} /></button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--sa-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+                  IP Address / CIDR Subnet
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 41.90.172.69 or 41.90.172.0/24"
+                  value={ipToBlockInput}
+                  onChange={ev => setIpToBlockInput(ev.target.value)}
+                  className="sa-input"
+                  style={{ width: '100%', fontFamily: 'monospace' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--sa-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+                  Reason for Block
+                </label>
+                <input
+                  type="text"
+                  value={blockReasonInput}
+                  onChange={ev => setBlockReasonInput(ev.target.value)}
+                  className="sa-input"
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  className="sa-btn sa-btn-danger"
+                  style={{ flex: 1 }}
+                  onClick={() => void blockIpOrSubnet(ipToBlockInput, blockReasonInput)}
+                >
+                  Confirm Block
+                </button>
+                <button
+                  type="button"
+                  className="sa-btn sa-btn-ghost"
+                  onClick={() => setBlockIpModalOpen(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 

@@ -1770,3 +1770,37 @@
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
+
+/* Print PDF Export Styles for Security Audits */
+@media print {
+  body, html {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+  }
+  .sa-sidebar,
+  .sa-topbar,
+  .sa-lockdown-btn,
+  .sa-btn,
+  .sa-playbooks-row,
+  .sa-filter-row,
+  .sa-toast,
+  .cth-modal-backdrop {
+    display: none !important;
+  }
+  .sa-shell {
+    display: block !important;
+  }
+  .sa-content {
+    padding: 0 !important;
+  }
+  .sa-panel, .sa-sec-metric-card, .sa-security-hero, .sa-pqc-card {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+  }
+  .sa-table th, .sa-table td {
+    color: #0f172a !important;
+    border-bottom: 1px solid #cbd5e1 !important;
+  }
+}
