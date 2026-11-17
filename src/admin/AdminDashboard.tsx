@@ -1022,31 +1022,48 @@ export default function AdminDashboard({ currentUser }: Props) {
   const fetchMasterTraderAppsFromDatabase = useCallback(async () => {
     try {
       setMasterAppsLoading(true)
+
+      let dbMapped: MasterTraderApp[] = []
       const res = await fetch(`${SUPABASE_URL}/rest/v1/master_trader_applications?select=*&order=created_at.desc&limit=50`, {
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
       })
-      if (!res.ok) return
-      const rows = await res.json() as any[]
-      if (Array.isArray(rows)) {
-        const mapped: MasterTraderApp[] = rows.map(r => {
-          const uProf = users.find(u => u.id === r.user_id)
-          return {
-            id: String(r.id),
-            userId: String(r.user_id),
-            userName: uProf?.name || `Trader #${String(r.user_id).substring(0, 6)}`,
-            userEmail: uProf?.email || '—',
-            displayName: String(r.display_name),
-            avatarUrl: String(r.avatar_url || ''),
-            riskLevel: (r.risk_level || 'Low') as any,
-            strategyTag: String(r.strategy_tag || 'Vol 100 & Gold Scalping'),
-            bio: String(r.bio || ''),
-            fee: Number(r.application_fee || 500),
-            status: r.status as any,
-            createdAt: String(r.created_at || new Date().toISOString()),
-          }
-        })
-        setMasterApps(mapped)
+      if (res.ok) {
+        const rows = await res.json() as any[]
+        if (Array.isArray(rows)) {
+          dbMapped = rows.map(r => {
+            const uProf = users.find(u => u.id === r.user_id)
+            return {
+              id: String(r.id),
+              userId: String(r.user_id),
+              userName: uProf?.name || `Trader #${String(r.user_id).substring(0, 6)}`,
+              userEmail: uProf?.email || '—',
+              displayName: String(r.display_name),
+              avatarUrl: String(r.avatar_url || ''),
+              riskLevel: (r.risk_level || 'Low') as any,
+              strategyTag: String(r.strategy_tag || 'Vol 100 & Gold Scalping'),
+              bio: String(r.bio || ''),
+              fee: Number(r.application_fee || 500),
+              status: r.status as any,
+              createdAt: String(r.created_at || new Date().toISOString()),
+            }
+          })
+        }
       }
+
+      // Read local apps queue
+      let localApps: MasterTraderApp[] = []
+      try {
+        const localStr = localStorage.getItem('binarypip_master_trader_apps')
+        if (localStr) localApps = JSON.parse(localStr)
+      } catch {}
+
+      // Deduplicate DB and local apps
+      const mergedMap = new Map<string, MasterTraderApp>()
+      localApps.forEach(a => mergedMap.set(a.id, a))
+      dbMapped.forEach(a => mergedMap.set(a.id, a))
+
+      const allMerged = Array.from(mergedMap.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      setMasterApps(allMerged)
     } catch {
       // silent
     } finally {
