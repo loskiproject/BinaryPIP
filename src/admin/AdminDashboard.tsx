@@ -130,6 +130,21 @@ export type PublishedTrader = {
   isActive: boolean
 }
 
+export type CopySubscriptionRecord = {
+  id: string
+  userId: string
+  userName: string
+  userEmail: string
+  traderName: string
+  traderAvatar: string
+  accountType: string
+  allocatedAmount: number
+  copyRatio: number
+  totalCopiedProfit: number
+  status: 'active' | 'paused' | 'stopped'
+  createdAt: string
+}
+
 type AuditEntry = {
   id: string
   adminName: string
@@ -445,6 +460,7 @@ export default function AdminDashboard({ currentUser }: Props) {
   const [masterApps, setMasterApps] = useState<MasterTraderApp[]>([])
   const [masterAppsLoading, setMasterAppsLoading] = useState(false)
   const [publishedTraders, setPublishedTraders] = useState<PublishedTrader[]>([])
+  const [copySubscriptions, setCopySubscriptions] = useState<CopySubscriptionRecord[]>([])
 
   // UI state
   const [userSearch, setUserSearch] = useState('')
@@ -1116,6 +1132,39 @@ export default function AdminDashboard({ currentUser }: Props) {
     }
   }, [])
 
+  const fetchCopySubscriptionsFromDatabase = useCallback(async () => {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/copy_subscriptions?select=*&order=created_at.desc&limit=100`, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+      })
+      if (!res.ok) return
+      const rows = await res.json() as any[]
+      if (Array.isArray(rows)) {
+        const mapped: CopySubscriptionRecord[] = rows.map(r => {
+          const uProf = users.find(u => u.id === r.user_id)
+          const snapshot = r.master_trader_snapshot || {}
+          return {
+            id: String(r.id),
+            userId: String(r.user_id),
+            userName: uProf?.name || `Client #${String(r.user_id).substring(0, 6)}`,
+            userEmail: uProf?.email || '—',
+            traderName: String(snapshot.name || r.master_trader_id || 'PipMaster'),
+            traderAvatar: String(snapshot.avatar || 'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=150&auto=format&fit=crop&q=80'),
+            accountType: String(r.account_type || 'real'),
+            allocatedAmount: Number(r.allocated_amount || 0),
+            copyRatio: Number(r.copy_ratio || 1.0),
+            totalCopiedProfit: Number(r.total_copied_profit || 0),
+            status: (r.status || 'active') as any,
+            createdAt: String(r.created_at || new Date().toISOString()),
+          }
+        })
+        setCopySubscriptions(mapped)
+      }
+    } catch {
+      // silent
+    }
+  }, [users])
+
   const updatePublishedTrader = async (traderId: string, updates: Partial<PublishedTrader>) => {
     try {
       const patchData: any = {}
@@ -1162,6 +1211,7 @@ export default function AdminDashboard({ currentUser }: Props) {
       addAudit('APPROVE_MASTER_TRADER', app.id, 'Master Trader Application', `Approved ${app.displayName} ($500 fee settled)`, 'info')
       notify(`Approved! ${app.displayName} is now a published Verified Master Trader.`)
       void fetchMasterTraderAppsFromDatabase()
+      void fetchPublishedTradersFromDatabase()
     } catch {
       notify('Failed to approve Master Trader Application.', 'err')
     }
@@ -1196,7 +1246,7 @@ export default function AdminDashboard({ currentUser }: Props) {
     }
   }
 
-  // Load all real database data on startup and poll every 2.5s
+  // Load all real database data on startup and poll every 3s (without auto-resetting input focus)
   useEffect(() => {
     void fetchUsers()
     void fetchKycFromDatabase()
@@ -1206,23 +1256,27 @@ export default function AdminDashboard({ currentUser }: Props) {
     void fetchSettingsFromDatabase()
     void fetchMasterTraderAppsFromDatabase()
     void fetchPublishedTradersFromDatabase()
+    void fetchCopySubscriptionsFromDatabase()
 
     const timer = setInterval(() => {
       void fetchUsers()
       void fetchTransactionsFromDatabase()
       void fetchKycFromDatabase()
       void fetchMasterTraderAppsFromDatabase()
-      void fetchPublishedTradersFromDatabase()
-    }, 2500)
+      void fetchCopySubscriptionsFromDatabase()
+    }, 3000)
 
     const handleStorageEvent = (e: StorageEvent) => {
-      if (e.key === 'binarypip_pending_transactions' || e.key === 'exstrade_deposit_request') {
+      if (e.key === 'binarypip_pending_transactions' || e.key === 'exstrade_deposit_request' || e.key === 'binarypip_master_trader_apps') {
         void fetchTransactionsFromDatabase()
+        void fetchMasterTraderAppsFromDatabase()
       }
     }
     const handleWindowMessage = (e: MessageEvent) => {
       if (e.data && (e.data.type === 'EXSTRADE_TRANSACTION_SUBMITTED' || e.data.type === 'EXSTRADE_DEPOSIT_REQUEST')) {
         void fetchTransactionsFromDatabase()
+        void fetchMasterTraderAppsFromDatabase()
+        void fetchCopySubscriptionsFromDatabase()
       }
     }
     window.addEventListener('storage', handleStorageEvent)
@@ -1241,7 +1295,10 @@ export default function AdminDashboard({ currentUser }: Props) {
           void fetchMasterTraderAppsFromDatabase()
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'master_traders' }, () => {
-          void fetchMasterTraderAppsFromDatabase()
+          void fetchPublishedTradersFromDatabase()
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'copy_subscriptions' }, () => {
+          void fetchCopySubscriptionsFromDatabase()
         })
         .subscribe()
     }
