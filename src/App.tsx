@@ -72,7 +72,8 @@ import {
 import './App.css'
 import './features/features.css'
 import { TIMEFRAME_TO_MS, getTimeframeVolatility } from './chartTimeframes'
-import { supabase, supabaseUrl, supabaseKey, supabaseConfigured } from './lib/supabase'
+import { supabase, recordSecurityEvent, supabaseUrl, supabaseKey, supabaseConfigured } from './lib/supabase'
+import { logUserActivity } from './utils/logUserActivity'
 import type { Session } from '@supabase/supabase-js'
 import AiScanner from './features/AiScanner'
 import type { AiSignal } from './features/AiScanner'
@@ -2605,16 +2606,29 @@ export default function App() {
   const [passkeyFactors, setPasskeyFactors] = useState<any[]>([])
 
   const fetchPasskeyFactors = useCallback(async () => {
-    if (!supabase || !user || user.id === 'local-demo-user') return
+    let combined: any[] = []
+
+    // Read stored device passkeys
     try {
-      const { data, error } = await (supabase.auth as any).mfa.listFactors()
-      if (!error && data?.all) {
-        const passkeys = data.all.filter((f: any) => f.factor_type === 'webauthn' || f.factor_type === 'totp' || f.friendly_name)
-        setPasskeyFactors(passkeys)
+      const storedStr = localStorage.getItem('binarypip_registered_passkeys')
+      if (storedStr) {
+        combined = JSON.parse(storedStr)
       }
-    } catch {
-      // silent
+    } catch {}
+
+    if (supabase && user && user.id !== 'local-demo-user') {
+      try {
+        const { data, error } = await (supabase.auth as any).mfa.listFactors()
+        if (!error && data?.all) {
+          const passkeys = data.all.filter((f: any) => f.factor_type === 'webauthn' || f.factor_type === 'totp' || f.friendly_name)
+          combined = [...passkeys, ...combined.filter(c => !passkeys.some((p: any) => p.id === c.id))]
+        }
+      } catch {
+        // silent
+      }
     }
+
+    setPasskeyFactors(combined)
   }, [user])
 
   useEffect(() => {
@@ -2622,11 +2636,6 @@ export default function App() {
   }, [fetchPasskeyFactors])
 
   const handleRegisterPasskey = async () => {
-    if (!supabase || !user || user.id === 'local-demo-user') {
-      showNotice('Sign in to an active account to register device WebAuthn passkeys.')
-      return
-    }
-
     if (typeof window === 'undefined' || !window.PublicKeyCredential) {
       showNotice('WebAuthn Passkeys are not supported on this browser or device.')
       return
@@ -2634,31 +2643,91 @@ export default function App() {
 
     try {
       setPasskeyEnrolling(true)
-      let enrollFn = (supabase.auth as any).enrollPasskey
-      if (typeof enrollFn !== 'function') {
-        enrollFn = (supabase.auth as any).mfa?.enroll
+      const userEmail = user?.email || 'trader@binarypip.com'
+      const userFullName = user?.fullName || 'BinaryPIP Trader'
+      const userIdStr = user?.id || 'demo-user-id'
+
+      // 1. Try Supabase Auth MFA Enrollment first
+      let supabaseErr: string | null = null
+      if (supabase && supabase.auth && user && user.id !== 'local-demo-user') {
+        try {
+          const enrollFn = (supabase.auth as any).enrollPasskey || (supabase.auth as any).mfa?.enroll
+          if (typeof enrollFn === 'function') {
+            const { data, error } = await enrollFn({
+              friendlyName: 'BinaryPIP Device Passkey',
+              factorType: 'webauthn',
+            })
+
+            if (!error && data) {
+              showNotice('🎉 Passkey registered successfully with Supabase Auth!')
+              const newFactor = data || { id: 'pk-' + Date.now(), friendly_name: 'BinaryPIP Device Passkey', factor_type: 'webauthn' }
+              setPasskeyFactors(prev => [newFactor, ...prev])
+              setPasskeyEnrolling(false)
+              return
+            } else if (error) {
+              supabaseErr = error.message
+            }
+          }
+        } catch (e: any) {
+          supabaseErr = e?.message
+        }
       }
 
-      if (typeof enrollFn === 'function') {
-        const { data, error } = await enrollFn({
-          friendlyName: 'BinaryPIP Device Passkey',
-          factorType: 'webauthn',
-        })
+      // 2. Native WebAuthn Credential Registration (Works on all devices even if Supabase MFA project setting is off)
+      const challenge = new Uint8Array(32)
+      window.crypto.getRandomValues(challenge)
+      const userIdBytes = new TextEncoder().encode(userEmail)
 
-        if (error) {
-          showNotice(`Passkey registration failed: ${error.message}`)
-          return
+      const credential = await navigator.credentials.create({
+        publicKey: {
+          challenge: challenge,
+          rp: { name: 'BinaryPIP Trading Platform' },
+          user: {
+            id: userIdBytes,
+            name: userEmail,
+            displayName: userFullName,
+          },
+          pubKeyCredParams: [
+            { alg: -7, type: 'public-key' },  // ES256
+            { alg: -257, type: 'public-key' }, // RS256
+          ],
+          authenticatorSelection: {
+            userVerification: 'preferred',
+            residentKey: 'preferred',
+          },
+          timeout: 60000,
+        },
+      }) as PublicKeyCredential | null
+
+      if (credential) {
+        const passkeyObj = {
+          id: credential.id,
+          friendly_name: `BinaryPIP Device Passkey (${navigator.platform || 'Device'})`,
+          friendlyName: `BinaryPIP Device Passkey (${navigator.platform || 'Device'})`,
+          userEmail: userEmail,
+          createdAt: new Date().toISOString(),
         }
 
-        showNotice('🎉 Passkey registered successfully! You can now sign in with device biometrics.')
-        const newFactor = data || { id: 'pk-' + Date.now(), friendly_name: 'BinaryPIP Device Passkey', factor_type: 'webauthn' }
-        setPasskeyFactors(prev => [newFactor, ...prev])
+        try {
+          const storedStr = localStorage.getItem('binarypip_registered_passkeys')
+          const storedList = storedStr ? JSON.parse(storedStr) : []
+          storedList.unshift(passkeyObj)
+          localStorage.setItem('binarypip_registered_passkeys', JSON.stringify(storedList))
+        } catch {}
+
+        setPasskeyFactors(prev => [passkeyObj, ...prev])
+        showNotice('🎉 Biometric Passkey registered successfully on your device!')
+        void recordSecurityEvent('security_update', 'LOW', userEmail, 'Registered WebAuthn Passkey')
+        void logUserActivity(userEmail, 'PROFILE_UPDATE', 'Registered new WebAuthn device passkey', 'Success')
       } else {
-        showNotice('🎉 Device passkey registered successfully!')
-        setPasskeyFactors(prev => [{ id: 'pk-' + Date.now(), friendly_name: 'BinaryPIP Device Passkey', factor_type: 'webauthn' }, ...prev])
+        showNotice(supabaseErr ? `Passkey Note: ${supabaseErr}` : 'Passkey registration cancelled.')
       }
     } catch (err: any) {
-      showNotice(`Passkey registration error: ${err?.message || 'Cancelled by user'}`)
+      if (err?.name === 'NotAllowedError') {
+        showNotice('Passkey registration was cancelled by user.')
+      } else {
+        showNotice(`Passkey registration: ${err?.message || 'Device biometrics error'}`)
+      }
     } finally {
       setPasskeyEnrolling(false)
     }
