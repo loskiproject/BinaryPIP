@@ -1,11 +1,11 @@
-import { useState, useEffect, type FormEvent } from 'react'
+import React, { useState, useEffect, type FormEvent } from 'react'
 import {
   Eye, EyeOff, CheckCircle2, XCircle, ArrowRight,
   Shield, ShieldCheck, Mail, Phone, User, Globe, Gift, AlertCircle,
-  BarChart2, Activity, Lock, LogIn, Sparkles, AtSign,
+  BarChart2, Activity, Lock, LogIn, Sparkles, AtSign, Fingerprint,
 } from 'lucide-react'
 import './AuthPortal.css'
-import { recordSecurityEvent } from '../lib/supabase'
+import { supabase, recordSecurityEvent } from '../lib/supabase'
 import { logUserActivity } from '../utils/logUserActivity'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -287,6 +287,57 @@ export default function AuthPortal({ onLogin, onSignup, onDemo, onGoogle, onForg
     }
   }
 
+  const [passkeyLoading, setPasskeyLoading] = useState(false)
+
+  const handlePasskeySignIn = async () => {
+    try {
+      setFormError('')
+      setPasskeyLoading(true)
+
+      if (!supabase || !supabase.auth) {
+        setFormError('Passkey authentication unavailable.')
+        setPasskeyLoading(false)
+        return
+      }
+
+      if (typeof window === 'undefined' || !window.PublicKeyCredential) {
+        setFormError('WebAuthn Passkeys are not supported on this browser or device.')
+        setPasskeyLoading(false)
+        return
+      }
+
+      let signInFn = (supabase.auth as any).signInWithPasskey
+      if (typeof signInFn !== 'function') {
+        signInFn = (supabase.auth as any).mfa?.authenticate
+      }
+
+      if (typeof signInFn === 'function') {
+        const { data, error } = await signInFn()
+        if (error) {
+          const errMsg = error.message || 'Passkey authentication failed or was cancelled.'
+          setFormError(errMsg)
+          void recordSecurityEvent('2fa_failed', 'MEDIUM', 'passkey-user', 'Passkey Login Failed')
+          void logUserActivity('passkey-user', 'AUTH_FAILED', `Passkey authentication error: ${errMsg}`, 'Warning')
+          setPasskeyLoading(false)
+          return
+        }
+
+        if (data?.session || data?.user) {
+          void recordSecurityEvent('login_success', 'LOW', data.user?.email || 'passkey-user', 'Passkey Biometric Login Success')
+          void logUserActivity(data.user?.email || 'passkey-user', 'USER_LOGIN', 'Biometric Passkey sign-in successful', 'Success')
+          window.location.reload()
+        }
+      } else {
+        setFormError('Passkey sign in is not supported on this session.')
+      }
+    } catch (err: any) {
+      const msg = err?.message || 'Passkey authentication cancelled or failed.'
+      setFormError(msg)
+    } finally {
+      setPasskeyLoading(false)
+    }
+  }
+
   // ── Signup validation per step ───────────────────────────────────────────
   const validateStep = (): string | null => {
     if (step === 1) {
@@ -480,6 +531,36 @@ export default function AuthPortal({ onLogin, onSignup, onDemo, onGoogle, onForg
                 </form>
 
                 <div className="nx-divider"><span>or</span></div>
+
+                <button
+                  type="button"
+                  onClick={handlePasskeySignIn}
+                  disabled={passkeyLoading || isSubmitting}
+                  style={{
+                    width: '100%',
+                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(0, 229, 255, 0.15) 100%)',
+                    border: '1px solid rgba(16, 185, 129, 0.4)',
+                    borderRadius: '12px',
+                    padding: '12px',
+                    color: '#ffffff',
+                    fontSize: '13.5px',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    marginBottom: '10px',
+                    boxShadow: '0 4px 16px rgba(16, 185, 129, 0.25)',
+                    transition: 'all 0.18s ease',
+                  }}
+                >
+                  {passkeyLoading ? (
+                    <><span className="nx-spinner" /> Scanning Biometric Passkey…</>
+                  ) : (
+                    <><Fingerprint size={18} color="#10b981" /> Sign in with Passkey (Biometrics)</>
+                  )}
+                </button>
 
                 <button className="nx-google-btn" type="button" onClick={onGoogle}>
                   <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
