@@ -1107,7 +1107,7 @@ export default function AdminDashboard({ currentUser }: Props) {
       if (isInitial) setMasterAppsLoading(true)
 
       let dbMapped: MasterTraderApp[] = []
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/master_trader_applications?select=*&order=created_at.desc&limit=50`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/master_trader_applications?select=id,user_id,display_name,avatar_url,risk_level,strategy_tag,bio,application_fee,status,created_at&order=created_at.desc&limit=50`, {
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
       })
       if (res.ok) {
@@ -1146,13 +1146,13 @@ export default function AdminDashboard({ currentUser }: Props) {
   const fetchSecurityFromDatabase = useCallback(async () => {
     try {
       const [eventsRes, blockedRes, settingsRes] = await Promise.all([
-        fetch(`${SUPABASE_URL}/rest/v1/security_events?select=*&order=created_at.desc&limit=100`, {
+        fetch(`${SUPABASE_URL}/rest/v1/security_events?select=id,created_at,event_type,severity,user_email,ip_address,subnet,user_agent,action_taken,metadata&order=created_at.desc&limit=50`, {
           headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
         }),
-        fetch(`${SUPABASE_URL}/rest/v1/blocked_ips?select=*&order=created_at.desc&limit=50`, {
+        fetch(`${SUPABASE_URL}/rest/v1/blocked_ips?select=id,ip_or_subnet,reason,blocked_by,created_at&order=created_at.desc&limit=50`, {
           headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
         }),
-        fetch(`${SUPABASE_URL}/rest/v1/security_settings?id=eq.1&select=*`, {
+        fetch(`${SUPABASE_URL}/rest/v1/security_settings?id=eq.1&select=id,lockdown_mode,withdrawals_frozen,strict_2fa_enforced,auto_block_brute_force,updated_at`, {
           headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
         }),
       ])
@@ -1387,7 +1387,7 @@ export default function AdminDashboard({ currentUser }: Props) {
   const fetchPublishedTradersFromDatabase = useCallback(async () => {
     try {
       let dbMapped: PublishedTrader[] = []
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/master_traders?select=*&order=created_at.desc`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/master_traders?select=id,user_id,display_name,avatar_url,is_verified,risk_level,strategy_tag,bio,win_rate,total_profit,copiers_count,is_active,created_at&order=created_at.desc&limit=200`, {
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
       })
       if (res.ok) {
@@ -1456,7 +1456,7 @@ export default function AdminDashboard({ currentUser }: Props) {
 
   const fetchCopySubscriptionsFromDatabase = useCallback(async () => {
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/copy_subscriptions?select=*&order=created_at.desc&limit=100`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/copy_subscriptions?select=id,user_id,master_trader_id,account_type,allocated_amount,copy_ratio,total_copied_profit,status,master_trader_snapshot,created_at&order=created_at.desc&limit=50`, {
         headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
       })
       if (!res.ok) return

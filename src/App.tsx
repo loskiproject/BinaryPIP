@@ -2613,9 +2613,10 @@ export default function App() {
       try {
         const { data } = await supabase
           .from('user_passkeys')
-          .select('*')
+          .select('id, user_email, credential_id, friendly_name, created_at')
           .eq('user_email', user.email)
           .order('created_at', { ascending: false })
+          .limit(20)
 
         if (Array.isArray(data) && data.length > 0) {
           combined = data.map(r => ({

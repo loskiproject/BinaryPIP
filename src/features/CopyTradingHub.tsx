@@ -285,9 +285,10 @@ export default function CopyTradingHub({
         if (!supabase) return
         const { data } = await supabase
           .from('master_traders')
-          .select('*')
+          .select('id, user_id, display_name, avatar_url, is_verified, risk_level, strategy_tag, bio, win_rate, total_profit, copiers_count, is_active')
           .eq('is_active', true)
           .order('created_at', { ascending: false })
+          .limit(50)
 
         if (mounted && Array.isArray(data) && data.length > 0) {
           const mapped: MasterTrader[] = data.map(r => ({
