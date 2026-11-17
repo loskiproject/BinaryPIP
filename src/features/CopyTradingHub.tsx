@@ -237,6 +237,43 @@ export default function CopyTradingHub({
 
   const [dbTraders, setDbTraders] = useState<MasterTrader[]>([])
   const [userAppStatus, setUserAppStatus] = useState<'none' | 'pending' | 'approved' | 'rejected'>('none')
+  const [traderOverrides, setTraderOverrides] = useState<Record<string, any>>({})
+
+  // Load real-time admin overrides from localStorage and window events
+  const loadTraderOverrides = () => {
+    try {
+      const localStr = localStorage.getItem('binarypip_master_trader_overrides')
+      if (localStr) {
+        setTraderOverrides(JSON.parse(localStr))
+      }
+    } catch {
+      // silent
+    }
+  }
+
+  useEffect(() => {
+    loadTraderOverrides()
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'binarypip_master_trader_overrides') {
+        loadTraderOverrides()
+      }
+    }
+
+    const handleMessage = (e: MessageEvent) => {
+      if (e.data && (e.data.type === 'EXSTRADE_TRADER_UPDATED' || e.data.type === 'EXSTRADE_TRANSACTION_SUBMITTED')) {
+        loadTraderOverrides()
+      }
+    }
+
+    window.addEventListener('storage', handleStorage)
+    window.addEventListener('message', handleMessage)
+
+    return () => {
+      window.removeEventListener('storage', handleStorage)
+      window.removeEventListener('message', handleMessage)
+    }
+  }, [])
 
   // Fetch real Master Traders & user application status from Supabase
   useEffect(() => {
@@ -334,7 +371,27 @@ export default function CopyTradingHub({
   const normAccountType = accountType === 'live' || accountType === 'real' ? 'real' : 'demo'
   const isDemo = normAccountType === 'demo'
 
-  const allCombinedTraders = [...dbTraders, ...MASTER_TRADERS_540.filter(gt => !dbTraders.some(dt => dt.id === gt.id))]
+  const rawCombinedTraders = [...dbTraders, ...MASTER_TRADERS_540.filter(gt => !dbTraders.some(dt => dt.id === gt.id))]
+
+  const allCombinedTraders = rawCombinedTraders
+    .map(trader => {
+      const ov = traderOverrides[trader.id]
+      if (!ov) return trader
+      return {
+        ...trader,
+        winRate: typeof ov.winRate === 'number' ? ov.winRate : trader.winRate,
+        totalProfit: typeof ov.totalProfit === 'number' ? ov.totalProfit : trader.totalProfit,
+        copiers: typeof ov.copiersCount === 'number' ? ov.copiersCount : (typeof ov.copiers === 'number' ? ov.copiers : trader.copiers),
+        isVerified: typeof ov.isVerified === 'boolean' ? ov.isVerified : trader.isVerified,
+      }
+    })
+    .filter(trader => {
+      const ov = traderOverrides[trader.id]
+      if (ov && typeof ov.isActive === 'boolean') {
+        return ov.isActive
+      }
+      return true
+    })
 
   const filteredTraders = allCombinedTraders.filter(trader => {
     const matchesSearch = trader.name.toLowerCase().includes(search.toLowerCase()) ||

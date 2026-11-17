@@ -1147,8 +1147,28 @@ export default function AdminDashboard({ currentUser }: Props) {
         isActive: true,
       }))
 
-      // Combine DB custom traders and static 540 master traders
+      // Read local overrides map
+      let overrides: Record<string, any> = {}
+      try {
+        const localStr = localStorage.getItem('binarypip_master_trader_overrides')
+        if (localStr) overrides = JSON.parse(localStr)
+      } catch {}
+
+      // Combine DB custom traders and static 540 master traders with overrides applied
       const combined = [...dbMapped, ...staticMapped.filter(st => !dbMapped.some(dt => dt.id === st.id))]
+        .map(trader => {
+          const ov = overrides[trader.id]
+          if (!ov) return trader
+          return {
+            ...trader,
+            winRate: typeof ov.winRate === 'number' ? ov.winRate : trader.winRate,
+            totalProfit: typeof ov.totalProfit === 'number' ? ov.totalProfit : trader.totalProfit,
+            copiersCount: typeof ov.copiersCount === 'number' ? ov.copiersCount : trader.copiersCount,
+            isVerified: typeof ov.isVerified === 'boolean' ? ov.isVerified : trader.isVerified,
+            isActive: typeof ov.isActive === 'boolean' ? ov.isActive : trader.isActive,
+          }
+        })
+
       setPublishedTraders(combined)
     } catch {
       // silent
@@ -1190,28 +1210,46 @@ export default function AdminDashboard({ currentUser }: Props) {
 
   const updatePublishedTrader = async (traderId: string, updates: Partial<PublishedTrader>) => {
     try {
-      const patchData: any = {}
-      if (typeof updates.winRate === 'number') patchData.win_rate = updates.winRate
-      if (typeof updates.totalProfit === 'number') patchData.total_profit = updates.totalProfit
-      if (typeof updates.copiersCount === 'number') patchData.copiers_count = updates.copiersCount
-      if (typeof updates.isVerified === 'boolean') patchData.is_verified = updates.isVerified
-      if (typeof updates.isActive === 'boolean') patchData.is_active = updates.isActive
+      // 1. Save override object in localStorage for instant real-time sync across client tabs
+      try {
+        const localStr = localStorage.getItem('binarypip_master_trader_overrides')
+        const overrides = localStr ? JSON.parse(localStr) : {}
+        overrides[traderId] = { ...(overrides[traderId] || {}), ...updates }
+        localStorage.setItem('binarypip_master_trader_overrides', JSON.stringify(overrides))
+      } catch {
+        // silent
+      }
 
-      await fetch(`${SUPABASE_URL}/rest/v1/master_traders?id=eq.${traderId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          'Prefer': 'return=minimal',
-        },
-        body: JSON.stringify(patchData),
-      })
-
+      // 2. Update local state
       setPublishedTraders(curr => curr.map(t => t.id === traderId ? { ...t, ...updates } : t))
-      notify('Master Trader parameters updated in real time!')
+
+      // 3. Update Supabase REST database
+      try {
+        const patchData: any = {}
+        if (typeof updates.winRate === 'number') patchData.win_rate = updates.winRate
+        if (typeof updates.totalProfit === 'number') patchData.total_profit = updates.totalProfit
+        if (typeof updates.copiersCount === 'number') patchData.copiers_count = updates.copiersCount
+        if (typeof updates.isVerified === 'boolean') patchData.is_verified = updates.isVerified
+        if (typeof updates.isActive === 'boolean') patchData.is_active = updates.isActive
+
+        await fetch(`${SUPABASE_URL}/rest/v1/master_traders?id=eq.${traderId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify(patchData),
+        })
+      } catch {
+        // silent
+      }
+
+      // 4. Dispatch real-time window & storage events
       window.dispatchEvent(new Event('storage'))
-      window.postMessage({ type: 'EXSTRADE_TRANSACTION_SUBMITTED' }, '*')
+      window.postMessage({ type: 'EXSTRADE_TRADER_UPDATED', traderId, updates }, '*')
+      notify('Master Trader parameters updated in real time!')
     } catch {
       notify('Failed to update Master Trader parameters.', 'err')
     }
