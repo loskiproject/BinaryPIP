@@ -5,7 +5,7 @@ import {
   CheckCircle2, XCircle, AlertTriangle, Plus, Trash2, Ban,
   Download, TrendingUp, TrendingDown, Zap, Sparkles,
   DollarSign, Clock, Shield, AlertCircle, X,
-  Pencil, Globe, Wifi, RefreshCw,
+  Pencil, Globe, Wifi, RefreshCw, Award,
   ServerCrash, ChevronRight, MessageSquare, KeyRound, CreditCard, ToggleLeft, ToggleRight, Copy,
 } from 'lucide-react'
 import './AdminDashboard.css'
@@ -24,6 +24,7 @@ type AdminSection =
   | 'users'
   | 'kyc'
   | 'finance'
+  | 'master_traders'
   | 'security'
   | 'admins'
   | 'audit'
@@ -97,6 +98,21 @@ type Transaction = {
   status: 'pending' | 'approved' | 'rejected' | 'flagged'
   createdAt: string
   flagReason?: string
+}
+
+export type MasterTraderApp = {
+  id: string
+  userId: string
+  userName: string
+  userEmail: string
+  displayName: string
+  avatarUrl: string
+  riskLevel: 'Low' | 'Medium' | 'High'
+  strategyTag: string
+  bio: string
+  fee: number
+  status: 'pending' | 'approved' | 'rejected'
+  createdAt: string
 }
 
 type AuditEntry = {
@@ -409,6 +425,10 @@ export default function AdminDashboard({ currentUser }: Props) {
   const [kycQueue, setKycQueue] = useState<KycCase[]>(initialKycQueue)
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions)
   const [auditLog, setAuditLog] = useState<AuditEntry[]>(initialAuditLog)
+
+  // Master Trader Applications State
+  const [masterApps, setMasterApps] = useState<MasterTraderApp[]>([])
+  const [masterAppsLoading, setMasterAppsLoading] = useState(false)
 
   // UI state
   const [userSearch, setUserSearch] = useState('')
@@ -998,6 +1018,93 @@ export default function AdminDashboard({ currentUser }: Props) {
     }
   }
 
+  // Fetch real Master Trader Applications from Supabase
+  const fetchMasterTraderAppsFromDatabase = useCallback(async () => {
+    try {
+      setMasterAppsLoading(true)
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/master_trader_applications?select=*&order=created_at.desc&limit=50`, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+      })
+      if (!res.ok) return
+      const rows = await res.json() as any[]
+      if (Array.isArray(rows)) {
+        const mapped: MasterTraderApp[] = rows.map(r => {
+          const uProf = users.find(u => u.id === r.user_id)
+          return {
+            id: String(r.id),
+            userId: String(r.user_id),
+            userName: uProf?.name || `Trader #${String(r.user_id).substring(0, 6)}`,
+            userEmail: uProf?.email || '—',
+            displayName: String(r.display_name),
+            avatarUrl: String(r.avatar_url || ''),
+            riskLevel: (r.risk_level || 'Low') as any,
+            strategyTag: String(r.strategy_tag || 'Vol 100 & Gold Scalping'),
+            bio: String(r.bio || ''),
+            fee: Number(r.application_fee || 500),
+            status: r.status as any,
+            createdAt: String(r.created_at || new Date().toISOString()),
+          }
+        })
+        setMasterApps(mapped)
+      }
+    } catch {
+      // silent
+    } finally {
+      setMasterAppsLoading(false)
+    }
+  }, [users])
+
+  const approveMasterApp = async (app: MasterTraderApp) => {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/master_trader_applications?id=eq.${app.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify({ status: 'approved' }),
+      })
+
+      setMasterApps(curr => curr.map(a => a.id === app.id ? { ...a, status: 'approved' } : a))
+      addAudit('APPROVE_MASTER_TRADER', app.id, 'Master Trader Application', `Approved ${app.displayName} ($500 fee settled)`, 'info')
+      notify(`Approved! ${app.displayName} is now a published Verified Master Trader.`)
+      void fetchMasterTraderAppsFromDatabase()
+    } catch {
+      notify('Failed to approve Master Trader Application.', 'err')
+    }
+  }
+
+  const rejectMasterApp = async (app: MasterTraderApp) => {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/master_trader_applications?id=eq.${app.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify({ status: 'rejected' }),
+      })
+
+      const targetU = users.find(u => u.id === app.userId)
+      if (targetU) {
+        const nextBal = targetU.balance + app.fee
+        await saveUserWalletBalance(app.userId, nextBal)
+        setUsers(curr => curr.map(u => u.id === app.userId ? { ...u, balance: nextBal } : u))
+      }
+
+      setMasterApps(curr => curr.map(a => a.id === app.id ? { ...a, status: 'rejected' } : a))
+      addAudit('REJECT_MASTER_TRADER', app.id, 'Master Trader Application', `Rejected ${app.displayName} ($500 fee refunded)`, 'warning')
+      notify(`Rejected ${app.displayName}. $500 fee refunded to user balance.`, 'warn')
+      void fetchMasterTraderAppsFromDatabase()
+    } catch {
+      notify('Failed to reject Master Trader Application.', 'err')
+    }
+  }
+
   // Load all real database data on startup and poll every 2.5s
   useEffect(() => {
     void fetchUsers()
@@ -1006,11 +1113,13 @@ export default function AdminDashboard({ currentUser }: Props) {
     void fetchTransactionsFromDatabase()
     void fetchGatewayFromDatabase()
     void fetchSettingsFromDatabase()
+    void fetchMasterTraderAppsFromDatabase()
 
     const timer = setInterval(() => {
       void fetchUsers()
       void fetchTransactionsFromDatabase()
       void fetchKycFromDatabase()
+      void fetchMasterTraderAppsFromDatabase()
     }, 2500)
 
     const handleStorageEvent = (e: StorageEvent) => {
@@ -1034,6 +1143,12 @@ export default function AdminDashboard({ currentUser }: Props) {
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
           void fetchUsers()
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'master_trader_applications' }, () => {
+          void fetchMasterTraderAppsFromDatabase()
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'master_traders' }, () => {
+          void fetchMasterTraderAppsFromDatabase()
         })
         .subscribe()
     }
@@ -2027,11 +2142,14 @@ export default function AdminDashboard({ currentUser }: Props) {
   // RENDER: DASHBOARD
   // ─────────────────────────────────────────────────────────────────────────
 
+  const pendingMasterApps = masterApps.filter(a => a.status === 'pending').length
+
   const navItems: { id: AdminSection; label: string; icon: typeof LayoutDashboard; perm?: keyof AdminPermissions; badge?: number }[] = [
     { id: 'overview',  label: 'Overview',     icon: LayoutDashboard },
     { id: 'users',     label: 'Users',        icon: Users,     perm: 'canManageUsers', badge: pendingAccounts },
     { id: 'kyc',       label: 'KYC Queue',    icon: FileText,  perm: 'canApproveKyc',          badge: pendingKyc },
     { id: 'finance',   label: 'Finance',      icon: Wallet,    perm: 'canApproveWithdrawals',  badge: pendingTxns + flaggedTxns },
+    { id: 'master_traders', label: 'Master Traders ($500)', icon: Award, badge: pendingMasterApps },
     { id: 'security',  label: 'AI Security Guardian', icon: ShieldCheck, badge: 2 },
     { id: 'admins',    label: 'Admin Team',   icon: Shield,        perm: 'canManageAdmins' },
     { id: 'gateway',   label: 'Payment Gateway', icon: CreditCard  },
@@ -2732,6 +2850,107 @@ export default function AdminDashboard({ currentUser }: Props) {
                 {filteredTxns.length === 0 && (
                   <div className="sa-empty"><CheckCircle2 size={28} color="#1ccf84" /><p>No transactions match this filter.</p></div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* ═══════════════════ MASTER TRADERS ════════════════════════════ */}
+          {section === 'master_traders' && (
+            <div className="sa-section">
+              <div className="sa-section-head">
+                <div>
+                  <div className="sa-kicker">COPY TRADING HUB</div>
+                  <h1>Master Trader Applications ($500 Fee)</h1>
+                </div>
+                <button
+                  type="button"
+                  className="sa-btn sa-btn-outline"
+                  onClick={() => fetchMasterTraderAppsFromDatabase()}
+                >
+                  <RefreshCw size={13} /> Refresh Queue
+                </button>
+              </div>
+
+              <div className="sa-panel">
+                <table className="sa-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Applicant User</th>
+                      <th>Display Name &amp; Strategy</th>
+                      <th>Risk Profile</th>
+                      <th>Fee Paid</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {masterAppsLoading && (
+                      <tr><td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: 'var(--sa-muted)' }}>
+                        <RefreshCw size={18} style={{ animation: 'sa-spin 1s linear infinite', marginBottom: 8 }} />
+                        <div>Loading applications from database…</div>
+                      </td></tr>
+                    )}
+                    {!masterAppsLoading && masterApps.length === 0 && (
+                      <tr><td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: 'var(--sa-muted)' }}>
+                        <Award size={28} style={{ marginBottom: 8, opacity: 0.4 }} />
+                        <div>No Master Trader applications in queue.</div>
+                      </td></tr>
+                    )}
+                    {masterApps.map(app => {
+                      const isPending = app.status === 'pending'
+                      const isApproved = app.status === 'approved'
+                      const isRejected = app.status === 'rejected'
+
+                      return (
+                        <tr key={app.id} className="sa-row-hover">
+                          <td><small>{new Date(app.createdAt).toLocaleString()}</small></td>
+                          <td>
+                            <div>
+                              <strong>{app.userName}</strong>
+                              <div className="sa-dim">{app.userEmail}</div>
+                            </div>
+                          </td>
+                          <td>
+                            <strong style={{ color: '#00e5ff', fontSize: '13.5px' }}>{app.displayName}</strong>
+                            <div style={{ fontSize: '11px', color: '#1ccf84', fontWeight: 700 }}>{app.strategyTag}</div>
+                            <div style={{ fontSize: '11.5px', color: 'var(--sa-muted)', marginTop: '2px', maxWidth: '280px', lineHeight: 1.3 }}>{app.bio}</div>
+                          </td>
+                          <td>
+                            <span style={{
+                              fontSize: '11px',
+                              fontWeight: 800,
+                              color: app.riskLevel === 'Low' ? '#1ccf84' : app.riskLevel === 'Medium' ? '#f2b94b' : '#f04452',
+                              background: app.riskLevel === 'Low' ? 'rgba(28, 207, 132, 0.15)' : app.riskLevel === 'Medium' ? 'rgba(242, 185, 75, 0.15)' : 'rgba(240, 68, 82, 0.15)',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                            }}>
+                              {app.riskLevel} Risk
+                            </span>
+                          </td>
+                          <td><strong style={{ color: '#1ccf84' }}>$500.00 USD</strong></td>
+                          <td>
+                            {isApproved && <span className="sa-badge" style={{ background: 'rgba(28,207,132,0.15)', color: '#1ccf84' }}>✓ Approved</span>}
+                            {isPending && <span className="sa-badge" style={{ background: 'rgba(242,185,75,0.15)', color: '#f2b94b' }}>⏳ Pending</span>}
+                            {isRejected && <span className="sa-badge" style={{ background: 'rgba(240,68,82,0.15)', color: '#f04452' }}>✗ Rejected</span>}
+                          </td>
+                          <td>
+                            {isPending ? (
+                              <div className="sa-action-row">
+                                <button type="button" className="sa-btn-xs sa-btn-xs-ok" onClick={() => approveMasterApp(app)}>
+                                  <CheckCircle2 size={11} /> Approve
+                                </button>
+                                <button type="button" className="sa-btn-xs sa-btn-xs-danger" onClick={() => rejectMasterApp(app)}>
+                                  <XCircle size={11} /> Reject
+                                </button>
+                              </div>
+                            ) : <span className="sa-dim">—</span>}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}
