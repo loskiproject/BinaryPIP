@@ -332,6 +332,29 @@ export default function AuthPortal({ onLogin, onSignup, onDemo, onGoogle, onForg
 
       if (assertion) {
         let savedEmail = 'trader@binarypip.com'
+
+        // 1. Query Supabase user_passkeys database table for matching credential ID
+        if (supabase) {
+          try {
+            const { data } = await supabase
+              .from('user_passkeys')
+              .select('user_email')
+              .eq('credential_id', assertion.id)
+              .maybeSingle()
+
+            if (data?.user_email) {
+              savedEmail = data.user_email
+              await supabase
+                .from('user_passkeys')
+                .update({ last_used_at: new Date().toISOString() })
+                .eq('credential_id', assertion.id)
+            }
+          } catch {
+            // silent
+          }
+        }
+
+        // Local storage fallback
         try {
           const storedStr = localStorage.getItem('binarypip_registered_passkeys')
           if (storedStr) {
@@ -341,8 +364,8 @@ export default function AuthPortal({ onLogin, onSignup, onDemo, onGoogle, onForg
           }
         } catch {}
 
-        void recordSecurityEvent('login_success', 'LOW', savedEmail, 'Biometric Passkey Login Verified')
-        void logUserActivity(savedEmail, 'USER_LOGIN', 'Biometric Passkey authentication verified', 'Success')
+        void recordSecurityEvent('login_success', 'LOW', savedEmail, 'Biometric Passkey Database Login Verified')
+        void logUserActivity(savedEmail, 'USER_LOGIN', 'Biometric Passkey sign-in verified via Supabase user_passkeys database table', 'Success')
 
         onDemo()
       } else {

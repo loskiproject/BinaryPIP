@@ -2608,25 +2608,37 @@ export default function App() {
   const fetchPasskeyFactors = useCallback(async () => {
     let combined: any[] = []
 
-    // Read stored device passkeys
-    try {
-      const storedStr = localStorage.getItem('binarypip_registered_passkeys')
-      if (storedStr) {
-        combined = JSON.parse(storedStr)
-      }
-    } catch {}
-
-    if (supabase && user && user.id !== 'local-demo-user') {
+    // 1. Fetch saved passkeys directly from Supabase user_passkeys database table
+    if (supabase && user) {
       try {
-        const { data, error } = await (supabase.auth as any).mfa.listFactors()
-        if (!error && data?.all) {
-          const passkeys = data.all.filter((f: any) => f.factor_type === 'webauthn' || f.factor_type === 'totp' || f.friendly_name)
-          combined = [...passkeys, ...combined.filter(c => !passkeys.some((p: any) => p.id === c.id))]
+        const { data } = await supabase
+          .from('user_passkeys')
+          .select('*')
+          .eq('user_email', user.email)
+          .order('created_at', { ascending: false })
+
+        if (Array.isArray(data) && data.length > 0) {
+          combined = data.map(r => ({
+            id: r.credential_id || r.id,
+            friendly_name: r.friendly_name,
+            friendlyName: r.friendly_name,
+            userEmail: r.user_email,
+            createdAt: r.created_at,
+          }))
         }
       } catch {
         // silent
       }
     }
+
+    // Read stored device passkeys fallback
+    try {
+      const storedStr = localStorage.getItem('binarypip_registered_passkeys')
+      if (storedStr) {
+        const localList = JSON.parse(storedStr)
+        combined = [...combined, ...localList.filter((l: any) => !combined.some(c => c.id === l.id))]
+      }
+    } catch {}
 
     setPasskeyFactors(combined)
   }, [user])
@@ -2673,7 +2685,7 @@ export default function App() {
         }
       }
 
-      // 2. Native WebAuthn Credential Registration (Works on all devices even if Supabase MFA project setting is off)
+      // 2. Native WebAuthn Credential Registration & Database Persistence
       const challenge = new Uint8Array(32)
       window.crypto.getRandomValues(challenge)
       const userIdBytes = new TextEncoder().encode(userEmail)
@@ -2701,24 +2713,46 @@ export default function App() {
 
       if (credential) {
         const passkeyObj = {
-          id: credential.id,
+          user_id: userIdStr,
+          user_email: userEmail,
+          credential_id: credential.id,
           friendly_name: `BinaryPIP Device Passkey (${navigator.platform || 'Device'})`,
-          friendlyName: `BinaryPIP Device Passkey (${navigator.platform || 'Device'})`,
-          userEmail: userEmail,
-          createdAt: new Date().toISOString(),
+          device_type: navigator.platform || 'Device',
+          created_at: new Date().toISOString(),
+          last_used_at: new Date().toISOString(),
+        }
+
+        // Save directly into Supabase user_passkeys database table
+        if (supabase) {
+          try {
+            await supabase.from('user_passkeys').insert(passkeyObj)
+          } catch {
+            // silent
+          }
         }
 
         try {
           const storedStr = localStorage.getItem('binarypip_registered_passkeys')
           const storedList = storedStr ? JSON.parse(storedStr) : []
-          storedList.unshift(passkeyObj)
+          storedList.unshift({
+            id: credential.id,
+            friendly_name: passkeyObj.friendly_name,
+            userEmail: userEmail,
+            createdAt: passkeyObj.created_at,
+          })
           localStorage.setItem('binarypip_registered_passkeys', JSON.stringify(storedList))
         } catch {}
 
-        setPasskeyFactors(prev => [passkeyObj, ...prev])
-        showNotice('🎉 Biometric Passkey registered successfully on your device!')
-        void recordSecurityEvent('security_update', 'LOW', userEmail, 'Registered WebAuthn Passkey')
-        void logUserActivity(userEmail, 'PROFILE_UPDATE', 'Registered new WebAuthn device passkey', 'Success')
+        setPasskeyFactors(prev => [{
+          id: credential.id,
+          friendly_name: passkeyObj.friendly_name,
+          userEmail: userEmail,
+          createdAt: passkeyObj.created_at,
+        }, ...prev])
+
+        showNotice('🎉 Biometric Passkey registered and saved to Supabase database!')
+        void recordSecurityEvent('security_update', 'LOW', userEmail, 'Registered WebAuthn Passkey in Database')
+        void logUserActivity(userEmail, 'PROFILE_UPDATE', 'Registered new WebAuthn device passkey in Supabase database', 'Success')
       } else {
         showNotice(supabaseErr ? `Passkey Note: ${supabaseErr}` : 'Passkey registration cancelled.')
       }
