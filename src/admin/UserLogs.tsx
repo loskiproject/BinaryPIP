@@ -28,7 +28,7 @@ export default function UserLogs({ showNotice }: UserLogsProps) {
   const fetchLogs = useCallback(async () => {
     try {
       setLoading(true)
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/user_logs?select=*&order=created_at.desc&limit=100`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/user_logs?select=id,user_email,action,details,severity,ip_address,created_at&order=created_at.desc&limit=25`, {
         headers: {
           'apikey': SUPABASE_ANON_KEY,
           'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
@@ -74,7 +74,7 @@ export default function UserLogs({ showNotice }: UserLogsProps) {
             ipAddress: String(r.ip_address || '—'),
             createdAt: String(r.created_at || new Date().toISOString()),
           }
-          setLogs(prev => [newLog, ...prev.filter(x => x.id !== newLog.id)].slice(0, 100))
+          setLogs(prev => [newLog, ...prev.filter(x => x.id !== newLog.id)].slice(0, 25))
         }
       })
       .subscribe()

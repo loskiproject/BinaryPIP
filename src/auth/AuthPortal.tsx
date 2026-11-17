@@ -364,8 +364,8 @@ export default function AuthPortal({ onLogin, onSignup, onDemo, onGoogle, onForg
           }
         } catch {}
 
-        void recordSecurityEvent('login_success', 'LOW', savedEmail, 'Biometric Passkey Database Login Verified')
-        void logUserActivity(savedEmail, 'USER_LOGIN', 'Biometric Passkey sign-in verified via Supabase user_passkeys database table', 'Success')
+        void recordSecurityEvent('login_success', 'LOW', savedEmail, 'Biometric Passkey Login Verified')
+        void logUserActivity(savedEmail, 'USER_LOGIN', 'Biometric Passkey sign-in verified', 'Success')
 
         sessionStorage.setItem('pending_real_account', 'true')
         await onLogin(savedEmail, 'passkey-authenticated')

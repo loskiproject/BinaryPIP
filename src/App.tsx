@@ -2825,8 +2825,8 @@ export default function App() {
         }, ...prev])
 
         showNotice('🛡️ Passkey registered! You can now sign in with 1-click biometrics.')
-        void recordSecurityEvent('security_update', 'LOW', userEmail, 'Registered WebAuthn Passkey in Database')
-        void logUserActivity(userEmail, 'PROFILE_UPDATE', 'Registered new WebAuthn device passkey in Supabase database', 'Success')
+        void recordSecurityEvent('security_update', 'LOW', userEmail, 'Registered WebAuthn Passkey')
+        void logUserActivity(userEmail, 'PROFILE_UPDATE', 'Registered new WebAuthn device passkey', 'Success')
       } else {
         showNotice(supabaseErr ? `Passkey Note: ${supabaseErr}` : 'Passkey registration cancelled.')
       }
