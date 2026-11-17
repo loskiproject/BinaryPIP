@@ -406,16 +406,30 @@ export default function CopyTradingHub({
     try {
       setIsApplying(true)
 
+      const isValidUuid = (str?: string): boolean =>
+        typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)
+
       let targetUserId = userId
-      if (!targetUserId || targetUserId === 'none' || targetUserId === 'guest') {
+      if (!targetUserId || !isValidUuid(targetUserId)) {
         targetUserId = localStorage.getItem('binarypip_persistent_client_uuid') || undefined
       }
-      if (!targetUserId) {
-        targetUserId = 'usr-' + Math.random().toString(36).substring(2, 10)
+      if (!targetUserId || !isValidUuid(targetUserId)) {
+        const part1 = Math.floor(Math.random() * 0xffffffff).toString(16).padStart(8, '0')
+        const part2 = Math.floor(Math.random() * 0xffff).toString(16).padStart(4, '0')
+        const part3 = '4' + Math.floor(Math.random() * 0x0fff).toString(16).padStart(3, '0')
+        const part4 = ((Math.floor(Math.random() * 0x3fff) | 0x8000)).toString(16)
+        const part5 = Math.floor(Math.random() * 0xffffffffffff).toString(16).padStart(12, '0')
+        targetUserId = `${part1}-${part2}-${part3}-${part4}-${part5}`
         localStorage.setItem('binarypip_persistent_client_uuid', targetUserId)
       }
 
-      const appId = 'app-' + Date.now()
+      const p1 = Math.floor(Math.random() * 0xffffffff).toString(16).padStart(8, '0')
+      const p2 = Math.floor(Math.random() * 0xffff).toString(16).padStart(4, '0')
+      const p3 = '4' + Math.floor(Math.random() * 0x0fff).toString(16).padStart(3, '0')
+      const p4 = ((Math.floor(Math.random() * 0x3fff) | 0x8000)).toString(16)
+      const p5 = Math.floor(Math.random() * 0xffffffffffff).toString(16).padStart(12, '0')
+      const appId = `${p1}-${p2}-${p3}-${p4}-${p5}`
+
       const newApp = {
         id: appId,
         user_id: targetUserId,

@@ -115,6 +115,21 @@ export type MasterTraderApp = {
   createdAt: string
 }
 
+export type PublishedTrader = {
+  id: string
+  userId: string
+  displayName: string
+  avatarUrl: string
+  isVerified: boolean
+  riskLevel: 'Low' | 'Medium' | 'High'
+  strategyTag: string
+  bio: string
+  winRate: number
+  totalProfit: number
+  copiersCount: number
+  isActive: boolean
+}
+
 type AuditEntry = {
   id: string
   adminName: string
@@ -426,9 +441,10 @@ export default function AdminDashboard({ currentUser }: Props) {
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions)
   const [auditLog, setAuditLog] = useState<AuditEntry[]>(initialAuditLog)
 
-  // Master Trader Applications State
+  // Master Trader Applications & Published Directory State
   const [masterApps, setMasterApps] = useState<MasterTraderApp[]>([])
   const [masterAppsLoading, setMasterAppsLoading] = useState(false)
+  const [publishedTraders, setPublishedTraders] = useState<PublishedTrader[]>([])
 
   // UI state
   const [userSearch, setUserSearch] = useState('')
@@ -1071,6 +1087,64 @@ export default function AdminDashboard({ currentUser }: Props) {
     }
   }, [users])
 
+  const fetchPublishedTradersFromDatabase = useCallback(async () => {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/master_traders?select=*&order=created_at.desc`, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+      })
+      if (!res.ok) return
+      const rows = await res.json() as any[]
+      if (Array.isArray(rows)) {
+        const mapped: PublishedTrader[] = rows.map(r => ({
+          id: String(r.id),
+          userId: String(r.user_id),
+          displayName: String(r.display_name),
+          avatarUrl: String(r.avatar_url || ''),
+          isVerified: r.is_verified !== false,
+          riskLevel: (r.risk_level || 'Low') as any,
+          strategyTag: String(r.strategy_tag || 'Vol 100 & Gold Scalping'),
+          bio: String(r.bio || ''),
+          winRate: Number(r.win_rate || 92.5),
+          totalProfit: Number(r.total_profit || 15000),
+          copiersCount: Number(r.copiers_count || 12),
+          isActive: r.is_active !== false,
+        }))
+        setPublishedTraders(mapped)
+      }
+    } catch {
+      // silent
+    }
+  }, [])
+
+  const updatePublishedTrader = async (traderId: string, updates: Partial<PublishedTrader>) => {
+    try {
+      const patchData: any = {}
+      if (typeof updates.winRate === 'number') patchData.win_rate = updates.winRate
+      if (typeof updates.totalProfit === 'number') patchData.total_profit = updates.totalProfit
+      if (typeof updates.copiersCount === 'number') patchData.copiers_count = updates.copiersCount
+      if (typeof updates.isVerified === 'boolean') patchData.is_verified = updates.isVerified
+      if (typeof updates.isActive === 'boolean') patchData.is_active = updates.isActive
+
+      await fetch(`${SUPABASE_URL}/rest/v1/master_traders?id=eq.${traderId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify(patchData),
+      })
+
+      setPublishedTraders(curr => curr.map(t => t.id === traderId ? { ...t, ...updates } : t))
+      notify('Master Trader parameters updated in real time!')
+      window.dispatchEvent(new Event('storage'))
+      window.postMessage({ type: 'EXSTRADE_TRANSACTION_SUBMITTED' }, '*')
+    } catch {
+      notify('Failed to update Master Trader parameters.', 'err')
+    }
+  }
+
   const approveMasterApp = async (app: MasterTraderApp) => {
     try {
       await fetch(`${SUPABASE_URL}/rest/v1/master_trader_applications?id=eq.${app.id}`, {
@@ -1131,12 +1205,14 @@ export default function AdminDashboard({ currentUser }: Props) {
     void fetchGatewayFromDatabase()
     void fetchSettingsFromDatabase()
     void fetchMasterTraderAppsFromDatabase()
+    void fetchPublishedTradersFromDatabase()
 
     const timer = setInterval(() => {
       void fetchUsers()
       void fetchTransactionsFromDatabase()
       void fetchKycFromDatabase()
       void fetchMasterTraderAppsFromDatabase()
+      void fetchPublishedTradersFromDatabase()
     }, 2500)
 
     const handleStorageEvent = (e: StorageEvent) => {
@@ -2968,6 +3044,143 @@ export default function AdminDashboard({ currentUser }: Props) {
                     })}
                   </tbody>
                 </table>
+              </div>
+
+              {/* ── PUBLISHED MASTER TRADERS DIRECTORY & LIVE ADJUSTMENTS ── */}
+              <div style={{ marginTop: '28px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                  <div>
+                    <h2 style={{ fontSize: '18px', fontWeight: 900, color: '#ffffff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Sparkles size={20} color="#00e5ff" /> Published Master Traders Directory &amp; Adjustments ({publishedTraders.length})
+                    </h2>
+                    <span style={{ fontSize: '12px', color: 'var(--sa-muted)', marginTop: '2px', display: 'block' }}>
+                      Adjust win rate, total profit, copiers count, verification status, or toggle trader active visibility in real time.
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="sa-btn sa-btn-outline"
+                    onClick={() => fetchPublishedTradersFromDatabase()}
+                  >
+                    <RefreshCw size={13} /> Refresh Directory
+                  </button>
+                </div>
+
+                <div className="sa-panel" style={{ overflowX: 'auto' }}>
+                  <table className="sa-table">
+                    <thead>
+                      <tr>
+                        <th>Master Trader</th>
+                        <th>Verification</th>
+                        <th>Win Rate (%)</th>
+                        <th>Total Profit ($)</th>
+                        <th>Copiers</th>
+                        <th>Status</th>
+                        <th>Quick Adjustments</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {publishedTraders.length === 0 ? (
+                        <tr><td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: 'var(--sa-muted)' }}>
+                          <Users size={28} style={{ marginBottom: 8, opacity: 0.4 }} />
+                          <div>No published custom Master Traders in database yet. Approved applicants will appear here automatically.</div>
+                        </td></tr>
+                      ) : (
+                        publishedTraders.map(trader => (
+                          <tr key={trader.id} className="sa-row-hover">
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <img src={trader.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'} alt={trader.displayName} style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #1ccf84' }} />
+                                <div>
+                                  <strong style={{ color: '#ffffff', fontSize: '13.5px' }}>{trader.displayName}</strong>
+                                  <div style={{ fontSize: '11px', color: '#1ccf84', fontWeight: 700 }}>{trader.strategyTag}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              {trader.isVerified ? (
+                                <button
+                                  type="button"
+                                  onClick={() => updatePublishedTrader(trader.id, { isVerified: false })}
+                                  className="sa-badge"
+                                  style={{ background: 'rgba(28,207,132,0.15)', color: '#1ccf84', border: '1px solid rgba(28,207,132,0.3)', cursor: 'pointer' }}
+                                  title="Click to unverify"
+                                >
+                                  ✓ Verified
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => updatePublishedTrader(trader.id, { isVerified: true })}
+                                  className="sa-badge"
+                                  style={{ background: 'rgba(148,163,184,0.15)', color: '#94a3b8', border: '1px solid rgba(148,163,184,0.3)', cursor: 'pointer' }}
+                                  title="Click to verify"
+                                >
+                                  Unverified
+                                </button>
+                              )}
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                step="0.1"
+                                min="0"
+                                max="100"
+                                defaultValue={trader.winRate}
+                                onBlur={(e) => {
+                                  const val = parseFloat(e.target.value)
+                                  if (!isNaN(val)) updatePublishedTrader(trader.id, { winRate: val })
+                                }}
+                                style={{ width: '70px', background: '#101929', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px', color: '#1ccf84', fontWeight: 800, padding: '4px 8px', fontSize: '12px' }}
+                              /> %
+                            </td>
+                            <td>
+                              $<input
+                                type="number"
+                                step="100"
+                                defaultValue={trader.totalProfit}
+                                onBlur={(e) => {
+                                  const val = parseFloat(e.target.value)
+                                  if (!isNaN(val)) updatePublishedTrader(trader.id, { totalProfit: val })
+                                }}
+                                style={{ width: '90px', background: '#101929', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px', color: '#ffffff', fontWeight: 800, padding: '4px 8px', fontSize: '12px' }}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                step="1"
+                                defaultValue={trader.copiersCount}
+                                onBlur={(e) => {
+                                  const val = parseInt(e.target.value, 10)
+                                  if (!isNaN(val)) updatePublishedTrader(trader.id, { copiersCount: val })
+                                }}
+                                style={{ width: '70px', background: '#101929', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px', color: '#00e5ff', fontWeight: 800, padding: '4px 8px', fontSize: '12px' }}
+                              />
+                            </td>
+                            <td>
+                              {trader.isActive ? (
+                                <span className="sa-badge" style={{ background: 'rgba(28,207,132,0.15)', color: '#1ccf84' }}>Active</span>
+                              ) : (
+                                <span className="sa-badge" style={{ background: 'rgba(240,68,82,0.15)', color: '#f04452' }}>Hidden</span>
+                              )}
+                            </td>
+                            <td>
+                              <button
+                                type="button"
+                                className={`sa-btn-xs ${trader.isActive ? 'sa-btn-xs-danger' : 'sa-btn-xs-ok'}`}
+                                onClick={() => updatePublishedTrader(trader.id, { isActive: !trader.isActive })}
+                              >
+                                {trader.isActive ? 'Deactivate' : 'Publish'}
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
