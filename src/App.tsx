@@ -2824,7 +2824,7 @@ export default function App() {
           createdAt: passkeyObj.created_at,
         }, ...prev])
 
-        showNotice('🎉 Biometric Passkey registered and saved to Supabase database!')
+        showNotice('🛡️ Passkey registered! You can now sign in with 1-click biometrics.')
         void recordSecurityEvent('security_update', 'LOW', userEmail, 'Registered WebAuthn Passkey in Database')
         void logUserActivity(userEmail, 'PROFILE_UPDATE', 'Registered new WebAuthn device passkey in Supabase database', 'Success')
       } else {
