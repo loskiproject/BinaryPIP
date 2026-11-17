@@ -1053,9 +1053,9 @@ export default function AdminDashboard({ currentUser }: Props) {
   }
 
   // Fetch real Master Trader Applications from Supabase
-  const fetchMasterTraderAppsFromDatabase = useCallback(async () => {
+  const fetchMasterTraderAppsFromDatabase = useCallback(async (isInitial = false) => {
     try {
-      setMasterAppsLoading(true)
+      if (isInitial) setMasterAppsLoading(true)
 
       let dbMapped: MasterTraderApp[] = []
       const res = await fetch(`${SUPABASE_URL}/rest/v1/master_trader_applications?select=*&order=created_at.desc&limit=50`, {
@@ -1101,7 +1101,7 @@ export default function AdminDashboard({ currentUser }: Props) {
     } catch {
       // silent
     } finally {
-      setMasterAppsLoading(false)
+      if (isInitial) setMasterAppsLoading(false)
     }
   }, [users])
 
@@ -1315,7 +1315,7 @@ export default function AdminDashboard({ currentUser }: Props) {
     void fetchTransactionsFromDatabase()
     void fetchGatewayFromDatabase()
     void fetchSettingsFromDatabase()
-    void fetchMasterTraderAppsFromDatabase()
+    void fetchMasterTraderAppsFromDatabase(true)
     void fetchPublishedTradersFromDatabase()
     void fetchCopySubscriptionsFromDatabase()
 
@@ -1323,9 +1323,9 @@ export default function AdminDashboard({ currentUser }: Props) {
       void fetchUsers()
       void fetchTransactionsFromDatabase()
       void fetchKycFromDatabase()
-      void fetchMasterTraderAppsFromDatabase()
+      void fetchMasterTraderAppsFromDatabase(false)
       void fetchCopySubscriptionsFromDatabase()
-    }, 3000)
+    }, 4000)
 
     const handleStorageEvent = (e: StorageEvent) => {
       if (e.key === 'binarypip_pending_transactions' || e.key === 'exstrade_deposit_request' || e.key === 'binarypip_master_trader_apps') {
