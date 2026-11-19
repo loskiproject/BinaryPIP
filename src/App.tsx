@@ -1899,11 +1899,17 @@ export default function App() {
         showNotice(`⚡ Admin Authenticated (${fullName || sessionUser.email}). Redirecting to Admin Dashboard.`)
       }
 
-      // Auto-switch to Real Account after login if requested
+      // Default active account state to Real Account ('live') on login, unless user manually switched to 'demo' in current session
+      const userSelectedMode = sessionStorage.getItem('binarypip_user_selected_account_type')
+      if (userSelectedMode === 'demo') {
+        setAccountType('demo')
+      } else {
+        setAccountType('live')
+        sessionStorage.setItem('binarypip_user_selected_account_type', 'live')
+      }
+
       if (sessionStorage.getItem('pending_real_account') === 'true') {
         sessionStorage.removeItem('pending_real_account')
-        setAccountType('live')
-        setLiveAccountCreated(true)
         if (liveBalance <= 0) {
           changeView('wallet')
           showNotice(`🎉 Welcome ${fullName || 'Trader'}! Redirecting to Wallet page to deposit (+50% Bonus!).`)
@@ -2165,6 +2171,8 @@ export default function App() {
 
   // Account Selector Handler (with Auth Login Check for Real Account & Funds Redirection)
   const handleAccountSelectChange = (nextType: AccountType) => {
+    sessionStorage.setItem('binarypip_user_selected_account_type', nextType)
+
     if (nextType === 'demo') {
       if (!demoAccountName) {
         setModal('create_demo')
