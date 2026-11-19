@@ -6106,16 +6106,79 @@ export default function App() {
             </div>
 
             <div className="topbar-actions" style={{ flex: 'none', width: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {/* Unified Single Account Switcher Dropdown */}
-              <select
-                className={`unified-account-dropdown ${accountType === 'live' ? 'unified-account-live' : accountType === 'demo' ? 'unified-account-demo' : ''}`}
-                style={{ minWidth: '175px' }}
-                value={accountType === 'none' ? 'live' : accountType}
-                onChange={(e) => handleAccountSelectChange(e.target.value as AccountType)}
-              >
-                <option value="live">🟢 Real Account (${liveBalance.toFixed(2)})</option>
-                <option value="demo">🟡 {demoAccountName || 'Demo Account'} (${demoBalance.toFixed(2)})</option>
-              </select>
+              {/* Pro Trading Terminal Account Selector Pill Button */}
+              <div className="pro-account-pill-wrap" style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                <div
+                  className={`pro-account-pill ${accountType === 'live' ? 'pro-pill-live' : 'pro-pill-demo'}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '7px',
+                    padding: '5px 10px',
+                    borderRadius: '9px',
+                    background: '#090e17',
+                    border: `1px solid ${accountType === 'live' ? '#10b981' : '#f59e0b'}`,
+                    cursor: 'pointer',
+                    boxShadow: accountType === 'live' ? '0 0 10px rgba(16, 185, 129, 0.25)' : '0 0 10px rgba(245, 158, 11, 0.25)',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  {/* Flat Glowing Status Dot */}
+                  <span
+                    style={{
+                      width: '7px',
+                      height: '7px',
+                      borderRadius: '50%',
+                      background: accountType === 'live' ? '#10b981' : '#f59e0b',
+                      boxShadow: `0 0 8px ${accountType === 'live' ? '#10b981' : '#f59e0b'}`,
+                      display: 'inline-block',
+                      flexShrink: 0,
+                    }}
+                  />
+
+                  {/* REAL / DEMO Pill Tag */}
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      fontWeight: 900,
+                      letterSpacing: '0.8px',
+                      textTransform: 'uppercase',
+                      color: accountType === 'live' ? '#10b981' : '#f59e0b',
+                      background: accountType === 'live' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                      padding: '2px 6px',
+                      borderRadius: '5px',
+                    }}
+                  >
+                    {accountType === 'live' ? 'REAL' : 'DEMO'}
+                  </span>
+
+                  {/* Crisp High-Contrast White Balance & Currency */}
+                  <span style={{ fontSize: '12px', fontWeight: 900, fontFamily: 'monospace', color: '#ffffff', letterSpacing: '-0.2px' }}>
+                    ${(accountType === 'live' ? liveBalance : demoBalance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span style={{ fontSize: '10.5px', color: '#94a3b8', fontWeight: 700 }}>USD</span>
+                  </span>
+
+                  {/* Dropdown Chevron Arrow */}
+                  <ChevronDown size={13} color="#94a3b8" style={{ marginLeft: '2px' }} />
+                </div>
+
+                {/* Invisible native select overlay for dropdown selection */}
+                <select
+                  value={accountType === 'none' ? 'live' : accountType}
+                  onChange={(e) => handleAccountSelectChange(e.target.value as AccountType)}
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    opacity: 0,
+                    cursor: 'pointer',
+                    width: '100%',
+                    height: '100%',
+                    zIndex: 2,
+                  }}
+                >
+                  <option value="live">REAL — ${(liveBalance).toFixed(2)} USD</option>
+                  <option value="demo">DEMO — ${(demoBalance).toFixed(2)} USD</option>
+                </select>
+              </div>
 
               {accountType === 'demo' && demoAccountName ? (
                 <button type="button" className="button button-outline" style={{ padding: '6px 10px', fontSize: '11px' }} onClick={handleQuickDemoDeposit}>
