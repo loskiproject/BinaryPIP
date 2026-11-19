@@ -276,6 +276,8 @@ export default function AuthPortal({ onLogin, onSignup, onDemo, onGoogle, onForg
       setFormError('Please enter your email and password.')
       return
     }
+    sessionStorage.removeItem('binarypip_user_selected_account_type')
+    sessionStorage.setItem('pending_real_account', 'true')
     const err = await onLogin(loginForm.identifier.trim(), loginForm.password)
     if (err) {
       setFormError(err)
