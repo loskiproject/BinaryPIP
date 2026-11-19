@@ -6110,12 +6110,11 @@ export default function App() {
               <select
                 className={`unified-account-dropdown ${accountType === 'live' ? 'unified-account-live' : accountType === 'demo' ? 'unified-account-demo' : ''}`}
                 style={{ minWidth: '175px' }}
-                value={accountType}
+                value={accountType === 'none' ? 'live' : accountType}
                 onChange={(e) => handleAccountSelectChange(e.target.value as AccountType)}
               >
-                <option value="none">Select an account</option>
-                <option value="demo">🟡 {demoAccountName || 'Demo Account'} (${demoBalance.toFixed(2)})</option>
                 <option value="live">🟢 Real Account (${liveBalance.toFixed(2)})</option>
+                <option value="demo">🟡 {demoAccountName || 'Demo Account'} (${demoBalance.toFixed(2)})</option>
               </select>
 
               {accountType === 'demo' && demoAccountName ? (
