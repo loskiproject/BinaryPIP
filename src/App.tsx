@@ -6108,7 +6108,7 @@ export default function App() {
             <div className="topbar-actions" style={{ flex: 'none', width: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
               {/* Unified Single Account Switcher Dropdown */}
               <select
-                className="unified-account-dropdown"
+                className={`unified-account-dropdown ${accountType === 'live' ? 'unified-account-live' : accountType === 'demo' ? 'unified-account-demo' : ''}`}
                 style={{ minWidth: '175px' }}
                 value={accountType}
                 onChange={(e) => handleAccountSelectChange(e.target.value as AccountType)}
