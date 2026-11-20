@@ -5642,7 +5642,6 @@ export default function App() {
       setLiveAccountCreated(true)
       setAccountType('live')
       setActiveView(role === 'admin' ? 'settings' : 'synthetic')
-      showNotice(`🔐 Authenticated via Biometric Passkey (${loginEmail}). Welcome back!`)
       return null
     }
 
