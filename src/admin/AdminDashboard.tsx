@@ -2168,6 +2168,57 @@ export default function AdminDashboard({ currentUser }: Props) {
         // 3. Save updated user wallet balance in Supabase Database (if deposit)
         if (isDeposit) {
           await saveUserWalletBalance(targetUserId, nextBal)
+
+          // 4. Check if depositor has a referrer (referred_by code) and process 10% referral commission in database
+          try {
+            if (supabase) {
+              const { data: depProf } = await supabase
+                .from('profiles')
+                .select('id, referred_by, referral_rewarded')
+                .eq('id', targetUserId)
+                .maybeSingle()
+
+              if (depProf?.referred_by && !depProf.referral_rewarded) {
+                const referrerCode = String(depProf.referred_by).trim().toUpperCase()
+                const commAmount = Number((txn.amount * 0.10).toFixed(2))
+
+                const { data: refProf } = await supabase
+                  .from('profiles')
+                  .select('id, email')
+                  .eq('referral_code', referrerCode)
+                  .maybeSingle()
+
+                if (refProf?.id) {
+                  const { data: refWallet } = await supabase
+                    .from('wallets')
+                    .select('live_balance')
+                    .eq('user_id', refProf.id)
+                    .maybeSingle()
+
+                  const nextReferrerBal = Number(refWallet?.live_balance || 0) + commAmount
+                  await saveUserWalletBalance(refProf.id, nextReferrerBal)
+
+                  await supabase.from('transactions').insert({
+                    user_id: refProf.id,
+                    type: 'referral_commission',
+                    amount: commAmount,
+                    asset: 'USD',
+                    method: 'SYSTEM',
+                    reference_id: `COMM-${Date.now()}`,
+                    details: { gateway_network: `10% Referral Commission from ${txn.userName || txn.userEmail}` },
+                    status: 'approved',
+                  })
+
+                  await supabase.from('profiles').update({ referral_rewarded: true }).eq('id', targetUserId)
+                  setUsers(curr => curr.map(u => u.id === refProf.id ? { ...u, balance: nextReferrerBal } : u))
+                  addAudit('REFERRAL_COMMISSION', refProf.id, 'Referral', `Credited $${commAmount.toFixed(2)} 10% commission to ${refProf.email}`, 'info')
+                  notify(`🎉 10% Referral Commission ($${commAmount.toFixed(2)}) credited to referrer ${refProf.email}!`)
+                }
+              }
+            }
+          } catch {
+            // silent
+          }
         }
       }
 

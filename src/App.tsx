@@ -2284,6 +2284,7 @@ export default function App() {
         .maybeSingle()
 
       if (!existingProf) {
+        const capturedRef = sessionStorage.getItem('binarypip_captured_ref_code') || localStorage.getItem('binarypip_captured_ref_code')
         await supabase.from('profiles').insert({
           id: targetUserId,
           email: userEmail,
@@ -2291,6 +2292,7 @@ export default function App() {
           role: 'client',
           account_status: 'active',
           kyc_status: 'unverified',
+          referred_by: capturedRef || null,
           updated_at: new Date().toISOString(),
         })
       }
