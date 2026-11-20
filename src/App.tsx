@@ -33,6 +33,7 @@ import {
   RotateCcw,
   RotateCw,
   Clock,
+  Gift,
   List,
   Users,
   Newspaper,
@@ -83,8 +84,9 @@ import AuthPortal, { type SignupPayload } from './auth/AuthPortal'
 import AdminDashboard from './admin/AdminDashboard'
 import InstallPwaWidget from './components/InstallPwaWidget'
 import CopyTradingHub from './features/CopyTradingHub'
+import ReferralModal from './features/ReferralModal'
 
-type View = 'overview' | 'assets' | 'tiers' | 'synthetic' | 'copy_trading' | 'institutions' | 'settings' | 'kyc_hub' | 'profile' | 'wallet' | 'funds' | 'help' | 'positions' | 'history' | 'verification' | 'how_it_works' | 'terms' | 'privacy'
+type View = 'overview' | 'assets' | 'tiers' | 'synthetic' | 'copy_trading' | 'institutions' | 'settings' | 'kyc_hub' | 'profile' | 'wallet' | 'funds' | 'help' | 'positions' | 'history' | 'verification' | 'how_it_works' | 'terms' | 'privacy' | 'referral'
 type AuthMode = 'login' | 'signup'
 type AccountType = 'none' | 'demo' | 'live'
 type Theme = 'dark' | 'light' | 'midnight' | 'cyberpunk'
@@ -211,6 +213,7 @@ const navigation: { id: View; label: string; icon: typeof LayoutDashboard }[] = 
   { id: 'tiers', label: 'Investments', icon: CandlestickChart },
   { id: 'funds', label: 'Wallet', icon: Wallet },
   { id: 'history', label: 'History', icon: Clock },
+  { id: 'referral', label: 'Refer & Earn', icon: Gift },
   { id: 'how_it_works', label: 'How It Works', icon: HelpCircle },
   { id: 'terms', label: 'Terms & Conditions', icon: FileText },
   { id: 'privacy', label: 'Privacy Policy', icon: ShieldCheck },
@@ -892,6 +895,25 @@ export default function App() {
 
   // AI Scanner
   const [aiScannerOpen, setAiScannerOpen] = useState(false)
+
+  // Referral Modal
+  const [referralModalOpen, setReferralModalOpen] = useState(false)
+
+  // Capture URL referral code (?ref=CODE)
+  useEffect(() => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search)
+      const refCode = urlParams.get('ref')
+      if (refCode) {
+        const cleanRef = refCode.trim().toUpperCase()
+        sessionStorage.setItem('binarypip_captured_ref_code', cleanRef)
+        localStorage.setItem('binarypip_captured_ref_code', cleanRef)
+        showNotice(`🎁 Referral link active: ${cleanRef}. Complete registration & deposit to earn bonus!`)
+      }
+    } catch {
+      // silent
+    }
+  }, [])
 
   // KYC prompt — show once per session if user has no submitted documents
   const [kycPromptDismissed, setKycPromptDismissed] = useState(false)
@@ -1798,6 +1820,12 @@ export default function App() {
 
   // Navigation Handler - Exactly 3 seconds loading screen visibility
   const changeView = (nextView: View) => {
+    if (nextView === 'referral') {
+      setReferralModalOpen(true)
+      setMobileMenuOpen(false)
+      return
+    }
+
     if (nextView === activeView) return
 
     // Protection: Admin Dashboard is reserved for Admin users
@@ -2329,6 +2357,51 @@ export default function App() {
       } catch {
         // silent
       }
+    }
+
+    // Process 10% referral commission trigger if user was referred by another trader
+    try {
+      const capturedRef = sessionStorage.getItem('binarypip_captured_ref_code') || localStorage.getItem('binarypip_captured_ref_code')
+      if (capturedRef && supabase) {
+        const commAmount = Math.max(10, depositAmount * 0.10)
+        const referrerRefCode = capturedRef.toUpperCase()
+
+        const { data: refProfile } = await supabase
+          .from('profiles')
+          .select('id, email')
+          .eq('referral_code', referrerRefCode)
+          .maybeSingle()
+
+        if (refProfile?.id) {
+          const { data: refWallet } = await supabase
+            .from('wallets')
+            .select('live_balance')
+            .eq('user_id', refProfile.id)
+            .maybeSingle()
+
+          const nextReferrerBal = Number(refWallet?.live_balance || 0) + commAmount
+          await updateWalletBalanceInSupabase(refProfile.id, nextReferrerBal)
+
+          await supabase.from('transactions').insert({
+            user_id: refProfile.id,
+            type: 'referral_commission',
+            amount: commAmount,
+            asset: 'USD',
+            method: 'SYSTEM',
+            reference_id: `REF-${Date.now()}`,
+            details: { gateway_network: `10% Referral Commission from ${user?.email || 'depositor'}` },
+            status: 'approved',
+          })
+
+          if (authUserId) {
+            await supabase.from('profiles').update({ referral_rewarded: true }).eq('id', authUserId)
+          }
+
+          void logUserActivity(user?.email || 'depositor', 'DEPOSIT_INIT', `Completed qualifying deposit ($${depositAmount}). Referral commission ($${commAmount.toFixed(2)}) credited to referrer ${refProfile.email}`, 'Success')
+        }
+      }
+    } catch {
+      // silent
     }
 
     recordFundingHistory({
@@ -5908,6 +5981,16 @@ export default function App() {
 
   return (
     <div className={`app-shell ${(activeView === 'synthetic' || activeView === 'overview' || activeView === 'assets') ? 'app-shell-synthetic' : ''}`}>
+
+      {/* ── REFERRAL MODAL ──────────────────────────────────────────── */}
+      {referralModalOpen && (
+        <ReferralModal
+          user={user}
+          userBalance={activeBalance}
+          onClose={() => setReferralModalOpen(false)}
+          showNotice={showNotice}
+        />
+      )}
 
       {/* ── EMAIL VERIFICATION BANNER ────────────────────────────────── */}
       {user && !user.emailVerified && user.id !== 'local-demo-user' && user.email && (
