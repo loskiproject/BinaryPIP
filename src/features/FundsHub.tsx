@@ -113,7 +113,7 @@ export default function FundsHub({
   const [_stkCheckoutId, setStkCheckoutId] = useState('')
   const [stkVerifying, setStkVerifying] = useState(false)
 
-  // Crypto State
+  // Crypto Proof / TxHash State
   const [cryptoTxHash, setCryptoTxHash] = useState('')
   const [cryptoScreenshotName, setCryptoScreenshotName] = useState<string | null>(null)
   const [depositSuccessModal, setDepositSuccessModal] = useState<{ amountUSD: number; method: string; ref: string } | null>(null)
@@ -390,7 +390,7 @@ export default function FundsHub({
                 alignItems: 'center',
                 gap: '6px',
                 transition: 'all 0.18s ease',
-                boxShadow: tab === 'deposit' ? '0 4px 12px rgba(16, 185, 129, 0.3)' : 'none',
+                boxShadow: tab === 'deposit' ? '0 4px 14px rgba(16, 185, 129, 0.35)' : 'none',
               }}
             >
               <ArrowDownToLine size={14} /> Deposit
@@ -400,7 +400,7 @@ export default function FundsHub({
               type="button"
               onClick={() => setTab('withdraw')}
               style={{
-                background: tab === 'withdraw' ? '#2A3644' : 'transparent',
+                background: tab === 'withdraw' ? 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)' : 'transparent',
                 color: tab === 'withdraw' ? '#FFFFFF' : '#8B9BB4',
                 border: 'none',
                 borderRadius: '8px',
@@ -412,6 +412,7 @@ export default function FundsHub({
                 alignItems: 'center',
                 gap: '6px',
                 transition: 'all 0.18s ease',
+                boxShadow: tab === 'withdraw' ? '0 4px 14px rgba(239, 68, 68, 0.35)' : 'none',
               }}
             >
               <ArrowUpFromLine size={14} /> Withdraw
@@ -421,8 +422,8 @@ export default function FundsHub({
               type="button"
               onClick={() => setTab('transfer')}
               style={{
-                background: tab === 'transfer' ? '#2A3644' : 'transparent',
-                color: tab === 'transfer' ? '#FFFFFF' : '#8B9BB4',
+                background: tab === 'transfer' ? 'linear-gradient(135deg, #00E5FF 0%, #00B0FF 100%)' : 'transparent',
+                color: tab === 'transfer' ? '#0B1015' : '#8B9BB4',
                 border: 'none',
                 borderRadius: '8px',
                 padding: '8px 16px',
@@ -433,6 +434,7 @@ export default function FundsHub({
                 alignItems: 'center',
                 gap: '6px',
                 transition: 'all 0.18s ease',
+                boxShadow: tab === 'transfer' ? '0 4px 14px rgba(0, 229, 255, 0.3)' : 'none',
               }}
             >
               <ArrowLeftRight size={14} /> Internal Transfer
@@ -541,7 +543,17 @@ export default function FundsHub({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '20px' }}>📱</span>
+                    <span style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '8px',
+                      background: 'rgba(37, 211, 102, 0.15)',
+                      border: '1px solid rgba(37, 211, 102, 0.4)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '16px',
+                    }}>📱</span>
                     <div>
                       <strong style={{ fontSize: '13.5px', fontWeight: 900, color: '#FFFFFF', display: 'block' }}>M-Pesa Instant</strong>
                       <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 700 }}>Min KES 130</span>
@@ -569,7 +581,19 @@ export default function FundsHub({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '20px' }}>₿</span>
+                    <span style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '8px',
+                      background: 'rgba(247, 147, 26, 0.15)',
+                      border: '1px solid rgba(247, 147, 26, 0.4)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '16px',
+                      color: '#F7931A',
+                      fontWeight: 900,
+                    }}>₿</span>
                     <div>
                       <strong style={{ fontSize: '13.5px', fontWeight: 900, color: '#FFFFFF', display: 'block' }}>Crypto (BTC / USDT)</strong>
                       <span style={{ fontSize: '11px', color: '#8B9BB4' }}>Min $1 USD</span>
@@ -599,7 +623,7 @@ export default function FundsHub({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span>{selectedMethodMeta.icon}</span>
+                      <span style={{ color: selectedMethodMeta.color || '#10B981', fontWeight: 900 }}>{selectedMethodMeta.icon}</span>
                       <span>{selectedMethodMeta.label}</span>
                     </div>
                     <ChevronDown size={14} color="#8B9BB4" />
@@ -641,7 +665,7 @@ export default function FundsHub({
                             gap: '8px',
                           }}
                         >
-                          <span>{m.icon}</span>
+                          <span style={{ color: m.color || '#10B981', fontWeight: 900 }}>{m.icon}</span>
                           <span>{m.label}</span>
                         </button>
                       ))}
@@ -850,7 +874,7 @@ export default function FundsHub({
               </div>
             )}
 
-            {/* Crypto Payment Form */}
+            {/* Crypto Payment Form & Proof Screenshot Upload */}
             {depositMethod !== 'mpesa' && stkStep === 'form' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {activeAddr && (
@@ -883,15 +907,49 @@ export default function FundsHub({
 
                 <div>
                   <label style={{ fontSize: '11px', fontWeight: 800, color: '#8B9BB4', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
-                    TXHASH / REFERENCE
+                    TXHASH / REFERENCE CODE
                   </label>
                   <input
                     type="text"
-                    placeholder="Paste transaction hash"
+                    placeholder="Paste transaction hash or reference"
                     value={cryptoTxHash}
                     onChange={e => setCryptoTxHash(e.target.value)}
                     style={{ width: '100%', background: '#182029', border: '1px solid #232E3A', borderRadius: '8px', padding: '10px', color: '#FFFFFF', fontFamily: 'monospace', fontSize: '12px', outline: 'none' }}
                   />
+                </div>
+
+                {/* Upload Payment Screenshot / Proof File Upload */}
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#8B9BB4', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+                    UPLOAD PAYMENT SCREENSHOT / PROOF
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    style={{ display: 'none' }}
+                    onChange={handleFileSelect}
+                  />
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{
+                      background: '#0B1015',
+                      border: '1px dashed rgba(16, 185, 129, 0.4)',
+                      borderRadius: '10px',
+                      padding: '12px',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '10px',
+                    }}
+                  >
+                    <Upload size={18} color="#10B981" />
+                    <span style={{ fontSize: '12px', color: cryptoScreenshotName ? '#10B981' : '#8B9BB4', fontWeight: 700 }}>
+                      {cryptoScreenshotName ? `📷 ${cryptoScreenshotName}` : 'Click to upload payment screenshot'}
+                    </span>
+                  </div>
                 </div>
               </div>
             )}
@@ -996,14 +1054,16 @@ export default function FundsHub({
                 type="button"
                 onClick={() => setWGateway(g)}
                 style={{
-                  background: wGateway === g ? 'rgba(16, 185, 129, 0.15)' : '#182029',
-                  border: wGateway === g ? '1.5px solid #10B981' : '1px solid #232E3A',
-                  color: wGateway === g ? '#10B981' : '#8B9BB4',
+                  background: wGateway === g ? 'rgba(239, 68, 68, 0.15)' : '#182029',
+                  border: wGateway === g ? '1.5px solid #EF4444' : '1px solid #232E3A',
+                  color: wGateway === g ? '#EF4444' : '#8B9BB4',
                   borderRadius: '20px',
                   padding: '6px 14px',
                   fontSize: '12px',
                   fontWeight: 800,
                   cursor: 'pointer',
+                  boxShadow: wGateway === g ? '0 0 12px rgba(239, 68, 68, 0.3)' : 'none',
+                  transition: 'all 0.18s ease',
                 }}
               >
                 {g === 'mpesa' ? '📱 M-Pesa' : g === 'BANK_WIRE' ? '🏛️ Bank Wire' : g}
@@ -1011,8 +1071,95 @@ export default function FundsHub({
             ))}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div>
+          {/* Complete Bank Wire Form */}
+          {wGateway === 'BANK_WIRE' ? (
+            <div style={{
+              background: '#182029',
+              border: '1px solid #232E3A',
+              borderRadius: '14px',
+              padding: '20px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+            }}>
+              {/* Select Country */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: '#8B9BB4', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
+                  SELECT COUNTRY
+                </label>
+                <select
+                  value={bCountry}
+                  onChange={(e) => {
+                    const country = e.target.value
+                    setBCountry(country)
+                    const banks = COUNTRY_BANKS_MAP[country] || COUNTRY_BANKS_MAP['Kenya']
+                    setBBankName(banks[0])
+                  }}
+                  style={{ width: '100%', background: '#0B1015', border: '1px solid #232E3A', borderRadius: '8px', color: '#ffffff', fontWeight: 700, padding: '10px 14px', outline: 'none' }}
+                >
+                  {Object.keys(COUNTRY_BANKS_MAP).map(country => (
+                    <option key={country} value={country}>{country}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Select Bank Name */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: '#8B9BB4', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
+                  SELECT BANK NAME
+                </label>
+                <select
+                  value={bBankName}
+                  onChange={(e) => setBBankName(e.target.value)}
+                  style={{ width: '100%', background: '#0B1015', border: '1px solid #EF4444', borderRadius: '8px', color: '#ffffff', fontWeight: 700, padding: '10px 14px', outline: 'none' }}
+                >
+                  {(COUNTRY_BANKS_MAP[bCountry] || COUNTRY_BANKS_MAP['Kenya']).map(bank => (
+                    <option key={bank} value={bank}>{bank}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Account Number / IBAN */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: '#8B9BB4', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
+                  ACCOUNT NUMBER / IBAN
+                </label>
+                <input
+                  placeholder="Enter bank account number or IBAN"
+                  value={bAccountNumber}
+                  onChange={(e) => setBAccountNumber(e.target.value)}
+                  style={{ background: '#0B1015', border: '1px solid #232E3A', borderRadius: '8px', color: '#ffffff', fontFamily: 'monospace', padding: '10px 14px', outline: 'none' }}
+                />
+              </div>
+
+              {/* Account Holder Full Name */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: '#8B9BB4', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
+                  ACCOUNT HOLDER FULL NAME
+                </label>
+                <input
+                  placeholder="Enter account holder name"
+                  value={bAccountName}
+                  onChange={(e) => setBAccountName(e.target.value)}
+                  style={{ background: '#0B1015', border: '1px solid #232E3A', borderRadius: '8px', color: '#ffffff', padding: '10px 14px', outline: 'none' }}
+                />
+              </div>
+
+              {/* SWIFT / BIC Code */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: '#8B9BB4', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
+                  SWIFT / BIC CODE (OPTIONAL)
+                </label>
+                <input
+                  placeholder="e.g. EQUKENNA"
+                  value={bSwiftCode}
+                  onChange={(e) => setBSwiftCode(e.target.value)}
+                  style={{ background: '#0B1015', border: '1px solid #232E3A', borderRadius: '8px', color: '#ffffff', fontFamily: 'monospace', padding: '10px 14px', outline: 'none' }}
+                />
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <label style={{ fontSize: '11px', fontWeight: 800, color: '#8B9BB4', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
                 DESTINATION ADDRESS / PHONE
               </label>
@@ -1024,43 +1171,49 @@ export default function FundsHub({
                 style={{ width: '100%', background: '#182029', border: '1px solid #232E3A', borderRadius: '8px', padding: '10px', color: '#FFFFFF', fontFamily: 'monospace', fontSize: '13px', outline: 'none' }}
               />
             </div>
+          )}
 
-            <div>
-              <label style={{ fontSize: '11px', fontWeight: 800, color: '#8B9BB4', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
-                AMOUNT (USD)
-              </label>
-              <input
-                type="number"
-                min={minWithdrawalUSD}
-                placeholder="100.00"
-                value={wAmt}
-                onChange={e => setWAmt(e.target.value)}
-                style={{ width: '100%', background: '#182029', border: '1px solid #232E3A', borderRadius: '8px', padding: '10px', color: '#FFFFFF', fontFamily: 'monospace', fontWeight: 800, fontSize: '14px', outline: 'none' }}
-              />
-              <span style={{ fontSize: '11px', color: '#8B9BB4', marginTop: '4px', display: 'block' }}>
-                Minimum withdrawal: ${minWithdrawalUSD.toFixed(2)} USD
-              </span>
-            </div>
-
-            <button
-              type="button"
-              onClick={confirmWithdraw}
-              style={{
-                width: '100%',
-                background: '#EF4444',
-                color: '#FFFFFF',
-                border: 'none',
-                borderRadius: '10px',
-                padding: '12px',
-                fontSize: '14px',
-                fontWeight: 900,
-                cursor: 'pointer',
-                marginTop: '8px',
-              }}
-            >
-              CONFIRM WITHDRAWAL
-            </button>
+          <div>
+            <label style={{ fontSize: '11px', fontWeight: 800, color: '#8B9BB4', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+              AMOUNT (USD)
+            </label>
+            <input
+              type="number"
+              min={minWithdrawalUSD}
+              placeholder="100.00"
+              value={wAmt}
+              onChange={e => setWAmt(e.target.value)}
+              style={{ width: '100%', background: '#182029', border: '1px solid #232E3A', borderRadius: '8px', padding: '10px', color: '#FFFFFF', fontFamily: 'monospace', fontWeight: 800, fontSize: '14px', outline: 'none' }}
+            />
+            <span style={{ fontSize: '11px', color: '#8B9BB4', marginTop: '4px', display: 'block' }}>
+              Minimum withdrawal: ${minWithdrawalUSD.toFixed(2)} USD
+            </span>
           </div>
+
+          <button
+            type="button"
+            onClick={confirmWithdraw}
+            style={{
+              width: '100%',
+              background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: '12px',
+              padding: '14px',
+              fontSize: '15px',
+              fontWeight: 900,
+              letterSpacing: '0.5px',
+              cursor: 'pointer',
+              boxShadow: '0 6px 20px rgba(239, 68, 68, 0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              transition: 'all 0.18s ease',
+            }}
+          >
+            <ArrowUpFromLine size={16} /> WITHDRAW
+          </button>
         </div>
       )}
 
@@ -1118,7 +1271,7 @@ export default function FundsHub({
             onClick={confirmTransfer}
             style={{
               width: '100%',
-              background: '#10B981',
+              background: 'linear-gradient(135deg, #00E5FF 0%, #00B0FF 100%)',
               color: '#0B1015',
               border: 'none',
               borderRadius: '10px',
@@ -1126,6 +1279,7 @@ export default function FundsHub({
               fontSize: '14px',
               fontWeight: 900,
               cursor: 'pointer',
+              boxShadow: '0 6px 18px rgba(0, 229, 255, 0.3)',
             }}
           >
             EXECUTE INTERNAL TRANSFER
@@ -1136,13 +1290,13 @@ export default function FundsHub({
       {/* WITHDRAWAL SUCCESS POPUP MODAL */}
       {withdrawSuccessModal && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(3, 9, 22, 0.88)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }} onClick={() => setWithdrawSuccessModal(null)}>
-          <div style={{ background: '#12181F', border: '1px solid #10B981', borderRadius: '20px', padding: '24px', maxWidth: '400px', width: '100%', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '16px' }} onClick={e => e.stopPropagation()}>
-            <CheckCircle2 size={42} color="#10B981" style={{ margin: '0 auto' }} />
+          <div style={{ background: '#12181F', border: '1px solid #EF4444', borderRadius: '20px', padding: '24px', maxWidth: '400px', width: '100%', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '16px' }} onClick={e => e.stopPropagation()}>
+            <CheckCircle2 size={42} color="#EF4444" style={{ margin: '0 auto' }} />
             <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#FFFFFF', margin: 0 }}>Withdrawal Submitted</h3>
             <p style={{ fontSize: '12.5px', color: '#8B9BB4', margin: 0 }}>
-              Your withdrawal of <strong style={{ color: '#10B981' }}>${withdrawSuccessModal.amount.toFixed(2)} USD</strong> is queued for admin review.
+              Your withdrawal of <strong style={{ color: '#EF4444' }}>${withdrawSuccessModal.amount.toFixed(2)} USD</strong> is queued for admin review.
             </p>
-            <button type="button" onClick={() => setWithdrawSuccessModal(null)} style={{ width: '100%', background: '#10B981', color: '#0B1015', border: 'none', borderRadius: '10px', padding: '12px', fontWeight: 900, fontSize: '13.5px', cursor: 'pointer' }}>
+            <button type="button" onClick={() => setWithdrawSuccessModal(null)} style={{ width: '100%', background: '#EF4444', color: '#FFFFFF', border: 'none', borderRadius: '10px', padding: '12px', fontWeight: 900, fontSize: '13.5px', cursor: 'pointer' }}>
               OK
             </button>
           </div>
