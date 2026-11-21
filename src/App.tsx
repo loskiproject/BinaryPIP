@@ -2418,7 +2418,6 @@ export default function App() {
     })
 
     setModal(null)
-    showNotice(`⏳ Deposit Request Submitted! $${depositAmount.toFixed(2)} on ${network}${refNote}. Status: PENDING Admin Verification.`)
   }
 
   const handleDepositSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -2472,7 +2471,6 @@ export default function App() {
     })
 
     setModal(null)
-    showNotice(`⏳ Deposit Request Submitted! $${depAmount.toFixed(2)} on ${selectedNetwork}. Status: PENDING Admin Verification.`)
   }
 
   const handleFundsWithdrawalRequest = async (withdrawalAmount: number, network: string, destination: string) => {

@@ -543,17 +543,23 @@ export default function FundsHub({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '8px',
-                      background: 'rgba(37, 211, 102, 0.15)',
-                      border: '1px solid rgba(37, 211, 102, 0.4)',
+                    <div style={{
+                      width: '40px',
+                      height: '28px',
+                      borderRadius: '6px',
+                      background: '#FFFFFF',
+                      border: '1px solid #10B981',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '16px',
-                    }}>📱</span>
+                      padding: '2px 4px',
+                      boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)',
+                      flexShrink: 0,
+                    }}>
+                      <span style={{ color: '#00A859', fontWeight: 900, fontSize: '11.5px', fontFamily: 'sans-serif', letterSpacing: '-0.5px' }}>
+                        M-<span style={{ color: '#E11B22' }}>P</span>ESA
+                      </span>
+                    </div>
                     <div>
                       <strong style={{ fontSize: '13.5px', fontWeight: 900, color: '#FFFFFF', display: 'block' }}>M-Pesa Instant</strong>
                       <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 700 }}>Min KES 130</span>
@@ -1185,9 +1191,6 @@ export default function FundsHub({
               onChange={e => setWAmt(e.target.value)}
               style={{ width: '100%', background: '#182029', border: '1px solid #232E3A', borderRadius: '8px', padding: '10px', color: '#FFFFFF', fontFamily: 'monospace', fontWeight: 800, fontSize: '14px', outline: 'none' }}
             />
-            <span style={{ fontSize: '11px', color: '#8B9BB4', marginTop: '4px', display: 'block' }}>
-              Minimum withdrawal: ${minWithdrawalUSD.toFixed(2)} USD
-            </span>
           </div>
 
           <button
