@@ -3129,6 +3129,28 @@ input:focus, select:focus {
   animation: floatBubbleUp 3s cubic-bezier(0.25, 1, 0.5, 1) infinite;
 }
 
+@keyframes ringBubbleEmit {
+  0% {
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1.5);
+    opacity: 0;
+  }
+}
+
+.ring-glowing-bubble {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: ringBubbleEmit 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  box-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+}
+
 
 /* ═══════════════════════════════════════════════════════════════════════════
    NEXSMARKETS — NEON GLOW OVERRIDES

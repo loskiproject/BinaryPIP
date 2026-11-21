@@ -4201,23 +4201,35 @@ export default function App() {
               ) : (
                 <AlertCircle size={36} color="#EF4444" strokeWidth={3} />
               )}
-              {/* Particle Dots Ring */}
-              {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
-                <div
-                  key={`t_dot_${deg}`}
-                  style={{
-                    position: 'absolute',
-                    width: '4px',
-                    height: '4px',
-                    borderRadius: '50%',
-                    background: targetProfitModal.amount >= 0 ? '#10B981' : '#EF4444',
-                    boxShadow: targetProfitModal.amount >= 0 ? '0 0 6px #10B981' : '0 0 6px #EF4444',
-                    top: `${50 + 52 * Math.sin((deg * Math.PI) / 180)}%`,
-                    left: `${50 + 52 * Math.cos((deg * Math.PI) / 180)}%`,
-                    transform: 'translate(-50%, -50%)',
-                  }}
-                />
-              ))}
+              {/* Animated Glowing Ring Bubbles Emanating From Rounded Circle */}
+              {[...Array(16)].map((_, i) => {
+                const angle = (i * 22.5) * (Math.PI / 180)
+                const distance = 42 + (i % 4) * 16
+                const tx = `${(Math.cos(angle) * distance).toFixed(1)}px`
+                const ty = `${(Math.sin(angle) * distance).toFixed(1)}px`
+                const size = 5 + (i % 3) * 3
+                const delay = `${(i * 0.15).toFixed(2)}s`
+                const color = targetProfitModal.amount >= 0 ? (i % 2 === 0 ? '#10B981' : '#00E5FF') : '#EF4444'
+
+                return (
+                  <div
+                    key={`t_ring_bubble_${i}`}
+                    className="ring-glowing-bubble"
+                    style={{
+                      top: '50%',
+                      left: '50%',
+                      width: `${size}px`,
+                      height: `${size}px`,
+                      background: color,
+                      color: color,
+                      '--tx': tx,
+                      '--ty': ty,
+                      animationDelay: delay,
+                      animationDuration: `${2.2 + (i % 3) * 0.4}s`,
+                    } as React.CSSProperties}
+                  />
+                )
+              })}
             </div>
 
             {/* Header Title */}
@@ -4370,23 +4382,35 @@ export default function App() {
               ) : (
                 <AlertCircle size={36} color="#EF4444" strokeWidth={3} />
               )}
-              {/* Particle Dots Ring */}
-              {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
-                <div
-                  key={`m_dot_${deg}`}
-                  style={{
-                    position: 'absolute',
-                    width: '4px',
-                    height: '4px',
-                    borderRadius: '50%',
-                    background: manualCloseModal.amount >= 0 ? '#10B981' : '#EF4444',
-                    boxShadow: manualCloseModal.amount >= 0 ? '0 0 6px #10B981' : '0 0 6px #EF4444',
-                    top: `${50 + 52 * Math.sin((deg * Math.PI) / 180)}%`,
-                    left: `${50 + 52 * Math.cos((deg * Math.PI) / 180)}%`,
-                    transform: 'translate(-50%, -50%)',
-                  }}
-                />
-              ))}
+              {/* Animated Glowing Ring Bubbles Emanating From Rounded Circle */}
+              {[...Array(16)].map((_, i) => {
+                const angle = (i * 22.5) * (Math.PI / 180)
+                const distance = 42 + (i % 4) * 16
+                const tx = `${(Math.cos(angle) * distance).toFixed(1)}px`
+                const ty = `${(Math.sin(angle) * distance).toFixed(1)}px`
+                const size = 5 + (i % 3) * 3
+                const delay = `${(i * 0.15).toFixed(2)}s`
+                const color = manualCloseModal.amount >= 0 ? (i % 2 === 0 ? '#10B981' : '#00E5FF') : '#EF4444'
+
+                return (
+                  <div
+                    key={`m_ring_bubble_${i}`}
+                    className="ring-glowing-bubble"
+                    style={{
+                      top: '50%',
+                      left: '50%',
+                      width: `${size}px`,
+                      height: `${size}px`,
+                      background: color,
+                      color: color,
+                      '--tx': tx,
+                      '--ty': ty,
+                      animationDelay: delay,
+                      animationDuration: `${2.2 + (i % 3) * 0.4}s`,
+                    } as React.CSSProperties}
+                  />
+                )
+              })}
             </div>
 
             {/* Header Title */}
