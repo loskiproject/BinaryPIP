@@ -523,10 +523,10 @@ export default function FundsHub({
           background: '#12181F',
           border: '1px solid #232E3A',
           borderRadius: '16px',
-          padding: '24px',
+          padding: '16px',
           display: 'grid',
           gridTemplateColumns: 'repeat(12, 1fr)',
-          gap: '24px',
+          gap: '20px',
           boxShadow: '0 16px 40px rgba(0, 0, 0, 0.4)',
         }}>
 
@@ -538,7 +538,7 @@ export default function FundsHub({
               <span style={{ fontSize: '11px', fontWeight: 800, color: '#8B9BB4', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'block', marginBottom: '10px' }}>
                 CHOOSE WALLET
               </span>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 {(['main', 'synthetic'] as (keyof WalletBalances)[]).map(k => {
                   const isSel = selectedWallet === k
                   const m = WALLET_META[k]
@@ -552,21 +552,23 @@ export default function FundsHub({
                         background: isSel ? '#182029' : '#0B1015',
                         border: isSel ? '1.5px solid #10B981' : '1px solid #232E3A',
                         borderRadius: '12px',
-                        padding: '14px',
+                        padding: '12px 14px',
                         textAlign: 'left',
                         cursor: 'pointer',
                         display: 'flex',
-                        alignItems: 'center',
+                        flexDirection: 'column',
                         justifyContent: 'space-between',
+                        gap: '8px',
                         boxShadow: isSel ? '0 0 14px rgba(16, 185, 129, 0.2)' : 'none',
                         transition: 'all 0.18s ease',
+                        minHeight: '74px',
                       }}
                     >
-                      <div>
-                        <strong style={{ fontSize: '14px', fontWeight: 900, color: '#FFFFFF', display: 'block' }}>{m.label}</strong>
-                        <span style={{ fontSize: '11px', color: '#8B9BB4' }}>${fmt(wallets[k])} USD</span>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                        <strong style={{ fontSize: '13.5px', fontWeight: 900, color: '#FFFFFF', display: 'block', lineHeight: 1.2 }}>{m.label}</strong>
+                        {isSel && <CheckCircle2 size={18} color="#10B981" style={{ flexShrink: 0 }} />}
                       </div>
-                      {isSel && <CheckCircle2 size={18} color="#10B981" />}
+                      <span style={{ fontSize: '11.5px', color: isSel ? '#10B981' : '#8B9BB4', fontWeight: 700 }}>${fmt(wallets[k])} USD</span>
                     </button>
                   )
                 })}
@@ -578,7 +580,7 @@ export default function FundsHub({
               <span style={{ fontSize: '11px', fontWeight: 800, color: '#8B9BB4', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'block', marginBottom: '10px' }}>
                 DEPOSIT METHOD
               </span>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 {/* M-Pesa Card */}
                 <button
                   type="button"
@@ -587,24 +589,30 @@ export default function FundsHub({
                     background: depositMethod === 'mpesa' ? '#182029' : '#0B1015',
                     border: depositMethod === 'mpesa' ? '1.5px solid #10B981' : '1px solid #232E3A',
                     borderRadius: '12px',
-                    padding: '14px',
+                    padding: '12px 14px',
                     textAlign: 'left',
                     cursor: 'pointer',
                     display: 'flex',
-                    alignItems: 'center',
+                    flexDirection: 'column',
                     justifyContent: 'space-between',
+                    gap: '10px',
                     boxShadow: depositMethod === 'mpesa' ? '0 0 14px rgba(16, 185, 129, 0.2)' : 'none',
                     transition: 'all 0.18s ease',
+                    minHeight: '84px',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <MpesaLogo size="normal" />
-                    <div>
-                      <strong style={{ fontSize: '13.5px', fontWeight: 900, color: '#FFFFFF', display: 'block' }}>M-Pesa Instant</strong>
-                      <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 700 }}>Min KES 130</span>
-                    </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <MpesaLogo size="small" />
+                    {depositMethod === 'mpesa' ? (
+                      <CheckCircle2 size={18} color="#10B981" style={{ flexShrink: 0 }} />
+                    ) : (
+                      <div style={{ width: 18, height: 18 }} />
+                    )}
                   </div>
-                  {depositMethod === 'mpesa' && <CheckCircle2 size={18} color="#10B981" />}
+                  <div>
+                    <strong style={{ fontSize: '13px', fontWeight: 900, color: '#FFFFFF', display: 'block', lineHeight: 1.2 }}>M-Pesa Instant</strong>
+                    <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 700, marginTop: '2px', display: 'block' }}>Min KES 130</span>
+                  </div>
                 </button>
 
                 {/* Crypto Card */}
@@ -615,36 +623,43 @@ export default function FundsHub({
                     background: depositMethod !== 'mpesa' ? '#182029' : '#0B1015',
                     border: depositMethod !== 'mpesa' ? '1.5px solid #10B981' : '1px solid #232E3A',
                     borderRadius: '12px',
-                    padding: '14px',
+                    padding: '12px 14px',
                     textAlign: 'left',
                     cursor: 'pointer',
                     display: 'flex',
-                    alignItems: 'center',
+                    flexDirection: 'column',
                     justifyContent: 'space-between',
+                    gap: '10px',
                     boxShadow: depositMethod !== 'mpesa' ? '0 0 14px rgba(16, 185, 129, 0.2)' : 'none',
                     transition: 'all 0.18s ease',
+                    minHeight: '84px',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                     <span style={{
-                      width: '32px',
-                      height: '32px',
+                      padding: '3px 8px',
                       borderRadius: '8px',
-                      background: 'rgba(247, 147, 26, 0.15)',
-                      border: '1px solid rgba(247, 147, 26, 0.4)',
-                      display: 'flex',
+                      background: 'rgba(247, 147, 26, 0.12)',
+                      border: '1px solid rgba(247, 147, 26, 0.35)',
+                      display: 'inline-flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '16px',
+                      gap: '4px',
+                      fontSize: '11.5px',
                       color: '#F7931A',
                       fontWeight: 900,
-                    }}>₿</span>
-                    <div>
-                      <strong style={{ fontSize: '13.5px', fontWeight: 900, color: '#FFFFFF', display: 'block' }}>Crypto (BTC / USDT)</strong>
-                      <span style={{ fontSize: '11px', color: '#8B9BB4' }}>Min $1 USD</span>
-                    </div>
+                    }}>
+                      <span>₿</span> CRYPTO
+                    </span>
+                    {depositMethod !== 'mpesa' ? (
+                      <CheckCircle2 size={18} color="#10B981" style={{ flexShrink: 0 }} />
+                    ) : (
+                      <div style={{ width: 18, height: 18 }} />
+                    )}
                   </div>
-                  {depositMethod !== 'mpesa' && <CheckCircle2 size={18} color="#10B981" />}
+                  <div>
+                    <strong style={{ fontSize: '13px', fontWeight: 900, color: '#FFFFFF', display: 'block', lineHeight: 1.2 }}>Crypto (BTC / USDT)</strong>
+                    <span style={{ fontSize: '11px', color: '#8B9BB4', marginTop: '2px', display: 'block' }}>Min $1 USD</span>
+                  </div>
                 </button>
               </div>
 
@@ -1022,6 +1037,7 @@ export default function FundsHub({
                   boxShadow: '0 6px 20px rgba(16, 185, 129, 0.35)',
                   transition: 'all 0.18s ease',
                   marginTop: 'auto',
+                  marginBottom: '16px',
                 }}
               >
                 <Smartphone size={18} /> TRIGGER M-PESA STK PUSH 📲
@@ -1047,6 +1063,7 @@ export default function FundsHub({
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
+                  marginBottom: '16px',
                 }}
               >
                 <RefreshCw size={18} className="sa-spin" /> SENDING STK PUSH TO PHONE...
@@ -1074,6 +1091,7 @@ export default function FundsHub({
                   gap: '8px',
                   boxShadow: '0 6px 20px rgba(16, 185, 129, 0.35)',
                   marginTop: 'auto',
+                  marginBottom: '16px',
                 }}
               >
                 <Zap size={16} /> PROCEED TO DEPOSIT
