@@ -868,7 +868,8 @@ export default function App() {
   const [amount, setAmount] = useState('500')
   const [withdrawAmount] = useState('100')
   const [selectedNetwork, setSelectedNetwork] = useState('USDT-TRC20')
-  const [notice, setNotice] = useState('')
+  const [noticeObj, setNoticeObj] = useState<{ text: string; type: 'real' | 'demo' | 'default' } | null>(null)
+  const noticeTimerRef = useRef<number | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
   const searchContainerRef = useRef<HTMLDivElement>(null)
@@ -1310,11 +1311,29 @@ export default function App() {
     }
   }, [])
 
-  // Toast Notification Helper
-  const showNotice = (message: string) => {
-    setNotice(message)
-    window.setTimeout(() => setNotice(''), 4000)
+  // Toast Notification Helper (Single-Line Pill Banner with Auto-Dismiss & Tap Dismiss)
+  const showNotice = (message: string, typeHint?: string) => {
+    if (!message) return
+    let type: 'real' | 'demo' | 'default' = 'default'
+    if (typeHint === 'real' || typeHint === 'demo') {
+      type = typeHint
+    } else if (message.startsWith('Switched to Real') || message.includes('Real Account selected')) {
+      type = 'real'
+    } else if (message.startsWith('Switched to Demo') || message.includes('Demo Account selected')) {
+      type = 'demo'
+    }
+
+    setNoticeObj({ text: message, type })
+
+    if (noticeTimerRef.current) {
+      window.clearTimeout(noticeTimerRef.current)
+    }
+    noticeTimerRef.current = window.setTimeout(() => {
+      setNoticeObj(null)
+    }, 2800)
   }
+
+  const notice = noticeObj?.text || ''
 
   const toggleFullscreen = () => {
     if (!isChartFullscreen) {
@@ -2210,7 +2229,8 @@ export default function App() {
         return
       }
       setAccountType('demo')
-      showNotice(`🟡 Switched to Demo Account: ${demoAccountName}`)
+      const demoFormatted = demoBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      showNotice(`Switched to Demo • $${demoFormatted} USD`, 'demo')
       return
     }
 
@@ -2226,12 +2246,8 @@ export default function App() {
       setAccountType('live')
       setLiveAccountCreated(true)
 
-      if (liveBalance <= 0) {
-        changeView('wallet')
-        showNotice('🟢 Real Account selected ($0.00 balance). Redirecting to Wallet page to make a deposit.')
-      } else {
-        showNotice(`🟢 Switched to Real Account. Balance: $${liveBalance.toFixed(2)}`)
-      }
+      const liveFormatted = liveBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      showNotice(`Switched to Real • $${liveFormatted} USD`, 'real')
       return
     }
 
@@ -7049,7 +7065,73 @@ export default function App() {
         </div>
       )}
 
-      {notice && <div className="toast"><Sparkles size={16} /><span>{notice}</span></div>}
+      {/* GLOBAL TOAST BANNER NOTIFICATION (Single-Line Pill Banner Float Above Mobile Nav) */}
+      {noticeObj && (
+        <div
+          onClick={() => setNoticeObj(null)}
+          style={{
+            position: 'fixed',
+            bottom: '76px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 99999,
+            background: noticeObj.type === 'real'
+              ? 'rgba(9, 17, 24, 0.95)'
+              : noticeObj.type === 'demo'
+              ? 'rgba(18, 14, 8, 0.95)'
+              : 'rgba(9, 15, 25, 0.95)',
+            border: noticeObj.type === 'real'
+              ? '1.5px solid rgba(16, 185, 129, 0.45)'
+              : noticeObj.type === 'demo'
+              ? '1.5px solid rgba(245, 158, 11, 0.45)'
+              : '1.5px solid rgba(0, 229, 255, 0.35)',
+            borderRadius: '9999px',
+            padding: '8px 18px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            whiteSpace: 'nowrap',
+            boxShadow: noticeObj.type === 'real'
+              ? '0 8px 24px rgba(0, 0, 0, 0.8), 0 0 16px rgba(16, 185, 129, 0.25)'
+              : noticeObj.type === 'demo'
+              ? '0 8px 24px rgba(0, 0, 0, 0.8), 0 0 16px rgba(245, 158, 11, 0.25)'
+              : '0 8px 24px rgba(0, 0, 0, 0.8), 0 0 16px rgba(0, 229, 255, 0.2)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            cursor: 'pointer',
+            maxWidth: 'calc(100vw - 32px)',
+            userSelect: 'none',
+            animation: 'fhubPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+          }}
+        >
+          {/* Status Indicator Dot (Green for REAL, Amber for DEMO, Cyan for default) */}
+          <span
+            style={{
+              width: '7px',
+              height: '7px',
+              borderRadius: '50%',
+              background: noticeObj.type === 'real' ? '#10B981' : noticeObj.type === 'demo' ? '#F59E0B' : '#00E5FF',
+              boxShadow: `0 0 8px ${noticeObj.type === 'real' ? '#10B981' : noticeObj.type === 'demo' ? '#F59E0B' : '#00E5FF'}`,
+              display: 'inline-block',
+              flexShrink: 0,
+            }}
+          />
+
+          {/* Single-Line Message Text */}
+          <span
+            style={{
+              fontSize: '12.5px',
+              fontWeight: 800,
+              color: '#FFFFFF',
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              letterSpacing: '-0.1px',
+              lineHeight: 1,
+            }}
+          >
+            {noticeObj.text}
+          </span>
+        </div>
+      )}
 
       <nav className="mobile-bottom-nav" aria-label="Primary">
         {([
