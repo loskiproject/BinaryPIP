@@ -597,24 +597,25 @@ export default function FundsHub({
                     background: depositMethod === 'mpesa' ? '#182029' : '#0B1015',
                     border: depositMethod === 'mpesa' ? '1.5px solid #10B981' : '1px solid #232E3A',
                     borderRadius: '10px',
-                    padding: '8px 12px',
+                    padding: '8px 10px',
                     textAlign: 'left',
                     cursor: 'pointer',
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    gap: '4px',
                     boxShadow: depositMethod === 'mpesa' ? '0 0 12px rgba(16, 185, 129, 0.2)' : 'none',
                     transition: 'all 0.18s ease',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                     <MpesaLogo size="small" />
-                    <div>
-                      <strong style={{ fontSize: '12px', fontWeight: 900, color: '#FFFFFF', display: 'block', lineHeight: 1.1 }}>M-Pesa Instant</strong>
-                      <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 700 }}>Min KES 130</span>
-                    </div>
+                    {depositMethod === 'mpesa' && <CheckCircle2 size={16} color="#10B981" style={{ flexShrink: 0 }} />}
                   </div>
-                  {depositMethod === 'mpesa' && <CheckCircle2 size={16} color="#10B981" style={{ flexShrink: 0 }} />}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '4px' }}>
+                    <strong style={{ fontSize: '12px', fontWeight: 900, color: '#FFFFFF', whiteSpace: 'nowrap' }}>M-Pesa Instant</strong>
+                    <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 700, whiteSpace: 'nowrap' }}>Min 130</span>
+                  </div>
                 </button>
 
                 {/* Crypto Card */}
@@ -625,17 +626,18 @@ export default function FundsHub({
                     background: depositMethod !== 'mpesa' ? '#182029' : '#0B1015',
                     border: depositMethod !== 'mpesa' ? '1.5px solid #10B981' : '1px solid #232E3A',
                     borderRadius: '10px',
-                    padding: '8px 12px',
+                    padding: '8px 10px',
                     textAlign: 'left',
                     cursor: 'pointer',
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    gap: '4px',
                     boxShadow: depositMethod !== 'mpesa' ? '0 0 12px rgba(16, 185, 129, 0.2)' : 'none',
                     transition: 'all 0.18s ease',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                     <span style={{
                       padding: '2px 6px',
                       borderRadius: '6px',
@@ -644,14 +646,18 @@ export default function FundsHub({
                       fontSize: '11px',
                       color: '#F7931A',
                       fontWeight: 900,
-                      flexShrink: 0,
-                    }}>₿</span>
-                    <div>
-                      <strong style={{ fontSize: '12px', fontWeight: 900, color: '#FFFFFF', display: 'block', lineHeight: 1.1 }}>Crypto (BTC/USDT)</strong>
-                      <span style={{ fontSize: '10px', color: '#8B9BB4' }}>Min $1 USD</span>
-                    </div>
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}>
+                      <span>₿</span> CRYPTO
+                    </span>
+                    {depositMethod !== 'mpesa' && <CheckCircle2 size={16} color="#10B981" style={{ flexShrink: 0 }} />}
                   </div>
-                  {depositMethod !== 'mpesa' && <CheckCircle2 size={16} color="#10B981" style={{ flexShrink: 0 }} />}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '4px' }}>
+                    <strong style={{ fontSize: '12px', fontWeight: 900, color: '#FFFFFF', whiteSpace: 'nowrap' }}>BTC / USDT</strong>
+                    <span style={{ fontSize: '10px', color: '#8B9BB4', fontWeight: 700, whiteSpace: 'nowrap' }}>Min $1</span>
+                  </div>
                 </button>
               </div>
 
@@ -774,75 +780,72 @@ export default function FundsHub({
 
             {/* M-PESA PAYMENT FORM */}
             {depositMethod === 'mpesa' && stkStep === 'form' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {/* Phone & Amount 2-Column Inputs Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  {/* Phone Input */}
-                  <div>
-                    <label style={{ fontSize: '10.5px', fontWeight: 800, color: '#8B9BB4', textTransform: 'uppercase', letterSpacing: '0.6px', display: 'block', marginBottom: '5px' }}>
-                      PHONE NUMBER
-                    </label>
-                    <div style={{ display: 'flex', alignItems: 'center', background: '#182029', border: '1.5px solid #232E3A', borderRadius: '10px', padding: '8px 10px', transition: 'border-color 0.15s ease' }}>
-                      <span style={{ fontSize: '13px', fontWeight: 900, color: '#10B981', paddingRight: '6px', flexShrink: 0 }}>🇰🇪 +254</span>
-                      <input
-                        type="tel"
-                        placeholder="0712 345 678"
-                        value={mpPhone}
-                        onChange={e => setMpPhone(e.target.value)}
-                        style={{
-                          width: '100%',
-                          background: 'transparent',
-                          border: 'none',
-                          outline: 'none',
-                          color: '#FFFFFF',
-                          fontFamily: 'monospace',
-                          fontSize: '15px',
-                          fontWeight: 900,
-                          letterSpacing: '0.5px',
-                          padding: '0',
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* KES Amount Input */}
-                  <div>
-                    <label style={{ fontSize: '10.5px', fontWeight: 800, color: '#8B9BB4', textTransform: 'uppercase', letterSpacing: '0.6px', display: 'block', marginBottom: '5px' }}>
-                      AMOUNT (KES)
-                    </label>
-                    <div style={{ display: 'flex', alignItems: 'center', background: '#182029', border: '1.5px solid #232E3A', borderRadius: '10px', padding: '8px 10px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 900, color: '#10B981', paddingRight: '6px', flexShrink: 0 }}>KES</span>
-                      <input
-                        type="number"
-                        min={minDepositKES}
-                        placeholder="130"
-                        value={mpKes}
-                        onChange={e => setMpKes(e.target.value)}
-                        style={{
-                          width: '100%',
-                          background: 'transparent',
-                          border: 'none',
-                          outline: 'none',
-                          color: '#FFFFFF',
-                          fontFamily: 'monospace',
-                          fontSize: '15px',
-                          fontWeight: 900,
-                          letterSpacing: '0.5px',
-                          padding: '0',
-                        }}
-                      />
-                    </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {/* Phone Input (Spacious & Full-Width to show full entered number) */}
+                <div>
+                  <label style={{ fontSize: '10.5px', fontWeight: 800, color: '#8B9BB4', textTransform: 'uppercase', letterSpacing: '0.6px', display: 'block', marginBottom: '5px' }}>
+                    PHONE NUMBER
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', background: '#182029', border: '1.5px solid #232E3A', borderRadius: '10px', padding: '10px 12px' }}>
+                    <span style={{ fontSize: '13.5px', fontWeight: 900, color: '#10B981', paddingRight: '8px', flexShrink: 0 }}>🇰🇪 +254</span>
+                    <input
+                      type="tel"
+                      placeholder="0712 345 678"
+                      value={mpPhone}
+                      onChange={e => setMpPhone(e.target.value)}
+                      style={{
+                        width: '100%',
+                        background: 'transparent',
+                        border: 'none',
+                        outline: 'none',
+                        color: '#FFFFFF',
+                        fontFamily: 'monospace',
+                        fontSize: '16px',
+                        fontWeight: 900,
+                        letterSpacing: '1px',
+                        padding: '0',
+                      }}
+                    />
                   </div>
                 </div>
 
-                {/* Live USD Readout */}
-                <div style={{ fontSize: '11px', color: '#10B981', fontWeight: 800, fontFamily: 'monospace', textAlign: 'right' }}>
-                  ≈ ${currentUsdEquivalent.toFixed(2)} USD • Min KES {minDepositKES.toLocaleString()}
+                {/* KES Amount Input & Conversion */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                    <label style={{ fontSize: '10.5px', fontWeight: 800, color: '#8B9BB4', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                      AMOUNT (KES)
+                    </label>
+                    <span style={{ fontSize: '10.5px', color: '#10B981', fontWeight: 800, fontFamily: 'monospace' }}>
+                      ≈ ${currentUsdEquivalent.toFixed(2)} USD • Min KES {minDepositKES.toLocaleString()}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', background: '#182029', border: '1.5px solid #232E3A', borderRadius: '10px', padding: '10px 12px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 900, color: '#10B981', paddingRight: '8px', flexShrink: 0 }}>KES</span>
+                    <input
+                      type="number"
+                      min={minDepositKES}
+                      placeholder="130"
+                      value={mpKes}
+                      onChange={e => setMpKes(e.target.value)}
+                      style={{
+                        width: '100%',
+                        background: 'transparent',
+                        border: 'none',
+                        outline: 'none',
+                        color: '#FFFFFF',
+                        fontFamily: 'monospace',
+                        fontSize: '16px',
+                        fontWeight: 900,
+                        letterSpacing: '1px',
+                        padding: '0',
+                      }}
+                    />
+                  </div>
                 </div>
 
                 {/* Live Transaction Review Summary Box */}
-                <div style={{ background: '#182029', border: '1px solid #232E3A', borderRadius: '12px', padding: '12px 14px', fontSize: '12px', color: '#8B9BB4', lineHeight: 1.5 }}>
-                  <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#10B981', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+                <div style={{ background: '#182029', border: '1px solid #232E3A', borderRadius: '10px', padding: '10px 12px', fontSize: '11.5px', color: '#8B9BB4', lineHeight: 1.4 }}>
+                  <span style={{ fontSize: '10px', fontWeight: 800, color: '#10B981', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }}>
                     REVIEW SELECTIONS
                   </span>
                   Depositing <strong style={{ color: '#FFFFFF' }}>KES {(parseFloat(mpKes) || 130).toLocaleString()}</strong> (≈ <strong style={{ color: '#10B981' }}>${currentUsdEquivalent.toFixed(2)} USD</strong>) to <strong style={{ color: '#FFFFFF' }}>{WALLET_META[selectedWallet].label}</strong> via <strong style={{ color: '#10B981' }}>M-Pesa</strong>.
