@@ -872,6 +872,8 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
   const searchContainerRef = useRef<HTMLDivElement>(null)
+  const [accountDropdownOpen, setAccountDropdownOpen] = useState(false)
+  const accountDropdownRef = useRef<HTMLDivElement>(null)
   const [_authMode, setAuthMode] = useState<AuthMode>('login')
   const [_showLoginPassword, setShowLoginPassword] = useState(false)
   const [loginForm, setLoginForm] = useState<LoginForm>(initialLoginForm)
@@ -918,11 +920,14 @@ export default function App() {
   // KYC prompt — show once per session if user has no submitted documents
   const [kycPromptDismissed, setKycPromptDismissed] = useState(false)
 
-  // Close search popover on click outside
+  // Close search popover and account dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
         setSearchFocused(false)
+      }
+      if (accountDropdownRef.current && !accountDropdownRef.current.contains(e.target as Node)) {
+        setAccountDropdownOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -6265,21 +6270,28 @@ export default function App() {
             </div>
 
             <div className="topbar-actions" style={{ flex: 'none', width: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {/* Pro Trading Terminal Account Selector Pill Button */}
-              <div className="pro-account-pill-wrap" style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+              {/* Pro Trading Terminal Account Selector Pill Button & Anchored Custom Dropdown */}
+              <div
+                className="pro-account-pill-wrap"
+                ref={accountDropdownRef}
+                style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
+              >
+                {/* Trigger Pill Button */}
                 <div
                   className={`pro-account-pill ${accountType === 'live' ? 'pro-pill-live' : 'pro-pill-demo'}`}
+                  onClick={() => setAccountDropdownOpen(prev => !prev)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '7px',
-                    padding: '5px 10px',
+                    padding: '6px 11px',
                     borderRadius: '9px',
                     background: '#090e17',
-                    border: `1px solid ${accountType === 'live' ? '#10b981' : '#f59e0b'}`,
+                    border: `1.5px solid ${accountType === 'live' ? '#10b981' : '#f59e0b'}`,
                     cursor: 'pointer',
-                    boxShadow: accountType === 'live' ? '0 0 10px rgba(16, 185, 129, 0.25)' : '0 0 10px rgba(245, 158, 11, 0.25)',
+                    boxShadow: accountType === 'live' ? '0 0 12px rgba(16, 185, 129, 0.25)' : '0 0 12px rgba(245, 158, 11, 0.25)',
                     transition: 'all 0.2s ease',
+                    userSelect: 'none',
                   }}
                 >
                   {/* Flat Glowing Status Dot */}
@@ -6317,26 +6329,162 @@ export default function App() {
                   </span>
 
                   {/* Dropdown Chevron Arrow */}
-                  <ChevronDown size={13} color="#94a3b8" style={{ marginLeft: '2px' }} />
+                  <ChevronDown
+                    size={13}
+                    color="#94a3b8"
+                    style={{
+                      marginLeft: '2px',
+                      transform: accountDropdownOpen ? 'rotate(180deg)' : 'none',
+                      transition: 'transform 0.2s ease',
+                    }}
+                  />
                 </div>
 
-                {/* Invisible native select overlay for dropdown selection */}
-                <select
-                  value={accountType === 'none' ? 'live' : accountType}
-                  onChange={(e) => handleAccountSelectChange(e.target.value as AccountType)}
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    opacity: 0,
-                    cursor: 'pointer',
-                    width: '100%',
-                    height: '100%',
-                    zIndex: 2,
-                  }}
-                >
-                  <option value="live">REAL — ${(liveBalance).toFixed(2)} USD</option>
-                  <option value="demo">DEMO — ${(demoBalance).toFixed(2)} USD</option>
-                </select>
+                {/* Anchored Custom Dropdown Popover */}
+                {accountDropdownOpen && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 6px)',
+                      right: 0,
+                      minWidth: '230px',
+                      background: '#0B141E',
+                      border: '1.5px solid rgba(16, 185, 129, 0.35)',
+                      borderRadius: '14px',
+                      padding: '8px',
+                      boxShadow: '0 16px 36px rgba(0, 0, 0, 0.85), 0 0 20px rgba(16, 185, 129, 0.15)',
+                      zIndex: 9999,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px',
+                      animation: 'fhubPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                    }}
+                  >
+                    {/* Option 1: REAL ACCOUNT */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleAccountSelectChange('live')
+                        setAccountDropdownOpen(false)
+                      }}
+                      style={{
+                        background: accountType === 'live' ? 'rgba(16, 185, 129, 0.15)' : '#121A24',
+                        border: accountType === 'live' ? '1.5px solid #10b981' : '1px solid #232E3A',
+                        borderRadius: '10px',
+                        padding: '10px 12px',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        transition: 'all 0.15s ease',
+                        width: '100%',
+                      }}
+                    >
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span
+                            style={{
+                              width: '7px',
+                              height: '7px',
+                              borderRadius: '50%',
+                              background: '#10b981',
+                              boxShadow: '0 0 8px #10b981',
+                              display: 'inline-block',
+                            }}
+                          />
+                          <span
+                            style={{
+                              fontSize: '10.5px',
+                              fontWeight: 900,
+                              letterSpacing: '0.8px',
+                              color: '#10b981',
+                              background: 'rgba(16, 185, 129, 0.15)',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                            }}
+                          >
+                            REAL
+                          </span>
+                          <span style={{ fontSize: '12px', fontWeight: 800, color: '#FFFFFF' }}>Real Account</span>
+                        </div>
+                        <span style={{ fontSize: '13px', fontWeight: 900, fontFamily: 'monospace', color: '#10b981', paddingLeft: '13px' }}>
+                          ${liveBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', paddingLeft: '8px' }}>
+                        {accountType === 'live' ? (
+                          <CheckCircle2 size={18} color="#10b981" />
+                        ) : (
+                          <div style={{ width: 16, height: 16, borderRadius: '50%', border: '1.5px solid #232E3A' }} />
+                        )}
+                      </div>
+                    </button>
+
+                    {/* Option 2: DEMO ACCOUNT */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleAccountSelectChange('demo')
+                        setAccountDropdownOpen(false)
+                      }}
+                      style={{
+                        background: accountType === 'demo' ? 'rgba(245, 158, 11, 0.15)' : '#121A24',
+                        border: accountType === 'demo' ? '1.5px solid #f59e0b' : '1px solid #232E3A',
+                        borderRadius: '10px',
+                        padding: '10px 12px',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        transition: 'all 0.15s ease',
+                        width: '100%',
+                      }}
+                    >
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span
+                            style={{
+                              width: '7px',
+                              height: '7px',
+                              borderRadius: '50%',
+                              background: '#f59e0b',
+                              boxShadow: '0 0 8px #f59e0b',
+                              display: 'inline-block',
+                            }}
+                          />
+                          <span
+                            style={{
+                              fontSize: '10.5px',
+                              fontWeight: 900,
+                              letterSpacing: '0.8px',
+                              color: '#f59e0b',
+                              background: 'rgba(245, 158, 11, 0.15)',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                            }}
+                          >
+                            DEMO
+                          </span>
+                          <span style={{ fontSize: '12px', fontWeight: 800, color: '#FFFFFF' }}>
+                            {demoAccountName || 'Demo Account'}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '13px', fontWeight: 900, fontFamily: 'monospace', color: '#f59e0b', paddingLeft: '13px' }}>
+                          ${demoBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', paddingLeft: '8px' }}>
+                        {accountType === 'demo' ? (
+                          <CheckCircle2 size={18} color="#f59e0b" />
+                        ) : (
+                          <div style={{ width: 16, height: 16, borderRadius: '50%', border: '1.5px solid #232E3A' }} />
+                        )}
+                      </div>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {accountType === 'demo' && demoAccountName ? (
