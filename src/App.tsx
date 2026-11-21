@@ -4124,286 +4124,341 @@ export default function App() {
         )}
       </div>
 
-      {/* TARGET PROFIT REACHED POPUP MODAL */}
+      {/* TARGET PROFIT REACHED POPUP MODAL (Redesigned to Match Exact Screenshot Spec) */}
       {targetProfitModal && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 99999,
-          background: 'rgba(3, 9, 22, 0.88)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '16px',
-        }} onClick={() => setTargetProfitModal(null)}>
-          <div style={{
-            background: '#071326',
-            border: targetProfitModal.amount >= 0 ? '1px solid rgba(32, 235, 90, 0.5)' : '1px solid rgba(255, 77, 77, 0.5)',
-            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 35px rgba(0, 229, 255, 0.2)',
-            borderRadius: '24px',
-            padding: '36px 28px 28px',
-            maxWidth: '430px',
-            width: '100%',
-            textAlign: 'center',
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            background: 'rgba(3, 8, 18, 0.88)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
-            gap: '20px',
-            position: 'relative',
-            overflow: 'hidden',
-            animation: 'fhubPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-          }} onClick={e => e.stopPropagation()}>
-
-            {/* CONGRATULATORY FLOATING BUBBLES */}
-            {targetProfitModal.amount >= 0 && (
-              <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', borderRadius: '24px' }}>
-                {[...Array(12)].map((_, i) => (
-                  <div
-                    key={`profit_bubble_${i}`}
-                    className="fhub-bubble"
-                    style={{
-                      left: `${6 + (i * 8)}%`,
-                      bottom: '-20px',
-                      width: `${12 + (i % 5) * 6}px`,
-                      height: `${12 + (i % 5) * 6}px`,
-                      background: i % 2 === 0
-                        ? 'radial-gradient(circle, rgba(32, 235, 90, 0.8) 0%, rgba(32, 235, 90, 0) 70%)'
-                        : 'radial-gradient(circle, rgba(0, 229, 255, 0.8) 0%, rgba(0, 229, 255, 0) 70%)',
-                      animationDelay: `${(i * 0.22).toFixed(2)}s`,
-                      animationDuration: `${2.2 + (i % 3) * 0.5}s`,
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-
-            <div style={{
-              width: '68px',
-              height: '68px',
-              borderRadius: '50%',
-              background: targetProfitModal.amount >= 0 ? 'radial-gradient(circle, rgba(32,235,90,0.25) 0%, rgba(7,19,38,0.95) 100%)' : 'radial-gradient(circle, rgba(255,77,77,0.25) 0%, rgba(7,19,38,0.95) 100%)',
-              border: targetProfitModal.amount >= 0 ? '1.5px solid #20eb5a' : '1.5px solid #ff4d4d',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+          onClick={() => setTargetProfitModal(null)}
+        >
+          <div
+            style={{
+              background: 'linear-gradient(180deg, #0b1520 0%, #060d16 100%)',
+              border: targetProfitModal.amount >= 0 ? '1.5px solid #10B981' : '1.5px solid #EF4444',
+              borderRadius: '28px',
+              padding: '32px 24px 28px',
+              maxWidth: '380px',
+              width: '100%',
+              textAlign: 'center',
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'center',
-              color: targetProfitModal.amount >= 0 ? '#20eb5a' : '#ff4d4d',
-              boxShadow: targetProfitModal.amount >= 0 ? '0 0 24px rgba(32,235,90,0.35)' : '0 0 24px rgba(255,77,77,0.35)',
-            }}>
-              <Target size={32} />
+              gap: '18px',
+              position: 'relative',
+              boxShadow: targetProfitModal.amount >= 0 ? '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px rgba(16, 185, 129, 0.2)' : '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px rgba(239, 68, 68, 0.2)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Top Right Close X Button */}
+            <button
+              type="button"
+              onClick={() => setTargetProfitModal(null)}
+              style={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                background: 'transparent',
+                border: 'none',
+                color: '#8B9BB4',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '4px',
+              }}
+            >
+              <X size={20} />
+            </button>
+
+            {/* Glowing Ring with Checkmark & Particle Dots */}
+            <div
+              style={{
+                width: '80px',
+                height: '80px',
+                borderRadius: '50%',
+                border: targetProfitModal.amount >= 0 ? '2px solid #10B981' : '2px solid #EF4444',
+                background: targetProfitModal.amount >= 0 ? 'radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.02) 70%)' : 'radial-gradient(circle, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.02) 70%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: targetProfitModal.amount >= 0 ? '0 0 25px rgba(16, 185, 129, 0.45), inset 0 0 15px rgba(16, 185, 129, 0.25)' : '0 0 25px rgba(239, 68, 68, 0.45), inset 0 0 15px rgba(239, 68, 68, 0.25)',
+                margin: '0 auto',
+                position: 'relative',
+              }}
+            >
+              {targetProfitModal.amount >= 0 ? (
+                <Check size={36} color="#10B981" strokeWidth={3} />
+              ) : (
+                <AlertCircle size={36} color="#EF4444" strokeWidth={3} />
+              )}
+              {/* Particle Dots Ring */}
+              {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
+                <div
+                  key={`t_dot_${deg}`}
+                  style={{
+                    position: 'absolute',
+                    width: '4px',
+                    height: '4px',
+                    borderRadius: '50%',
+                    background: targetProfitModal.amount >= 0 ? '#10B981' : '#EF4444',
+                    boxShadow: targetProfitModal.amount >= 0 ? '0 0 6px #10B981' : '0 0 6px #EF4444',
+                    top: `${50 + 52 * Math.sin((deg * Math.PI) / 180)}%`,
+                    left: `${50 + 52 * Math.cos((deg * Math.PI) / 180)}%`,
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                />
+              ))}
             </div>
 
-            <div style={{
-              fontSize: '13px',
-              fontWeight: 800,
-              color: targetProfitModal.amount >= 0 ? '#20eb5a' : '#ff4d4d',
-              letterSpacing: '0.8px',
-              textTransform: 'uppercase',
-            }}>
-              {targetProfitModal.amount >= 0 ? '🎉 TARGET PROFIT HITTED!' : '⚠️ TARGET PROFIT / STOP SETTLED'}
-            </div>
+            {/* Header Title */}
+            <h4
+              style={{
+                fontSize: '14px',
+                fontWeight: 900,
+                color: targetProfitModal.amount >= 0 ? '#10B981' : '#EF4444',
+                letterSpacing: '1px',
+                textTransform: 'uppercase',
+                textShadow: targetProfitModal.amount >= 0 ? '0 0 12px rgba(16, 185, 129, 0.5)' : '0 0 12px rgba(239, 68, 68, 0.5)',
+                margin: 0,
+              }}
+            >
+              {targetProfitModal.amount >= 0 ? 'TRADE SUCCESSFULLY CLOSED' : 'TRADE CLOSED WITH LOSS'}
+            </h4>
 
-            <div style={{
-              fontSize: '34px',
-              fontWeight: 900,
-              color: '#ffffff',
-              fontFamily: 'system-ui, -apple-system, sans-serif',
-              letterSpacing: '-0.5px',
-              marginTop: '-6px',
-            }}>
+            {/* Amount */}
+            <div
+              style={{
+                fontSize: '36px',
+                fontWeight: 900,
+                color: '#FFFFFF',
+                letterSpacing: '-0.5px',
+                margin: '-4px 0 0 0',
+                textShadow: '0 0 20px rgba(255, 255, 255, 0.3)',
+              }}
+            >
               {targetProfitModal.amount >= 0 ? `+$${targetProfitModal.amount.toFixed(2)}` : `-$${Math.abs(targetProfitModal.amount).toFixed(2)}`} USD
             </div>
 
-            <div style={{
-              background: 'rgba(3, 20, 42, 0.75)',
-              border: '1px solid rgba(0, 229, 255, 0.25)',
-              borderRadius: '14px',
-              padding: '16px 18px',
-              textAlign: 'left',
-              width: '100%',
-            }}>
-              <div style={{
-                fontSize: '13px',
-                fontWeight: 700,
-                color: '#00e5ff',
-                marginBottom: '6px',
-              }}>
+            {/* Inner Details Box */}
+            <div
+              style={{
+                width: '100%',
+                background: 'rgba(18, 30, 48, 0.75)',
+                border: '1px solid rgba(0, 229, 255, 0.2)',
+                borderRadius: '16px',
+                padding: '16px 18px',
+                textAlign: 'left',
+              }}
+            >
+              <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#00E5FF', marginBottom: '6px' }}>
                 Target Auto-Close Guard Executed
               </div>
-              <p style={{
-                fontSize: '12px',
-                color: '#a0aec0',
-                lineHeight: 1.5,
-                margin: 0,
-              }}>
-                Your target profit threshold of <strong>${targetProfitInput} USD</strong> was reached. All running trades were automatically closed and net P&amp;L settled into your wallet.
+              <p style={{ fontSize: '12.5px', color: '#94A3B8', lineHeight: 1.5, margin: 0 }}>
+                Target profit threshold of <strong>${targetProfitInput} USD</strong> was reached. Positions successfully closed with realized profit of +${targetProfitModal.amount.toFixed(2)} USD.
               </p>
             </div>
 
+            {/* Action Pill Button */}
             <button
               type="button"
               onClick={() => setTargetProfitModal(null)}
               style={{
                 width: '100%',
-                background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)',
-                color: '#ffffff',
+                background: 'linear-gradient(135deg, #0284C7 0%, #06B6D4 100%)',
+                color: '#FFFFFF',
                 border: 'none',
-                borderRadius: '12px',
+                borderRadius: '9999px',
                 padding: '14px',
+                fontWeight: 900,
                 fontSize: '15px',
-                fontWeight: 800,
+                letterSpacing: '1px',
                 cursor: 'pointer',
-                boxShadow: '0 8px 22px rgba(0, 180, 216, 0.4)',
+                boxShadow: '0 6px 20px rgba(2, 132, 199, 0.45)',
+                transition: 'transform 0.15s ease',
               }}
             >
-              OK
+              DONE
             </button>
           </div>
         </div>
       )}
 
-      {/* MANUAL CLOSE TRADE RESULT POPUP BANNER MODAL */}
+      {/* MANUAL CLOSE TRADE RESULT POPUP MODAL (Redesigned to Match Exact Screenshot Spec) */}
       {manualCloseModal && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 99999,
-          background: 'rgba(3, 9, 22, 0.88)',
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '16px',
-        }} onClick={() => setManualCloseModal(null)}>
-          <div style={{
-            background: '#071326',
-            border: manualCloseModal.amount >= 0 ? '1px solid rgba(32, 235, 90, 0.5)' : '1px solid rgba(255, 77, 77, 0.5)',
-            boxShadow: manualCloseModal.amount >= 0 ? '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 35px rgba(32, 235, 90, 0.25)' : '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 35px rgba(255, 77, 77, 0.25)',
-            borderRadius: '24px',
-            padding: '36px 28px 28px',
-            maxWidth: '430px',
-            width: '100%',
-            textAlign: 'center',
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            background: 'rgba(3, 8, 18, 0.88)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
-            gap: '20px',
-            position: 'relative',
-            overflow: 'hidden',
-            animation: 'fhubPopIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-          }} onClick={e => e.stopPropagation()}>
-
-            {/* CONGRATULATORY FLOATING BUBBLES */}
-            {manualCloseModal.amount >= 0 && (
-              <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', borderRadius: '24px' }}>
-                {[...Array(12)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="fhub-bubble"
-                    style={{
-                      left: `${6 + (i * 8)}%`,
-                      bottom: '-20px',
-                      width: `${12 + (i % 5) * 6}px`,
-                      height: `${12 + (i % 5) * 6}px`,
-                      background: i % 2 === 0
-                        ? 'radial-gradient(circle, rgba(32, 235, 90, 0.8) 0%, rgba(32, 235, 90, 0) 70%)'
-                        : 'radial-gradient(circle, rgba(0, 229, 255, 0.8) 0%, rgba(0, 229, 255, 0) 70%)',
-                      animationDelay: `${(i * 0.22).toFixed(2)}s`,
-                      animationDuration: `${2.2 + (i % 3) * 0.5}s`,
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Top Icon Badge */}
-            <div style={{
-              width: '68px',
-              height: '68px',
-              borderRadius: '50%',
-              background: manualCloseModal.amount >= 0 ? 'radial-gradient(circle, rgba(32,235,90,0.25) 0%, rgba(7,19,38,0.95) 100%)' : 'radial-gradient(circle, rgba(255,77,77,0.25) 0%, rgba(7,19,38,0.95) 100%)',
-              border: manualCloseModal.amount >= 0 ? '1.5px solid #20eb5a' : '1.5px solid #ff4d4d',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+          onClick={() => setManualCloseModal(null)}
+        >
+          <div
+            style={{
+              background: 'linear-gradient(180deg, #0b1520 0%, #060d16 100%)',
+              border: manualCloseModal.amount >= 0 ? '1.5px solid #10B981' : '1.5px solid #EF4444',
+              borderRadius: '28px',
+              padding: '32px 24px 28px',
+              maxWidth: '380px',
+              width: '100%',
+              textAlign: 'center',
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'center',
-              color: manualCloseModal.amount >= 0 ? '#20eb5a' : '#ff4d4d',
-              boxShadow: manualCloseModal.amount >= 0 ? '0 0 24px rgba(32,235,90,0.35)' : '0 0 24px rgba(255,77,77,0.35)',
-            }}>
-              {manualCloseModal.amount >= 0 ? <CheckCircle2 size={34} /> : <AlertCircle size={34} />}
+              gap: '18px',
+              position: 'relative',
+              boxShadow: manualCloseModal.amount >= 0 ? '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px rgba(16, 185, 129, 0.2)' : '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px rgba(239, 68, 68, 0.2)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Top Right Close X Button */}
+            <button
+              type="button"
+              onClick={() => setManualCloseModal(null)}
+              style={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                background: 'transparent',
+                border: 'none',
+                color: '#8B9BB4',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '4px',
+              }}
+            >
+              <X size={20} />
+            </button>
+
+            {/* Glowing Ring with Checkmark & Particle Dots */}
+            <div
+              style={{
+                width: '80px',
+                height: '80px',
+                borderRadius: '50%',
+                border: manualCloseModal.amount >= 0 ? '2px solid #10B981' : '2px solid #EF4444',
+                background: manualCloseModal.amount >= 0 ? 'radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.02) 70%)' : 'radial-gradient(circle, rgba(239, 68, 68, 0.2) 0%, rgba(239, 68, 68, 0.02) 70%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: manualCloseModal.amount >= 0 ? '0 0 25px rgba(16, 185, 129, 0.45), inset 0 0 15px rgba(16, 185, 129, 0.25)' : '0 0 25px rgba(239, 68, 68, 0.45), inset 0 0 15px rgba(239, 68, 68, 0.25)',
+                margin: '0 auto',
+                position: 'relative',
+              }}
+            >
+              {manualCloseModal.amount >= 0 ? (
+                <Check size={36} color="#10B981" strokeWidth={3} />
+              ) : (
+                <AlertCircle size={36} color="#EF4444" strokeWidth={3} />
+              )}
+              {/* Particle Dots Ring */}
+              {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
+                <div
+                  key={`m_dot_${deg}`}
+                  style={{
+                    position: 'absolute',
+                    width: '4px',
+                    height: '4px',
+                    borderRadius: '50%',
+                    background: manualCloseModal.amount >= 0 ? '#10B981' : '#EF4444',
+                    boxShadow: manualCloseModal.amount >= 0 ? '0 0 6px #10B981' : '0 0 6px #EF4444',
+                    top: `${50 + 52 * Math.sin((deg * Math.PI) / 180)}%`,
+                    left: `${50 + 52 * Math.cos((deg * Math.PI) / 180)}%`,
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                />
+              ))}
             </div>
 
-            {/* Banner Kicker */}
-            <div style={{
-              fontSize: '13px',
-              fontWeight: 800,
-              color: manualCloseModal.amount >= 0 ? '#20eb5a' : '#ff4d4d',
-              letterSpacing: '0.8px',
-              textTransform: 'uppercase',
-            }}>
-              {manualCloseModal.amount >= 0 ? '🎉 TRADE CLOSED WITH PROFIT!' : '⚠️ TRADE CLOSED WITH LOSS'}
-            </div>
+            {/* Header Title */}
+            <h4
+              style={{
+                fontSize: '14px',
+                fontWeight: 900,
+                color: manualCloseModal.amount >= 0 ? '#10B981' : '#EF4444',
+                letterSpacing: '1px',
+                textTransform: 'uppercase',
+                textShadow: manualCloseModal.amount >= 0 ? '0 0 12px rgba(16, 185, 129, 0.5)' : '0 0 12px rgba(239, 68, 68, 0.5)',
+                margin: 0,
+              }}
+            >
+              {manualCloseModal.amount >= 0 ? 'TRADE SUCCESSFULLY CLOSED' : 'TRADE CLOSED WITH LOSS'}
+            </h4>
 
             {/* Amount */}
-            <div style={{
-              fontSize: '34px',
-              fontWeight: 900,
-              color: '#ffffff',
-              fontFamily: 'system-ui, -apple-system, sans-serif',
-              letterSpacing: '-0.5px',
-              marginTop: '-6px',
-            }}>
+            <div
+              style={{
+                fontSize: '36px',
+                fontWeight: 900,
+                color: '#FFFFFF',
+                letterSpacing: '-0.5px',
+                margin: '-4px 0 0 0',
+                textShadow: '0 0 20px rgba(255, 255, 255, 0.3)',
+              }}
+            >
               {manualCloseModal.amount >= 0 ? `+$${manualCloseModal.amount.toFixed(2)}` : `-$${Math.abs(manualCloseModal.amount).toFixed(2)}`} USD
             </div>
 
-            {/* Details Box */}
-            <div style={{
-              background: 'rgba(3, 20, 42, 0.75)',
-              border: '1px solid rgba(0, 229, 255, 0.25)',
-              borderRadius: '14px',
-              padding: '16px 18px',
-              textAlign: 'left',
-              width: '100%',
-            }}>
-              <div style={{
-                fontSize: '13px',
-                fontWeight: 700,
-                color: '#00e5ff',
-                marginBottom: '6px',
-              }}>
+            {/* Inner Details Box */}
+            <div
+              style={{
+                width: '100%',
+                background: 'rgba(18, 30, 48, 0.75)',
+                border: '1px solid rgba(0, 229, 255, 0.2)',
+                borderRadius: '16px',
+                padding: '16px 18px',
+                textAlign: 'left',
+              }}
+            >
+              <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#00E5FF', marginBottom: '6px' }}>
                 Manual Trade Settlement Confirmed
               </div>
-              <p style={{
-                fontSize: '12px',
-                color: '#a0aec0',
-                lineHeight: 1.5,
-                margin: 0,
-              }}>
+              <p style={{ fontSize: '12.5px', color: '#94A3B8', lineHeight: 1.5, margin: 0 }}>
                 {manualCloseModal.count > 1
                   ? `Successfully closed all ${manualCloseModal.count} running positions with net realized P&L of ${manualCloseModal.amount >= 0 ? '+' : ''}$${manualCloseModal.amount.toFixed(2)} USD.`
-                  : `Position ${manualCloseModal.posId ? '#' + manualCloseModal.posId : ''} (${manualCloseModal.symbol || 'Trade'}) successfully closed with ${manualCloseModal.amount >= 0 ? 'realized profit' : 'net loss'} of ${manualCloseModal.amount >= 0 ? '+' : ''}$${manualCloseModal.amount.toFixed(2)} USD.`}
+                  : `Position (${manualCloseModal.count}) successfully closed with a realized profit of ${manualCloseModal.amount >= 0 ? '+' : ''}$${manualCloseModal.amount.toFixed(2)} USD.`}
               </p>
             </div>
 
-            {/* OK Button */}
+            {/* Action Pill Button */}
             <button
               type="button"
               onClick={() => setManualCloseModal(null)}
               style={{
                 width: '100%',
-                background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)',
-                color: '#ffffff',
+                background: 'linear-gradient(135deg, #0284C7 0%, #06B6D4 100%)',
+                color: '#FFFFFF',
                 border: 'none',
-                borderRadius: '12px',
+                borderRadius: '9999px',
                 padding: '14px',
+                fontWeight: 900,
                 fontSize: '15px',
-                fontWeight: 800,
+                letterSpacing: '1px',
                 cursor: 'pointer',
-                boxShadow: '0 8px 22px rgba(0, 180, 216, 0.4)',
+                boxShadow: '0 6px 20px rgba(2, 132, 199, 0.45)',
+                transition: 'transform 0.15s ease',
               }}
             >
-              OK
+              DONE
             </button>
           </div>
         </div>
