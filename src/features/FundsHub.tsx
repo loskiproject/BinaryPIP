@@ -4,8 +4,49 @@ import {
   ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight,
   Copy, CheckCircle2, Check, AlertCircle, Smartphone,
   DollarSign, RefreshCw, ChevronDown, EyeOff, Eye,
-  Zap, Sparkles, Wallet, Upload, X, ShieldCheck
+  Zap, Sparkles, Wallet, Upload, X, ShieldCheck, Clock
 } from 'lucide-react'
+
+export function MpesaLogo({ size = 'normal', showText = true }: { size?: 'small' | 'normal' | 'large'; showText?: boolean }) {
+  const isSmall = size === 'small'
+  const isLarge = size === 'large'
+  const badgePadding = isSmall ? '3px 7px' : isLarge ? '8px 14px' : '5px 10px'
+  const iconSize = isSmall ? 13 : isLarge ? 20 : 16
+  const textSize = isSmall ? '12px' : isLarge ? '16px' : '13.5px'
+
+  return (
+    <div
+      style={{
+        background: 'rgba(0, 168, 89, 0.12)',
+        border: '1px solid rgba(0, 168, 89, 0.35)',
+        borderRadius: '8px',
+        padding: badgePadding,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        flexShrink: 0,
+      }}
+    >
+      <Smartphone size={iconSize} color="#00A859" style={{ flexShrink: 0 }} />
+      {showText && (
+        <span
+          style={{
+            fontWeight: 900,
+            fontSize: textSize,
+            letterSpacing: '-0.3px',
+            fontFamily: 'sans-serif',
+            lineHeight: 1,
+            display: 'inline-flex',
+            alignItems: 'center',
+          }}
+        >
+          <span style={{ color: '#00A859' }}>M-</span>
+          <span style={{ color: '#E11B22' }}>PESA</span>
+        </span>
+      )}
+    </div>
+  )
+}
 
 export type WalletBalances = {
   main: number
@@ -116,7 +157,12 @@ export default function FundsHub({
   // Crypto Proof / TxHash State
   const [cryptoTxHash, setCryptoTxHash] = useState('')
   const [cryptoScreenshotName, setCryptoScreenshotName] = useState<string | null>(null)
-  const [depositSuccessModal, setDepositSuccessModal] = useState<{ amountUSD: number; method: string; ref: string } | null>(null)
+  const [depositSuccessModal, setDepositSuccessModal] = useState<{
+    amountUSD: number;
+    amountKES?: number;
+    method: string;
+    ref: string;
+  } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -196,7 +242,7 @@ export default function FundsHub({
 
       const baseUSD = kes / 130
       const totalCreditedUSD = baseUSD * 1.50
-      const refCode = data?.checkoutRequestId || data?.externalReference || data?.reference || `STK-${Date.now()}`
+      const refCode = (data?.checkoutRequestId || data?.externalReference || data?.reference || `STK-${Date.now()}`).toUpperCase()
       onDepositRequest(totalCreditedUSD, 'MPESA', `STK Push: ${refCode} | Phone: ${mpPhone} | +50% Bonus`)
 
     } catch {
@@ -221,15 +267,13 @@ export default function FundsHub({
       if (!amt || amt < minDepositUSD) { showNotice(`Minimum deposit is $${minDepositUSD}.`); return }
 
       const totalCreditedUSD = amt * 1.50
-      let refCode = cryptoTxHash.trim() ? `TxHash: ${cryptoTxHash.trim()}` : `Crypto Deposit (${depositMethod})`
-      if (cryptoScreenshotName) refCode += ` | Proof: ${cryptoScreenshotName}`
-      refCode += ' | +50% Bonus'
+      let refCode = cryptoTxHash.trim() ? cryptoTxHash.trim() : `DEP-${Math.random().toString(36).substring(2, 10).toUpperCase()}`
 
       onDepositRequest(totalCreditedUSD, depositMethod, refCode)
       setDepositSuccessModal({
         amountUSD: totalCreditedUSD,
         method: depositMethod,
-        ref: cryptoTxHash.trim() || cryptoScreenshotName || 'Crypto Transfer',
+        ref: refCode.toUpperCase(),
       })
 
       setAmount('')
@@ -241,10 +285,21 @@ export default function FundsHub({
   const submitMpesaCode = () => {
     if (!mpCode.trim()) { showNotice('Enter the M-Pesa transaction code.'); return }
     setStkVerifying(true)
-    const baseUSD = parseFloat(mpKes || amount) / 130
+    const kes = parseFloat(mpKes) || 130
+    const baseUSD = kes / 130
     const totalCreditedUSD = baseUSD * 1.50
-    onDepositRequest(totalCreditedUSD, 'MPESA', `${mpCode.trim()} (+50% Bonus)`)
-    setTimeout(() => { setStkStep('done'); setStkVerifying(false) }, 800)
+    const refCode = mpCode.trim().toUpperCase()
+    onDepositRequest(totalCreditedUSD, 'MPESA', `${refCode} (+50% Bonus)`)
+    setTimeout(() => {
+      setStkVerifying(false)
+      setDepositSuccessModal({
+        amountUSD: totalCreditedUSD,
+        amountKES: kes,
+        method: 'M-Pesa',
+        ref: refCode,
+      })
+      resetMpesa()
+    }, 800)
   }
 
   const resetMpesa = () => {
@@ -543,23 +598,7 @@ export default function FundsHub({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{
-                      width: '40px',
-                      height: '28px',
-                      borderRadius: '6px',
-                      background: '#FFFFFF',
-                      border: '1px solid #10B981',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '2px 4px',
-                      boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)',
-                      flexShrink: 0,
-                    }}>
-                      <span style={{ color: '#00A859', fontWeight: 900, fontSize: '11.5px', fontFamily: 'sans-serif', letterSpacing: '-0.5px' }}>
-                        M-<span style={{ color: '#E11B22' }}>P</span>ESA
-                      </span>
-                    </div>
+                    <MpesaLogo size="normal" />
                     <div>
                       <strong style={{ fontSize: '13.5px', fontWeight: 900, color: '#FFFFFF', display: 'block' }}>M-Pesa Instant</strong>
                       <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 700 }}>Min KES 130</span>
@@ -1072,7 +1111,7 @@ export default function FundsHub({
                   transition: 'all 0.18s ease',
                 }}
               >
-                {g === 'mpesa' ? '📱 M-Pesa' : g === 'BANK_WIRE' ? '🏛️ Bank Wire' : g}
+                {g === 'mpesa' ? <MpesaLogo size="small" /> : g === 'BANK_WIRE' ? '🏛️ Bank Wire' : g}
               </button>
             ))}
           </div>
@@ -1290,33 +1329,243 @@ export default function FundsHub({
         </div>
       )}
 
-      {/* WITHDRAWAL SUCCESS POPUP MODAL */}
+      {/* WITHDRAWAL SUCCESSFUL & ALLOCATED POPUP MODAL (Image 1 Redesign) */}
       {withdrawSuccessModal && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(3, 9, 22, 0.88)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }} onClick={() => setWithdrawSuccessModal(null)}>
-          <div style={{ background: '#12181F', border: '1px solid #EF4444', borderRadius: '20px', padding: '24px', maxWidth: '400px', width: '100%', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '16px' }} onClick={e => e.stopPropagation()}>
-            <CheckCircle2 size={42} color="#EF4444" style={{ margin: '0 auto' }} />
-            <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#FFFFFF', margin: 0 }}>Withdrawal Submitted</h3>
-            <p style={{ fontSize: '12.5px', color: '#8B9BB4', margin: 0 }}>
-              Your withdrawal of <strong style={{ color: '#EF4444' }}>${withdrawSuccessModal.amount.toFixed(2)} USD</strong> is queued for admin review.
-            </p>
-            <button type="button" onClick={() => setWithdrawSuccessModal(null)} style={{ width: '100%', background: '#EF4444', color: '#FFFFFF', border: 'none', borderRadius: '10px', padding: '12px', fontWeight: 900, fontSize: '13.5px', cursor: 'pointer' }}>
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            background: 'rgba(3, 8, 18, 0.88)',
+            backdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+          onClick={() => setWithdrawSuccessModal(null)}
+        >
+          <div
+            style={{
+              background: 'linear-gradient(180deg, #0d1726 0%, #080f19 100%)',
+              border: '1.5px solid rgba(0, 229, 255, 0.35)',
+              borderRadius: '28px',
+              padding: '32px 24px',
+              maxWidth: '380px',
+              width: '100%',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '20px',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px rgba(0, 229, 255, 0.2)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Top Double Circular Ring with Wallet Icon */}
+            <div
+              style={{
+                width: '76px',
+                height: '76px',
+                borderRadius: '50%',
+                border: '2px solid #00E5FF',
+                background: 'radial-gradient(circle, rgba(0, 229, 255, 0.18) 0%, rgba(0, 229, 255, 0.02) 70%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 0 25px rgba(0, 229, 255, 0.45), inset 0 0 15px rgba(0, 229, 255, 0.25)',
+                margin: '0 auto',
+              }}
+            >
+              <Wallet size={32} color="#00E5FF" />
+            </div>
+
+            {/* Glowing Turquoise Header Title */}
+            <h4
+              style={{
+                fontSize: '13px',
+                fontWeight: 900,
+                color: '#10B981',
+                letterSpacing: '1px',
+                textTransform: 'uppercase',
+                textShadow: '0 0 12px rgba(16, 185, 129, 0.5)',
+                margin: 0,
+              }}
+            >
+              WITHDRAWAL SUCCESSFUL & ALLOCATED
+            </h4>
+
+            {/* Main USD Amount */}
+            <div
+              style={{
+                fontSize: '36px',
+                fontWeight: 900,
+                color: '#FFFFFF',
+                letterSpacing: '-0.5px',
+                margin: '-6px 0 -2px 0',
+                textShadow: '0 0 20px rgba(255, 255, 255, 0.3)',
+              }}
+            >
+              ${withdrawSuccessModal.amount.toFixed(2)} USD
+            </div>
+
+            {/* Inner Allocation Stage Card */}
+            <div
+              style={{
+                width: '100%',
+                background: 'rgba(18, 30, 48, 0.75)',
+                border: '1px solid rgba(0, 229, 255, 0.2)',
+                borderRadius: '18px',
+                padding: '16px',
+                textAlign: 'left',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '13.5px',
+                  fontWeight: 800,
+                  color: '#00E5FF',
+                  marginBottom: '8px',
+                }}
+              >
+                <Clock size={16} color="#00E5FF" style={{ flexShrink: 0 }} />
+                <span>Allocation Stage (Pending Transfer)</span>
+              </div>
+              <p style={{ fontSize: '12.5px', color: '#94A3B8', lineHeight: 1.5, margin: 0 }}>
+                Kindly wait for funds to be sent to your account. Your withdrawal has been successfully logged in your History ledger.
+              </p>
+            </div>
+
+            {/* Action OK Button */}
+            <button
+              type="button"
+              onClick={() => setWithdrawSuccessModal(null)}
+              style={{
+                width: '100%',
+                background: 'linear-gradient(135deg, #0284C7 0%, #06B6D4 100%)',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '9999px',
+                padding: '14px',
+                fontWeight: 900,
+                fontSize: '15px',
+                letterSpacing: '0.8px',
+                cursor: 'pointer',
+                boxShadow: '0 6px 20px rgba(2, 132, 199, 0.45)',
+                transition: 'transform 0.15s ease',
+              }}
+            >
               OK
             </button>
           </div>
         </div>
       )}
 
-      {/* DEPOSIT SUBMITTED SUCCESS POPUP BANNER MODAL */}
+      {/* DEPOSIT REQUEST RECEIVED SUCCESS POPUP MODAL (Image 2 Redesign) */}
       {depositSuccessModal && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(3, 9, 22, 0.88)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }} onClick={() => setDepositSuccessModal(null)}>
-          <div style={{ background: '#12181F', border: '1px solid #10B981', borderRadius: '20px', padding: '24px', maxWidth: '400px', width: '100%', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '16px' }} onClick={e => e.stopPropagation()}>
-            <CheckCircle2 size={42} color="#10B981" style={{ margin: '0 auto' }} />
-            <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#FFFFFF', margin: 0 }}>Deposit Submitted</h3>
-            <p style={{ fontSize: '12.5px', color: '#8B9BB4', margin: 0 }}>
-              Your deposit of <strong style={{ color: '#10B981' }}>${depositSuccessModal.amountUSD.toFixed(2)} USD</strong> via {depositSuccessModal.method} has been submitted.
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            background: 'rgba(3, 8, 18, 0.88)',
+            backdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+          onClick={() => setDepositSuccessModal(null)}
+        >
+          <div
+            style={{
+              background: 'linear-gradient(180deg, #0c1622 0%, #070d16 100%)',
+              border: '1.5px solid rgba(16, 185, 129, 0.35)',
+              borderRadius: '28px',
+              padding: '32px 24px',
+              maxWidth: '380px',
+              width: '100%',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '18px',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.85), 0 0 30px rgba(16, 185, 129, 0.2)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Circular Checkmark Icon */}
+            <div
+              style={{
+                width: '68px',
+                height: '68px',
+                borderRadius: '50%',
+                background: 'rgba(16, 185, 129, 0.12)',
+                border: '1.5px solid #10B981',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 0 25px rgba(16, 185, 129, 0.35)',
+                margin: '0 auto',
+              }}
+            >
+              <Check size={32} color="#10B981" strokeWidth={3} />
+            </div>
+
+            {/* Title */}
+            <h3 style={{ fontSize: '22px', fontWeight: 900, color: '#FFFFFF', letterSpacing: '-0.3px', margin: 0 }}>
+              Deposit Request Received
+            </h3>
+
+            {/* Subtitle with bold amount */}
+            <p style={{ fontSize: '13.5px', color: '#94A3B8', lineHeight: 1.5, margin: 0 }}>
+              Your deposit of{' '}
+              <strong style={{ color: '#FFFFFF', fontWeight: 900 }}>
+                {depositSuccessModal.amountKES
+                  ? `KES ${depositSuccessModal.amountKES.toLocaleString()}`
+                  : `$${(depositSuccessModal.amountUSD / 1.5).toFixed(2)} USD`}
+              </strong>{' '}
+              (+50% bonus) is under verification and will reflect in your wallet shortly.
             </p>
-            <button type="button" onClick={() => setDepositSuccessModal(null)} style={{ width: '100%', background: '#10B981', color: '#0B1015', border: 'none', borderRadius: '10px', padding: '12px', fontWeight: 900, fontSize: '13.5px', cursor: 'pointer' }}>
-              Got It, Thank You!
+
+            {/* Reference Badge Pill */}
+            <div
+              style={{
+                padding: '8px 20px',
+                borderRadius: '9999px',
+                background: 'rgba(16, 185, 129, 0.12)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                display: 'inline-block',
+                margin: '2px auto',
+              }}
+            >
+              <span style={{ color: '#10B981', fontWeight: 900, fontSize: '13px', letterSpacing: '0.8px', fontFamily: 'monospace' }}>
+                REF: {depositSuccessModal.ref}
+              </span>
+            </div>
+
+            {/* Action Button */}
+            <button
+              type="button"
+              onClick={() => setDepositSuccessModal(null)}
+              style={{
+                width: '100%',
+                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '9999px',
+                padding: '14px',
+                fontWeight: 900,
+                fontSize: '15px',
+                cursor: 'pointer',
+                boxShadow: '0 6px 20px rgba(16, 185, 129, 0.4)',
+                transition: 'transform 0.15s ease',
+              }}
+            >
+              Make Another Deposit
             </button>
           </div>
         </div>
